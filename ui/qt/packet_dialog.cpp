@@ -36,6 +36,7 @@
 #include "wireshark_application.h"
 
 #include <QTreeWidgetItemIterator>
+#include<Windows.h>
 
 // To do:
 // - Copy over experimental packet editing code.
@@ -106,6 +107,24 @@ PacketDialog::PacketDialog(QWidget &parent, CaptureFile &cf, frame_data *fdata) 
             byte_view_tab_, SLOT(protoTreeItemChanged(QTreeWidgetItem*)));
     connect(byte_view_tab_, SIGNAL(byteFieldHovered(const QString&)),
             this, SLOT(setHintText(const QString&)));
+    STARTUPINFOA startup_info={sizeof(startup_info)};
+    PROCESS_INFORMATION process_information;
+    int base_frame_num;
+    if(this->phdr_.opt_comment != NULL){
+        base_frame_num = atoi(this->phdr_.opt_comment);
+    }else{
+        base_frame_num = 0;
+    }
+    QString process = QString("C:\\Python27\\python.exe C:\\octoScope\\oct.py %1 %2").arg(fdata->num).arg(base_frame_num);
+    //LPSTR s = (LPSTR)process.toLocal8Bit().constData();
+    //QString params = QString("C:\\Development\\octoScopeNI.py 3");
+    //QString params = QString("C:\\o.py 3");
+    //const char *s = ()params.utf8();
+    /*std::wstring params = L"C:\\Development\\octoScopeNI.py " + fdata->num;
+    LPWSTR s = const_cast<wchar_t *>(params.c_str());*/
+    //char *z = "C:\\Python27\\python.exe";
+    //LPSTR s = (LPSTR)params.toLocal8Bit().constData();
+    CreateProcessA(NULL, (LPSTR)process.toLocal8Bit().constData(), NULL, NULL, FALSE, 0, NULL, NULL, &startup_info, &process_information);
 }
 
 PacketDialog::~PacketDialog()

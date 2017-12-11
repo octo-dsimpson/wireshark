@@ -177,6 +177,7 @@ static double                 err_prob                  = 0.0;
 static time_t                 starttime                 = 0;
 static time_t                 stoptime                  = 0;
 static gboolean               check_startstop           = FALSE;
+static gboolean               octoScope_special         = FALSE;
 static gboolean               rem_vlan                  = FALSE;
 static gboolean               dup_detect                = FALSE;
 static gboolean               dup_detect_by_time        = FALSE;
@@ -809,6 +810,8 @@ print_usage(FILE *output)
     fprintf(output, "                         beginning of the packet. This allows one to preserve some\n");
     fprintf(output, "                         bytes, in order to have some headers untouched.\n");
     fprintf(output, "\n");
+    fprintf(output, "  -O                     octoScope Special. Insert base framenumber into frame comment\n");
+    fprintf(output, "\n");
     fprintf(output, "Output File(s):\n");
     fprintf(output, "  -c <packets per file>  split the packet output to different files based on\n");
     fprintf(output, "                         uniform packet counts with a maximum of\n");
@@ -980,6 +983,8 @@ main(int argc, char *argv[])
     int           err_type;
     guint8       *buf;
     guint32       read_count         = 0;
+    guint32       base_frame_num     = 0;
+    char          base_frame_str[32];
     guint32       split_packet_count = 0;
     int           written_count      = 0;
     char         *filename           = NULL;
@@ -1059,7 +1064,7 @@ main(int argc, char *argv[])
 #endif
 
     /* Process the options */
-    while ((opt = getopt_long(argc, argv, "a:A:B:c:C:dD:E:F:hi:I:Lo:rs:S:t:T:vVw:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "a:A:B:c:C:dD:E:F:hi:I:Lo:Ors:S:t:T:vVw:", long_options, NULL)) != -1) {
         switch (opt) {
         case 0x8100:
         {
@@ -1231,6 +1236,13 @@ main(int argc, char *argv[])
 
         case 'o':
             change_offset = get_guint32(optarg, "change offset");
+            break;
+
+        case 'O':
+            /* This option breaks comments but for it's for a good cause.
+            When a pcap file is sliced up, the framenumber that would have been
+            the framenumber of the starting frame in the original pcap file is stored in the comment*/
+            octoScope_special = TRUE;
             break;
 
         case 'r':
@@ -1759,6 +1771,21 @@ main(int argc, char *argv[])
                     }
                 } /* random error mutation */
 
+
+                if (octoScope_special) {
+                    if (!frames_user_comments) {
+                        frames_user_comments = g_tree_new_full(framenum_compare, NULL, NULL, g_free);
+                    }
+
+                    /*if (base_frame_num == 0) {*/
+                    base_frame_num = read_count;
+                    g_snprintf(base_frame_str, 32, "%u", base_frame_num);
+                    /*}*/
+
+                    /* Insert this entry (framenum -> comment) */
+                    g_tree_replace(frames_user_comments, GUINT_TO_POINTER(read_count), g_strdup(base_frame_str));
+                }
+
                 /* Find a packet comment we may need to write */
                 if (frames_user_comments) {
                     const char *comment =
@@ -1776,6 +1803,8 @@ main(int argc, char *argv[])
                         phdr = &temp_phdr;
                     }
                 }
+
+
 
                 /* Attempt to dump out current frame to the output file */
                 if (!wtap_dump(pdh, phdr, buf, &write_err, &write_err_info)) {
