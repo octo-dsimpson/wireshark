@@ -6,19 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  * References:
  * RFC 3267  http://www.ietf.org/rfc/rfc3267.txt?number=3267
@@ -49,6 +37,7 @@ static dissector_handle_t amr_wb_handle;
 
 /* Initialize the protocol and registered fields */
 static int proto_amr = -1;
+static int proto_amr_wb = -1;
 static int hf_amr_nb_cmr = -1;
 static int hf_amr_wb_cmr = -1;
 static int hf_amr_payload_decoded_as = -1;
@@ -788,6 +777,7 @@ proto_register_amr(void)
 
 /* Register the protocol name and description */
     proto_amr = proto_register_protocol("Adaptive Multi-Rate","AMR", "amr");
+    proto_amr_wb = proto_register_protocol_in_name_only("Adaptive Multi-Rate WB","AMR WB", "amr_wb", proto_amr, FT_PROTOCOL);
 
 /* Required function calls to register the header fields and subtrees used */
     proto_register_field_array(proto_amr, hf, array_length(hf));
@@ -821,7 +811,7 @@ proto_register_amr(void)
                        &pref_amr_mode, modes, AMR_NB);
 
     amr_handle = register_dissector("amr", dissect_amr, proto_amr);
-    amr_wb_handle = register_dissector("amr-wb", dissect_amr_wb, proto_amr);
+    amr_wb_handle = register_dissector("amr-wb", dissect_amr_wb, proto_amr_wb);
     register_dissector("amr_if1_nb", dissect_amr_nb_if1, proto_amr);
     register_dissector("amr_if1_wb", dissect_amr_wb_if1, proto_amr);
     register_dissector("amr_if2_nb", dissect_amr_nb_if2, proto_amr);

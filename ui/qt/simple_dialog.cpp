@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "simple_dialog.h"
 
@@ -33,9 +20,7 @@
 #include <ui/qt/utils/qt_ui_utils.h>
 #include "wireshark_application.h"
 
-#if (QT_VERSION > QT_VERSION_CHECK(5, 2, 0))
 #include <QCheckBox>
-#endif
 #include <QMessageBox>
 #include <QRegExp>
 #include <QTextCodec>
@@ -107,7 +92,6 @@ simple_message_box(ESD_TYPE_E type, gboolean *notagain,
 
     sd.setDetailedText(secondary_msg);
 
-#if (QT_VERSION > QT_VERSION_CHECK(5, 2, 0))
     QCheckBox *cb = NULL;
     if (notagain) {
         cb = new QCheckBox();
@@ -115,15 +99,12 @@ simple_message_box(ESD_TYPE_E type, gboolean *notagain,
         cb->setText(QObject::tr("Don't show this message again."));
         sd.setCheckBox(cb);
     }
-#endif
 
     sd.exec();
 
-#if (QT_VERSION > QT_VERSION_CHECK(5, 2, 0))
     if (notagain && cb) {
         *notagain = cb->isChecked();
     }
-#endif
 }
 
 /*
@@ -174,9 +155,7 @@ simple_error_message_box(const char *msg_format, ...)
 }
 
 SimpleDialog::SimpleDialog(QWidget *parent, ESD_TYPE_E type, int btn_mask, const char *msg_format, va_list ap) :
-#if (QT_VERSION > QT_VERSION_CHECK(5, 2, 0))
     check_box_(0),
-#endif
     message_box_(0)
 {
     gchar *vmessage;
@@ -206,10 +185,7 @@ SimpleDialog::SimpleDialog(QWidget *parent, ESD_TYPE_E type, int btn_mask, const
 
     message_box_ = new QMessageBox(parent);
     message_box_->setTextFormat(Qt::PlainText);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
     message_box_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-#endif
-
 
     switch(type) {
     case ESD_TYPE_ERROR:
@@ -320,9 +296,7 @@ int SimpleDialog::exec()
     }
 
     message_box_->setDetailedText(detailed_text_);
-#if (QT_VERSION > QT_VERSION_CHECK(5, 2, 0))
     message_box_->setCheckBox(check_box_);
-#endif
 
     int status = message_box_->exec();
     delete message_box_;

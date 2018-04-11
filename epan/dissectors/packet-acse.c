@@ -24,19 +24,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -185,7 +173,7 @@ static int hf_acse_ACSE_requirements_higher_level_association = -1;
 static int hf_acse_ACSE_requirements_nested_association = -1;
 
 /*--- End of included file: packet-acse-hf.c ---*/
-#line 68 "./asn1/acse/packet-acse-template.c"
+#line 56 "./asn1/acse/packet-acse-template.c"
 static gint hf_acse_user_data = -1;
 
 /* Initialize the subtree pointers */
@@ -230,7 +218,7 @@ static gint ett_acse_Authentication_value_other = -1;
 static gint ett_acse_Authentication_value = -1;
 
 /*--- End of included file: packet-acse-ett.c ---*/
-#line 73 "./asn1/acse/packet-acse-template.c"
+#line 61 "./asn1/acse/packet-acse-template.c"
 
 static expert_field ei_acse_dissector_not_available = EI_INIT;
 static expert_field ei_acse_malformed = EI_INIT;
@@ -1685,7 +1673,7 @@ dissect_acse_AE_title(gboolean implicit_tag _U_, tvbuff_t *tvb _U_, int offset _
 
 
 /*--- End of included file: packet-acse-fn.c ---*/
-#line 138 "./asn1/acse/packet-acse-template.c"
+#line 126 "./asn1/acse/packet-acse-template.c"
 
 
 /*
@@ -1718,8 +1706,7 @@ dissect_acse(tvbuff_t *tvb, packet_info *pinfo, proto_tree *parent_tree, void* d
 	session = ( (struct SESSION_DATA_STRUCTURE*)data);
 	if (session->spdu_type == 0) {
 		if (parent_tree) {
-			REPORT_DISSECTOR_BUG(
-				wmem_strdup_printf(wmem_packet_scope(), "Wrong spdu type %x from session dissector.",session->spdu_type));
+			REPORT_DISSECTOR_BUG("Wrong spdu type %x from session dissector.",session->spdu_type);
 			return 0;
 		}
 	}
@@ -2231,7 +2218,7 @@ void proto_register_acse(void) {
         NULL, HFILL }},
 
 /*--- End of included file: packet-acse-hfarr.c ---*/
-#line 251 "./asn1/acse/packet-acse-template.c"
+#line 238 "./asn1/acse/packet-acse-template.c"
   };
 
   /* List of subtrees */
@@ -2277,7 +2264,7 @@ void proto_register_acse(void) {
     &ett_acse_Authentication_value,
 
 /*--- End of included file: packet-acse-ettarr.c ---*/
-#line 257 "./asn1/acse/packet-acse-template.c"
+#line 244 "./asn1/acse/packet-acse-template.c"
   };
 
   static ei_register_info ei[] = {

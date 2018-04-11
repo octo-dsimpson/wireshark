@@ -29,23 +29,55 @@
     </message>
     <message>
         <source>Search Authors</source>
-        <translation type="unfinished"></translation>
+        <translation>Szukaj autorów</translation>
     </message>
     <message>
         <source>Folders</source>
         <translation>Foldery</translation>
     </message>
     <message>
+        <source>Filter by path</source>
+        <translation>Filtruj po ścieżce</translation>
+    </message>
+    <message>
         <source>Plugins</source>
         <translation>Wtyczki</translation>
+    </message>
+    <message>
+        <source>No plugins found.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Search Plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Filter by type:</source>
+        <translation>Filtruj po typie:</translation>
     </message>
     <message>
         <source>Keyboard Shortcuts</source>
         <translation>Skróty klawiaturowe</translation>
     </message>
     <message>
+        <source>Search Shortcuts</source>
+        <translation>Szukaj skrótów</translation>
+    </message>
+    <message>
+        <source>Acknowledgments</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>License</source>
         <translation>Licencja</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>Kopiuj</translation>
+    </message>
+    <message>
+        <source>Copy Row(s)</source>
+        <translation>Kopiuj wiersz(e)</translation>
     </message>
 </context>
 <context>
@@ -70,6 +102,43 @@
     <message>
         <source>Can&apos;t assign %1 to %2</source>
         <translation>Nie można przypisać %1 do %2</translation>
+    </message>
+</context>
+<context>
+    <name>AdvancedPrefsModel</name>
+    <message>
+        <source>Name</source>
+        <translation>Nazwa</translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation>Status</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>typ</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Wartość</translation>
+    </message>
+</context>
+<context>
+    <name>ApplyLineEdit</name>
+    <message>
+        <source>Apply changes</source>
+        <translation>Zastosuj zmiany</translation>
+    </message>
+</context>
+<context>
+    <name>AuthorListModel</name>
+    <message>
+        <source>Name</source>
+        <translation>Nazwa</translation>
+    </message>
+    <message>
+        <source>Email</source>
+        <translation>Email</translation>
     </message>
 </context>
 <context>
@@ -120,15 +189,15 @@
     </message>
     <message>
         <source>Mark/Unmark Row</source>
-        <translation type="unfinished"></translation>
+        <translation>Zaznacz/Odznacz wiersz</translation>
     </message>
     <message>
         <source>CtrlM</source>
-        <translation type="unfinished"></translation>
+        <translation>CtrlM</translation>
     </message>
     <message>
         <source>Mark/Unmark Cell</source>
-        <translation type="unfinished"></translation>
+        <translation>Zaznacz/Odznacz komórkę</translation>
     </message>
     <message>
         <source>Save Table Image</source>
@@ -263,15 +332,15 @@
     </message>
     <message>
         <source>Mark/Unmark Row</source>
-        <translation type="unfinished"></translation>
+        <translation>Zaznacz/Odznacz wiersz</translation>
     </message>
     <message>
         <source>CtrlM</source>
-        <translation type="unfinished"></translation>
+        <translation>CtrlM</translation>
     </message>
     <message>
         <source>Mark/Unmark Cell</source>
-        <translation type="unfinished"></translation>
+        <translation>Zaznacz/Odznacz komórkę</translation>
     </message>
     <message>
         <source>Unknown</source>
@@ -374,15 +443,15 @@
     </message>
     <message>
         <source>Mark/Unmark Row</source>
-        <translation type="unfinished"></translation>
+        <translation>Zaznacz/Odznacz wiersz</translation>
     </message>
     <message>
         <source>CtrlM</source>
-        <translation type="unfinished"></translation>
+        <translation>CtrlM</translation>
     </message>
     <message>
         <source>Mark/Unmark Cell</source>
-        <translation type="unfinished"></translation>
+        <translation>Zaznacz/Odznacz komórkę</translation>
     </message>
     <message>
         <source>true</source>
@@ -425,7 +494,7 @@
     </message>
     <message>
         <source>Subevent</source>
-        <translation type="unfinished"></translation>
+        <translation>Subevent</translation>
     </message>
     <message>
         <source>Status</source>
@@ -533,11 +602,11 @@
     </message>
     <message>
         <source>Results filter:</source>
-        <translation type="unfinished"></translation>
+        <translation>Filtr wyników:</translation>
     </message>
     <message>
         <source>Display filter:</source>
-        <translation type="unfinished"></translation>
+        <translation>Filtr wyświetlania:</translation>
     </message>
     <message>
         <source>All Interfaces</source>
@@ -565,15 +634,15 @@
     </message>
     <message>
         <source>Mark/Unmark Row</source>
-        <translation type="unfinished"></translation>
+        <translation>Zaznacz/Odznacz wiersz</translation>
     </message>
     <message>
         <source>Ctrl+M</source>
-        <translation type="unfinished"></translation>
+        <translation>Ctrl+M</translation>
     </message>
     <message>
         <source>Mark/Unmark Cell</source>
-        <translation type="unfinished"></translation>
+        <translation>Zaznacz/Odznacz komórkę</translation>
     </message>
     <message>
         <source>Unknown</source>
@@ -614,12 +683,8 @@
         <translation>Pokaż szesnastkowo</translation>
     </message>
     <message>
-        <source>Byte %1</source>
-        <translation>Bajt %1</translation>
-    </message>
-    <message>
-        <source>Bytes %1-%2</source>
-        <translation>Bajty %1-%2</translation>
+        <source>Show text based on packet</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -677,33 +742,7 @@
     </message>
     <message>
         <source>Automatically detect file type</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message numerus="yes">
-        <source>%1, error after %Ln packet(s)</source>
-        <oldsource>%1, error after %2 packets</oldsource>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%1, timed out at %Ln packet(s)</source>
-        <oldsource>%1, timed out at %2 packets</oldsource>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%1, %Ln packet(s)</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
+        <translation>Automatycznie wykryj typ pliku</translation>
     </message>
     <message>
         <source>Prepend packets</source>
@@ -776,6 +815,30 @@
     <message>
         <source>error opening file</source>
         <translation>błąd podczas otwierania pliku</translation>
+    </message>
+    <message numerus="yes">
+        <source>%1, error after %Ln record(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%1, timed out at %Ln data record(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%1, %Ln data record(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
     </message>
     <message>
         <source>unknown</source>
@@ -972,6 +1035,53 @@
     </message>
 </context>
 <context>
+    <name>CaptureFilterCombo</name>
+    <message>
+        <source>Capture filter selector</source>
+        <translation>Wybór filtru przechwytywania</translation>
+    </message>
+</context>
+<context>
+    <name>CaptureFilterEdit</name>
+    <message>
+        <source>Capture filter entry</source>
+        <translation>Wpis filtru przechwytywania</translation>
+    </message>
+    <message>
+        <source>Manage saved bookmarks.</source>
+        <translation>Zarządzaj zapisanymi zakładkami.</translation>
+    </message>
+    <message>
+        <source>Apply this filter string to the display.</source>
+        <translation>Zastosuj filtr.</translation>
+    </message>
+    <message>
+        <source>Multiple filters selected. Override them here or leave this blank to preserve them.</source>
+        <extracomment>This is a very long concept that needs to fit into a short space.</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;The interfaces you have selected have different capture filters. Typing a filter here will override them. Doing nothing will preserve them.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter a capture filter %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save this filter</source>
+        <translation>Zapisz filtr</translation>
+    </message>
+    <message>
+        <source>Remove this filter</source>
+        <translation>Usuń filtr</translation>
+    </message>
+    <message>
+        <source>Manage Capture Filters</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>CaptureInterfacesDialog</name>
     <message>
         <source>Input</source>
@@ -1002,8 +1112,8 @@
         <translation>Format wyjściowy:</translation>
     </message>
     <message>
-        <source>pcap-ng</source>
-        <translation>pcap-ng</translation>
+        <source>pcapng</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>pcap</source>
@@ -1297,8 +1407,8 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Zapisuj pakiety w formacie pcap-ng&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <source>Capture packets in pcap-ng format</source>
-        <translation>Zapisuj pakiety w formacie pcap-ng</translation>
+        <source>Capture packets in pcapng format</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Update the list of packets while capture is in progress. This can result in dropped packets on high-speed networks.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
@@ -1316,20 +1426,23 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <source>Automatic scrolling in live capture</source>
         <translation>Automatyczne przewijanie podczas przechwytywania</translation>
     </message>
+    <message>
+        <source>Disable external capture interfaces</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ColoringRulesDelegate</name>
+    <message>
+        <source>the &quot;@&quot; symbol will be ignored.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ColoringRulesDialog</name>
     <message>
         <source>Dialog</source>
         <translation>Okno</translation>
-    </message>
-    <message>
-        <source>Name</source>
-        <translation>Nazwa</translation>
-    </message>
-    <message>
-        <source>Filter</source>
-        <translation>Filtr</translation>
     </message>
     <message>
         <source>&lt;small&gt;&lt;i&gt;A hint.&lt;/i&gt;&lt;/small&gt;</source>
@@ -1364,8 +1477,12 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Tło</translation>
     </message>
     <message>
-        <source>Coloring Rules</source>
-        <translation>Reguły kolorowania</translation>
+        <source>Set the display filter using this rule.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Apply as filter</source>
+        <translation>Zastosuj filtr</translation>
     </message>
     <message>
         <source>Import</source>
@@ -1384,8 +1501,8 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Zapisz filtry w pliku.</translation>
     </message>
     <message>
-        <source>the &quot;@&quot; symbol will be ignored.</source>
-        <translation>Symbol &quot;@&quot; będzie zignorowany.</translation>
+        <source>Coloring Rules %1</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Double click to edit. Drag to move. Rules are processed in order until a match is found.</source>
@@ -1407,9 +1524,20 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <source>Wireshark doesn&apos;t recognize one or more of your coloring rules. They have been disabled.</source>
         <translation type="unfinished"></translation>
     </message>
+</context>
+<context>
+    <name>ColoringRulesModel</name>
     <message>
-        <source>Unable to save coloring rules: %s</source>
-        <translation>Nie można zapisać reguł kolorowania: %s</translation>
+        <source>Unable to save coloring rules: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">Nazwa</translation>
+    </message>
+    <message>
+        <source>Filter</source>
+        <translation type="unfinished">Filtr</translation>
     </message>
 </context>
 <context>
@@ -1528,6 +1656,37 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     </message>
 </context>
 <context>
+    <name>DataPrinter</name>
+    <message>
+        <source>Copy Bytes as Hex + ASCII Dump</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as a hex and ASCII dump.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as a hex dump.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy only the printable text in the packet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as a stream of hex.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as application/octet-stream MIME data.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as an escaped string.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>DecodeAsDialog</name>
     <message>
         <source>Change the dissection behavior for a protocol.</source>
@@ -1544,6 +1703,123 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>Decode As</source>
         <translation>Dekoduj jako</translation>
+    </message>
+</context>
+<context>
+    <name>DecodeAsModel</name>
+    <message>
+        <source>Match using this field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Current&quot;Decode As&quot; behavior</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Default &quot;Decode As&quot; behavior</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change behavior when the protocol field matches this value</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>String</source>
+        <translation type="unfinished">String</translation>
+    </message>
+    <message>
+        <source>Integer, base </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>unknown</source>
+        <translation type="unfinished">nieznany</translation>
+    </message>
+    <message>
+        <source>&lt;none&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GUID</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation type="unfinished">Wartość</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Current</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>DisplayFilterCombo</name>
+    <message>
+        <source>Display filter selector</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select from previously used filters.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>DisplayFilterEdit</name>
+    <message>
+        <source>Display filter entry</source>
+        <translation type="unfinished">Wpis filtru wyświetlania</translation>
+    </message>
+    <message>
+        <source>Manage saved bookmarks.</source>
+        <translation type="unfinished">Zarządzaj zapisanymi zakładkami.</translation>
+    </message>
+    <message>
+        <source>Apply this filter string to the display.</source>
+        <translation type="unfinished">Zastosuj filtr.</translation>
+    </message>
+    <message>
+        <source>Apply a display filter %1 &lt;%2/&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter a display filter %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Apply a read filter %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Invalid filter: </source>
+        <translation type="unfinished">Błędny filtr: </translation>
+    </message>
+    <message>
+        <source>Save this filter</source>
+        <translation type="unfinished">Zapisz filtr</translation>
+    </message>
+    <message>
+        <source>Remove this filter</source>
+        <translation type="unfinished">Usuń filtr</translation>
+    </message>
+    <message>
+        <source>Manage Display Filters</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manage Filter Expressions</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1630,56 +1906,47 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Okno</translation>
     </message>
     <message>
-        <source>Table Name</source>
-        <translation>Nazwa Tabeli</translation>
-    </message>
-    <message>
-        <source>Short Name</source>
-        <translation>Krótka Nazwa</translation>
+        <source>Search:</source>
+        <translation type="unfinished">Szukaj:</translation>
     </message>
     <message>
         <source>Dissector Tables</source>
         <translation>Tabele Dekoderów</translation>
     </message>
+</context>
+<context>
+    <name>DissectorTablesProxyModel</name>
     <message>
-        <source>String Tables</source>
-        <translation>Tabele Stringów</translation>
-    </message>
-    <message>
-        <source>Integer Tables</source>
-        <translation>Tabele Liczbowe</translation>
-    </message>
-    <message>
-        <source>Custom Tables</source>
-        <translation>Tabele Niestandardowe</translation>
-    </message>
-    <message>
-        <source>Heuristic Tables</source>
-        <translation>Tabela Heurystyczna</translation>
-    </message>
-    <message>
-        <source>Selector Name</source>
-        <translation>Selektor</translation>
+        <source>Table Type</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>String</source>
-        <translation>String</translation>
+        <translation type="unfinished">String</translation>
     </message>
     <message>
         <source>Dissector</source>
-        <translation>Dekoder</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Port</source>
-        <translation>Port</translation>
+        <source>Integer</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Protocol</source>
         <translation>Protokół</translation>
     </message>
     <message>
-        <source>Table Type</source>
-        <translation>Typ Tabeli</translation>
+        <source>Short Name</source>
+        <translation>Krótka Nazwa</translation>
+    </message>
+    <message>
+        <source>Table Name</source>
+        <translation>Nazwa Tabeli</translation>
+    </message>
+    <message>
+        <source>Selector Name</source>
+        <translation>Selektor</translation>
     </message>
 </context>
 <context>
@@ -1687,14 +1954,6 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>Dialog</source>
         <translation>Okno</translation>
-    </message>
-    <message>
-        <source>Protocol</source>
-        <translation>Protokół</translation>
-    </message>
-    <message>
-        <source>Description</source>
-        <translation>Opis</translation>
     </message>
     <message>
         <source>&lt;small&gt;&lt;i&gt;Disabling a protocol prevents higher layer protocols from being displayed&lt;/i&gt;&lt;/small&gt;</source>
@@ -1722,18 +1981,14 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     </message>
 </context>
 <context>
-    <name>EndpointDialog</name>
+    <name>EnabledProtocolsModel</name>
     <message>
-        <source>Map</source>
-        <translation>Mapuj</translation>
+        <source>Protocol</source>
+        <translation>Protokół</translation>
     </message>
     <message>
-        <source>Draw IPv4 or IPv6 endpoints on a map.</source>
-        <translation>Dodaj punkty krańcowe IPv4 lub IPv6.</translation>
-    </message>
-    <message>
-        <source>Map file error</source>
-        <translation>Błąd mapowania pliku</translation>
+        <source>Description</source>
+        <translation>Opis</translation>
     </message>
 </context>
 <context>
@@ -1741,26 +1996,6 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>Dialog</source>
         <translation>Okno</translation>
-    </message>
-    <message>
-        <source>Severity</source>
-        <translation>Istotność</translation>
-    </message>
-    <message>
-        <source>Summary</source>
-        <translation>Podsumowanie</translation>
-    </message>
-    <message>
-        <source>Group</source>
-        <translation>Grupa</translation>
-    </message>
-    <message>
-        <source>Protocol</source>
-        <translation>Protokół</translation>
-    </message>
-    <message>
-        <source>Count</source>
-        <translation>Wystąpienia</translation>
     </message>
     <message>
         <source>&lt;small&gt;&lt;i&gt;A hint.&lt;/i&gt;&lt;/small&gt;</source>
@@ -1832,8 +2067,12 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Informacja ekspercka</translation>
     </message>
     <message>
-        <source>Endpoint expert failed to set filter</source>
-        <translation>Krańcowemu punktowi eksperckiemu nie udało się ustawić filtru.</translation>
+        <source>Collapse All</source>
+        <translation>Zwiń wszystko</translation>
+    </message>
+    <message>
+        <source>Expand All</source>
+        <translation>Rozwiń wszystko</translation>
     </message>
     <message>
         <source>Capture file closed.</source>
@@ -1855,9 +2094,32 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <source>Display filter: &quot;%1&quot;</source>
         <translation>Filtr wyświetlania: &quot;%1&quot;</translation>
     </message>
+</context>
+<context>
+    <name>ExpertInfoProxyModel</name>
     <message>
         <source>Packet</source>
         <translation>Pakiet</translation>
+    </message>
+    <message>
+        <source>Severity</source>
+        <translation>Istotność</translation>
+    </message>
+    <message>
+        <source>Summary</source>
+        <translation>Podsumowanie</translation>
+    </message>
+    <message>
+        <source>Group</source>
+        <translation>Grupa</translation>
+    </message>
+    <message>
+        <source>Protocol</source>
+        <translation>Protokół</translation>
+    </message>
+    <message>
+        <source>Count</source>
+        <translation>Wystąpienia</translation>
     </message>
 </context>
 <context>
@@ -1904,26 +2166,6 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Okno</translation>
     </message>
     <message>
-        <source>Packet</source>
-        <translation>Pakiet</translation>
-    </message>
-    <message>
-        <source>Hostname</source>
-        <translation>Nazwa hosta</translation>
-    </message>
-    <message>
-        <source>Content Type</source>
-        <translation>Typ zawartości</translation>
-    </message>
-    <message>
-        <source>Size</source>
-        <translation>Rozmiar</translation>
-    </message>
-    <message>
-        <source>Filename</source>
-        <translation>Nazwa pliku</translation>
-    </message>
-    <message>
         <source>Searching for objects</source>
         <translation>Szukanie obiektów</translation>
     </message>
@@ -1953,6 +2195,29 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     </message>
 </context>
 <context>
+    <name>ExportObjectModel</name>
+    <message>
+        <source>Packet</source>
+        <translation>Pakiet</translation>
+    </message>
+    <message>
+        <source>Hostname</source>
+        <translation>Nazwa hosta</translation>
+    </message>
+    <message>
+        <source>Content Type</source>
+        <translation>Typ zawartości</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>Rozmiar</translation>
+    </message>
+    <message>
+        <source>Filename</source>
+        <translation>Nazwa pliku</translation>
+    </message>
+</context>
+<context>
     <name>ExportPDUDialog</name>
     <message>
         <source>Dialog</source>
@@ -1961,6 +2226,13 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>Display filter:</source>
         <translation>Filtr:</translation>
+    </message>
+</context>
+<context>
+    <name>ExtArgSelector</name>
+    <message>
+        <source>Reload data</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1979,7 +2251,7 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>Interface Options</source>
         <oldsource>Extcap Interface Options</oldsource>
-        <translation type="unfinished"></translation>
+        <translation>Opcje interfejsów</translation>
     </message>
     <message>
         <source>Start</source>
@@ -1987,15 +2259,30 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     </message>
     <message>
         <source>Extcap Help cannot be found</source>
-        <translation type="unfinished"></translation>
+        <translation>Nie odnaleziono pomocy dla modułu Extcap</translation>
     </message>
     <message>
         <source>The help for the extcap interface %1 cannot be found. Given file: %2</source>
-        <translation type="unfinished"></translation>
+        <translation>Nie znaleziono pomocy dla interfejsu extcap %1. Plik: %2</translation>
     </message>
     <message>
         <source>Save parameter on capture start</source>
         <translation>Zapisz parametry przy starcie przechwytywania</translation>
+    </message>
+</context>
+<context>
+    <name>FieldFilterEdit</name>
+    <message>
+        <source>Display filter entry</source>
+        <translation>Wpis filtru wyświetlania</translation>
+    </message>
+    <message>
+        <source>Enter a field %1</source>
+        <translation>Wpisz pole %1</translation>
+    </message>
+    <message>
+        <source>Invalid filter: </source>
+        <translation>Błędny filtr: </translation>
     </message>
 </context>
 <context>
@@ -2007,6 +2294,30 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>Directory:</source>
         <translation>Katalog:</translation>
+    </message>
+    <message>
+        <source>No files in Set</source>
+        <translation>Brak plików w zbiorze</translation>
+    </message>
+    <message>
+        <source>No capture loaded</source>
+        <translation>Nie załadowano pliku przechwytywania</translation>
+    </message>
+    <message numerus="yes">
+        <source>%Ln File(s) in Set</source>
+        <oldsource>%1 File%2 in Set</oldsource>
+        <translation>
+            <numerusform>%Ln Plik w Zbiorze</numerusform>
+            <numerusform>%Ln Plików w Zbiorze</numerusform>
+            <numerusform>%Ln Plików w Zbiorze</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>FilesetEntryModel</name>
+    <message>
+        <source>Open this capture file</source>
+        <translation>Otwórz plik przechwytywania</translation>
     </message>
     <message>
         <source>Filename</source>
@@ -2023,27 +2334,6 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>Size</source>
         <translation>Rozmiar</translation>
-    </message>
-    <message>
-        <source>No files in Set</source>
-        <translation>Brak plików w zbiorze</translation>
-    </message>
-    <message>
-        <source>No capture loaded</source>
-        <translation>Nie załadowano pliku przechwytywania</translation>
-    </message>
-    <message>
-        <source>Open this capture file</source>
-        <translation>Otwórz plik przechwytywania</translation>
-    </message>
-    <message numerus="yes">
-        <source>%Ln File(s) in Set</source>
-        <oldsource>%1 File%2 in Set</oldsource>
-        <translation>
-            <numerusform>%Ln Plik w Zbiorze</numerusform>
-            <numerusform>%Ln Plików w Zbiorze</numerusform>
-            <numerusform>%Ln Plików w Zbiorze</numerusform>
-        </translation>
     </message>
 </context>
 <context>
@@ -2145,6 +2435,17 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     </message>
 </context>
 <context>
+    <name>FindLineEdit</name>
+    <message>
+        <source>Textual Find</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Regular Expression Find</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>FirewallRulesDialog</name>
     <message>
         <source>Create rules for</source>
@@ -2209,6 +2510,117 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>Unable to save %1</source>
         <translation>Nie można zapisać %1</translation>
+    </message>
+</context>
+<context>
+    <name>FolderListModel</name>
+    <message>
+        <source>&quot;File&quot; dialogs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>capture files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Temp</source>
+        <translation>Temp</translation>
+    </message>
+    <message>
+        <source>untitled capture files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Personal configuration</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>dfilters, preferences, ethers, </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Global configuration</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>dfilters, preferences, manuf, </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>System</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>ethers, ipxnets</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Program</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>program files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Personal Plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>binary plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Global Plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Personal Lua Plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>lua scripts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Global Lua Plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Extcap path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Extcap Plugins search path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>MaxMind DB path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>MaxMind DB database search path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>MIB/PIB path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SMI MIB/PIB search path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">Nazwa</translation>
+    </message>
+    <message>
+        <source>Location</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Typical Files</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2312,13 +2724,12 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Kliknij by wybrać.</translation>
     </message>
     <message>
-        <source>Save Stream Content As</source>
-        <translation>Zapisz zawartość strumiania jako</translation>
+        <source>Regex Find:</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>
-[Stream output truncated]</source>
-        <translation>Obcięto dane strumiania</translation>
+        <source>Save Stream Content As</source>
+        <translation>Zapisz zawartość strumiania jako</translation>
     </message>
     <message>
         <source>No capture file.</source>
@@ -2341,12 +2752,20 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Proszę sprawdzić czy zaznaczono pakiet %1.</translation>
     </message>
     <message>
+        <source>Entire conversation (%1)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Follow %1 Stream (%2)</source>
         <translation>Śledź strumień %1 (%2)</translation>
     </message>
     <message>
         <source>Error creating filter for this stream.</source>
         <translation>Błąd tworzenia filtru dla tego strumienia.</translation>
+    </message>
+    <message>
+        <source>[Stream output truncated]</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>A transport or network layer header is needed.</source>
@@ -3547,6 +3966,17 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <source>Show hidden interfaces</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>External capture interfaces disabled.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>InterfaceSortFilterModel</name>
+    <message>
+        <source>No interfaces to be displayed. %1 interfaces hidden.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>InterfaceToolbar</name>
@@ -3564,10 +3994,92 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     </message>
 </context>
 <context>
+    <name>InterfaceToolbarLineEdit</name>
+    <message>
+        <source>Apply changes</source>
+        <translation type="unfinished">Zastosuj zmiany</translation>
+    </message>
+</context>
+<context>
+    <name>InterfaceTreeModel</name>
+    <message>
+        <source>No Interfaces found.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Friendly Name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Interface Name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Local Pipe Path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Comment</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Link-Layer Header</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Promiscuous</source>
+        <translation type="unfinished">Tryb mieszany</translation>
+    </message>
+    <message>
+        <source>Snaplen (B)</source>
+        <translation type="unfinished">Rozmiar przechwyconej ramki (B)</translation>
+    </message>
+    <message>
+        <source>Buffer (MB)</source>
+        <translation type="unfinished">Bufor (MiB)</translation>
+    </message>
+    <message>
+        <source>Monitor Mode</source>
+        <translation type="unfinished">Tryb monitora</translation>
+    </message>
+    <message>
+        <source>Capture Filter</source>
+        <translation type="unfinished">Filtr przechwytywania</translation>
+    </message>
+    <message>
+        <source>Addresses</source>
+        <translation type="unfinished">Adresy</translation>
+    </message>
+    <message>
+        <source>Address</source>
+        <translation type="unfinished">Adres</translation>
+    </message>
+    <message>
+        <source>Extcap interface: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No addresses</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No capture filter</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Capture filter</source>
+        <translation type="unfinished">Filtr przechwytywania</translation>
+    </message>
+</context>
+<context>
     <name>LBMLBTRMTransportDialog</name>
     <message>
-        <source>LBTRM Transport Statistics</source>
-        <translation>Statystyki tranportu LBTRM</translation>
+        <source>LBT-RM Transport Statistics</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Sources</source>
@@ -3671,10 +4183,12 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     </message>
     <message>
         <source>NCF</source>
+        <extracomment>Nak ConFirmation</extracomment>
         <translation>NCF</translation>
     </message>
     <message>
         <source>SM</source>
+        <extracomment>Session Message</extracomment>
         <translation>SM</translation>
     </message>
     <message>
@@ -3849,8 +4363,8 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
 <context>
     <name>LBMLBTRUTransportDialog</name>
     <message>
-        <source>LBTRU Transport Statistics</source>
-        <translation>Statystyki tranportu LBTRU</translation>
+        <source>LBT-RU Transport Statistics</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Sources</source>
@@ -4414,8 +4928,12 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Komponent 3:</translation>
     </message>
     <message>
-        <source>Show packet separator on Packet List</source>
-        <translation>Pokazuj separator na Liście Pakietów</translation>
+        <source>Packet List settings:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show packet separator</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Status Bar settings:</source>
@@ -4532,6 +5050,14 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>Reset</source>
         <translation>Reset</translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Switch the direction of the connection (view the opposite flow).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Zmień kierunek przepływu w połączeniu.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <source>Switch Direction</source>
+        <translation type="unfinished">Odwróć kierunek</translation>
     </message>
     <message>
         <source>Reset Graph</source>
@@ -4710,6 +5236,14 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Shift+X</translation>
     </message>
     <message>
+        <source>Switch direction (swap between UL and DL)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>D</source>
+        <translation>D</translation>
+    </message>
+    <message>
         <source>Time</source>
         <translation>Czas</translation>
     </message>
@@ -4724,6 +5258,10 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>LTE RLC Graph - no channel selected</source>
         <translation>Wykres LTE RLC - brak wybranego kanału</translation>
+    </message>
+    <message>
+        <source>Save As</source>
+        <translation>Zapisz jako</translation>
     </message>
     <message>
         <source>%1 %2 (%3s seq %4 len %5)</source>
@@ -4748,6 +5286,26 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     <message>
         <source>Click to select a portion of the graph.</source>
         <translation>Kliknij by wybrać obszar wykresu.</translation>
+    </message>
+    <message>
+        <source>Portable Document Format (*.pdf)</source>
+        <translation>Dokument PDF (*.pdf)</translation>
+    </message>
+    <message>
+        <source>Portable Network Graphics (*.png)</source>
+        <translation>Obraz PNG (*.png)</translation>
+    </message>
+    <message>
+        <source>Windows Bitmap (*.bmp)</source>
+        <translation>Bitmapa Windows (*.bmp)</translation>
+    </message>
+    <message>
+        <source>JPEG File Interchange Format (*.jpeg *.jpg)</source>
+        <translation>Obraz JPEG (*.jpeg *.jpg)</translation>
+    </message>
+    <message>
+        <source>Save Graph As</source>
+        <translation>Zapisz wykres jako</translation>
     </message>
 </context>
 <context>
@@ -4832,6 +5390,10 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Otwórz okno Ustawień Pliku Przechwytywania</translation>
     </message>
     <message>
+        <source>Profile: %1</source>
+        <translation>Profil: %1</translation>
+    </message>
+    <message>
         <source>Manage Profiles</source>
         <oldsource>Manage Profiles...</oldsource>
         <translation>Zarządzaj profilami</translation>
@@ -4881,12 +5443,24 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
         <translation>Brak informacji eksperckiej</translation>
     </message>
     <message>
-        <source>Profile: </source>
-        <translation>Profil: </translation>
+        <source>, 1 byte</source>
+        <translation>, 1 bajt</translation>
+    </message>
+    <message>
+        <source>, %1 bytes</source>
+        <translation>, %1 bajtów</translation>
+    </message>
+    <message>
+        <source>Byte %1</source>
+        <translation>Bajt %1</translation>
+    </message>
+    <message>
+        <source>Bytes %1-%2</source>
+        <translation>Bajty %1-%2</translation>
     </message>
     <message>
         <source>Selected Packet: %1 %2 </source>
-        <translation type="unfinished"></translation>
+        <translation>Wybrany pakiet: %1 %2</translation>
     </message>
     <message>
         <source>Packets: %1 %4 Displayed: %2 (%3%)</source>
@@ -4931,7 +5505,7 @@ UWAGA: Przynajmniej jedna opcja MUSI zostać zaznaczona.</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open a file on your file system&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Otwórz plik&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>&lt;h2&gt;Open&lt;/h2&gt;</source>
@@ -5066,24 +5640,28 @@ text-decoration: underline;
     </message>
     <message>
         <source>Show in Finder</source>
-        <translation type="unfinished"></translation>
+        <translation>Otwórz w wyszukiwajce</translation>
     </message>
     <message>
         <source>Show in Folder</source>
-        <translation type="unfinished"></translation>
+        <translation>Pokaż w folderze</translation>
     </message>
     <message>
         <source>All interfaces shown</source>
-        <translation type="unfinished"></translation>
+        <translation>Wszystkie interfejsy</translation>
     </message>
     <message numerus="yes">
         <source>%n interface(s) shown, %1 hidden</source>
         <oldsource>%Ln interface(s) shown</oldsource>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>Pokazano interfejsów: %1, ukryto: %2</numerusform>
+            <numerusform>Pokazano interfejsów: %1, ukryto: %2</numerusform>
+            <numerusform>Pokazano interfejsów: %1, ukryto: %2</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>You are sniffing the glue that holds the Internet together using Wireshark </source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>You are running Wireshark </source>
@@ -5111,7 +5689,7 @@ text-decoration: underline;
     </message>
     <message>
         <source>Remove</source>
-        <translation type="unfinished"></translation>
+        <translation>Usuń</translation>
     </message>
 </context>
 <context>
@@ -5599,11 +6177,11 @@ text-decoration: underline;
     </message>
     <message>
         <source>Next Packet In History</source>
-        <translation type="unfinished"></translation>
+        <translation>Następny pakiet w historii</translation>
     </message>
     <message>
         <source>Go to the next packet in your selection history</source>
-        <translation type="unfinished"></translation>
+        <translation>Idź do następnego pakietu w wybranej historii</translation>
     </message>
     <message>
         <source>Previous Packet In History</source>
@@ -5611,6 +6189,14 @@ text-decoration: underline;
     </message>
     <message>
         <source>Go to the previous packet in your selection history</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Collapse Subtrees</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Collapse the current packet detail</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5800,6 +6386,14 @@ text-decoration: underline;
     <message>
         <source>Add or change a packet comment</source>
         <translation>Dodaj lub zmień komentarz pakietu</translation>
+    </message>
+    <message>
+        <source>Delete All Packet Comments</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove all packet comments in the capture file</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Configuration profiles</source>
@@ -6250,16 +6844,8 @@ text-decoration: underline;
         <translation>Stwórz reguły ACL zapory ogniowej</translation>
     </message>
     <message>
-        <source>…as Escaped String</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a Escaped string</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>&amp;Full Screen</source>
-        <translation type="unfinished"></translation>
+        <translation>Pełny ekran</translation>
     </message>
     <message>
         <source>&amp;Options…</source>
@@ -6380,6 +6966,14 @@ text-decoration: underline;
     <message>
         <source>SSL Stream</source>
         <translation>Strumień SSL</translation>
+    </message>
+    <message>
+        <source>Request Sequences</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>HTTP Request Sequences</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Decode &amp;As…</source>
@@ -6636,46 +7230,6 @@ text-decoration: underline;
     <message>
         <source>Show or hide the packet bytes</source>
         <translation>Pokaż/ukryj bajty pakietu</translation>
-    </message>
-    <message>
-        <source>Bytes as Hex + ASCII Dump</source>
-        <translation>Bajty jako Hex + ASCII Dump</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a hex and ASCII dump.</source>
-        <translation>Kopiuj bajty pakietu jako Hex i ASCII Dump.</translation>
-    </message>
-    <message>
-        <source>…as Hex Dump</source>
-        <translation>…jako Hex Dump</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a hex dump.</source>
-        <translation>Kopiuj bajty pakietu jako Hex Dump.</translation>
-    </message>
-    <message>
-        <source>…as Printable Text</source>
-        <translation>…drukowalny tekst</translation>
-    </message>
-    <message>
-        <source>Copy only the printable text in the packet.</source>
-        <translation>Kopiuj tylko drukowalny tekst z pakietu.</translation>
-    </message>
-    <message>
-        <source>…as a Hex Stream</source>
-        <translation>…jako strumień Hex</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a stream of hex.</source>
-        <translation>Kopiuj bajty pakietu jako strumień Hex.</translation>
-    </message>
-    <message>
-        <source>…as Raw Binary</source>
-        <translation>…jako strumień binarny</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as application/octet-stream MIME data.</source>
-        <translation>Kopiuj bajty pakietu jako typ MIME application/octet-stream.</translation>
     </message>
     <message>
         <source>MAP Summary</source>
@@ -7088,6 +7642,10 @@ text-decoration: underline;
         <translation>Nie można skopiować tekstu. Spróbuj inną pozycję.</translation>
     </message>
     <message>
+        <source>Are you sure you want to remove all packet comments?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Unable to build conversation filter.</source>
         <translation>Nie można stworzyć filtru konwersacji.</translation>
     </message>
@@ -7141,7 +7699,7 @@ text-decoration: underline;
     </message>
     <message>
         <source>Remove</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Usuń</translation>
     </message>
     <message>
         <source>Loading</source>
@@ -7202,22 +7760,6 @@ text-decoration: underline;
     <message>
         <source>Confirm unsaved capture files</source>
         <translation>Potwierdź zamykanie niezapisanych plików przechwytywania</translation>
-    </message>
-    <message>
-        <source>If checked the packet detail items will be automatically scrolled when they are expanded.</source>
-        <translation>Jeśli zaznaczono to szczegółypakietu będą automatycznie przewijane gdy są rozwijane.</translation>
-    </message>
-    <message>
-        <source>Automatically scroll packet details</source>
-        <translation>Automatyczne przewijanie szczegółów pakietu</translation>
-    </message>
-    <message>
-        <source>Percentage distance from the top to scroll packet details.</source>
-        <translation>Procentowa odległość przesuwania od góry do szczegółów pakietu.</translation>
-    </message>
-    <message>
-        <source>Packet detail scroll percentage:</source>
-        <translation>Procent przewijania szczegółów pakietu:</translation>
     </message>
     <message>
         <source>Main toolbar style:</source>
@@ -7537,8 +8079,8 @@ text-decoration: underline;
 <context>
     <name>PacketCommentDialog</name>
     <message>
-        <source>Packet Comment</source>
-        <translation>Komentarz pakietu</translation>
+        <source>Packet %1 Comment</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -7558,6 +8100,14 @@ text-decoration: underline;
     <message>
         <source>[%1 closed] </source>
         <translation>[%1 zamknięty]</translation>
+    </message>
+    <message>
+        <source>Byte %1</source>
+        <translation type="unfinished">Bajt %1</translation>
+    </message>
+    <message>
+        <source>Bytes %1-%2</source>
+        <translation type="unfinished">Bajty %1-%2</translation>
     </message>
 </context>
 <context>
@@ -7670,6 +8220,17 @@ text-decoration: underline;
     </message>
 </context>
 <context>
+    <name>PacketListModel</name>
+    <message>
+        <source>Dissecting</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sorting &quot;%1&quot;</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>PacketRangeGroupBox</name>
     <message>
         <source>Form</source>
@@ -7717,6 +8278,40 @@ text-decoration: underline;
     </message>
 </context>
 <context>
+    <name>PathChooserDelegate</name>
+    <message>
+        <source>Browse</source>
+        <translation type="unfinished">Przeglądaj</translation>
+    </message>
+    <message>
+        <source>Open Pipe</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>PluginListModel</name>
+    <message>
+        <source>extcap</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">Nazwa</translation>
+    </message>
+    <message>
+        <source>Version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Path</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>PreferenceEditorFrame</name>
     <message>
         <source>Frame</source>
@@ -7742,24 +8337,40 @@ text-decoration: underline;
 <context>
     <name>PreferencesDialog</name>
     <message>
+        <source>Search:</source>
+        <translation>Szukaj:</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation>Preferencje</translation>
+    </message>
+</context>
+<context>
+    <name>PrefsModel</name>
+    <message>
+        <source>Advanced</source>
+        <extracomment>Names of special preferences handled by the GUI</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Appearance</source>
-        <translation>Prezentacja</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Layout</source>
-        <translation>Wygląd</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Columns</source>
-        <translation>Kolumny</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Font and Colors</source>
-        <translation>Czcionki i kolory</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Capture</source>
-        <translation>Przechwytywanie</translation>
+        <translation type="unfinished">Przechwytuj</translation>
     </message>
     <message>
         <source>Expert</source>
@@ -7767,36 +8378,7 @@ text-decoration: underline;
     </message>
     <message>
         <source>Filter Buttons</source>
-        <oldsource>Filter Expressions</oldsource>
         <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Advanced</source>
-        <translation>Zaawansowane</translation>
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation>Szukaj:</translation>
-    </message>
-    <message>
-        <source>Name</source>
-        <translation>Nazwa</translation>
-    </message>
-    <message>
-        <source>Status</source>
-        <translation>Status</translation>
-    </message>
-    <message>
-        <source>Type</source>
-        <translation>Typ</translation>
-    </message>
-    <message>
-        <source>Value</source>
-        <translation>Wartość</translation>
-    </message>
-    <message>
-        <source>Preferences</source>
-        <translation>Preferencje</translation>
     </message>
 </context>
 <context>
@@ -7931,14 +8513,6 @@ text-decoration: underline;
         <source>Colorize with Filter</source>
         <translation>Koloruj z filtrem</translation>
     </message>
-    <message>
-        <source>, 1 byte</source>
-        <translation>, 1 bajt</translation>
-    </message>
-    <message>
-        <source>, %1 bytes</source>
-        <translation>, %1 bajtów</translation>
-    </message>
 </context>
 <context>
     <name>ProtocolHierarchyDialog</name>
@@ -8052,22 +8626,6 @@ text-decoration: underline;
 </context>
 <context>
     <name>QObject</name>
-    <message>
-        <source>Default</source>
-        <translation>Domyślne</translation>
-    </message>
-    <message>
-        <source>Changed</source>
-        <translation>Zmienione</translation>
-    </message>
-    <message>
-        <source>Has this preference been changed?</source>
-        <translation>Czy to ustawienie zostało zmienione?</translation>
-    </message>
-    <message>
-        <source>Default value is empty</source>
-        <translation>Domyślna wartość jest pusta</translation>
-    </message>
     <message>
         <source>Average Throughput (bits/s)</source>
         <translation type="unfinished"></translation>
@@ -8419,6 +8977,38 @@ text-decoration: underline;
     <message>
         <source>The filter expression %1 isn&apos;t a valid display filter. (%2).</source>
         <translation>Filtr %1 nie jest poprawnym filtrem wyświetlania. (%2).</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No remote interfaces found.</source>
+        <translation type="unfinished">Nie znaleziono zdalnych interfejsów.</translation>
+    </message>
+    <message>
+        <source>PCAP not found</source>
+        <translation type="unfinished">PCAP nie znaleziony</translation>
+    </message>
+    <message>
+        <source>Unknown error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Changed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Has this preference been changed?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Default value is empty</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -10309,6 +10899,21 @@ text-decoration: underline;
     </message>
 </context>
 <context>
+    <name>ScsiServiceResponseTimeDialog</name>
+    <message>
+        <source>&lt;small&gt;&lt;i&gt;Select a command and enter a filter if desired, then press Apply.&lt;/i&gt;&lt;/small&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Command:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SCSI Service Response Times</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>SearchFrame</name>
     <message>
         <source>Frame</source>
@@ -10750,6 +11355,21 @@ text-decoration: underline;
     </message>
 </context>
 <context>
+    <name>ShortcutListModel</name>
+    <message>
+        <source>Shortcut</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">Nazwa</translation>
+    </message>
+    <message>
+        <source>Description</source>
+        <translation type="unfinished">Opis</translation>
+    </message>
+</context>
+<context>
     <name>ShowPacketBytesDialog</name>
     <message>
         <source>Show Packet Bytes</source>
@@ -10876,6 +11496,10 @@ text-decoration: underline;
         </translation>
     </message>
     <message>
+        <source>Regex Find:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Save Selected Packet Bytes As</source>
         <translation>Zapisz zaznaczone bajty pakietu jako</translation>
     </message>
@@ -10894,10 +11518,6 @@ text-decoration: underline;
 <context>
     <name>SplashOverlay</name>
     <message>
-        <source>Form</source>
-        <translation>Formularz</translation>
-    </message>
-    <message>
         <source>Initializing dissectors</source>
         <translation>Inicjacja dekoderów</translation>
     </message>
@@ -10906,7 +11526,7 @@ text-decoration: underline;
         <translation>Inicjacja kanałów komunikacyjnych</translation>
     </message>
     <message>
-        <source>Initializing extcap</source>
+        <source>Initializing external capture plugins</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -10965,22 +11585,6 @@ text-decoration: underline;
         <translation>Okno</translation>
     </message>
     <message>
-        <source>Name</source>
-        <translation>Nazwa</translation>
-    </message>
-    <message>
-        <source>Filter</source>
-        <translation>Filtr</translation>
-    </message>
-    <message>
-        <source>Type</source>
-        <translation>Typ</translation>
-    </message>
-    <message>
-        <source>Description</source>
-        <translation>Opis</translation>
-    </message>
-    <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Search the list of field names.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Przeszukaj listę nazw pól.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
@@ -10999,6 +11603,32 @@ text-decoration: underline;
     <message>
         <source>%1 protocols, %2 fields.</source>
         <translation>%1 protokołów, %2 pól.</translation>
+    </message>
+</context>
+<context>
+    <name>SupportedProtocolsModel</name>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">Nazwa</translation>
+    </message>
+    <message>
+        <source>Filter</source>
+        <translation type="unfinished">Filtr</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Description</source>
+        <translation type="unfinished">Opis</translation>
+    </message>
+</context>
+<context>
+    <name>SyntaxLineEdit</name>
+    <message>
+        <source>&quot;%1&quot; may have unexpected results (see the User&apos;s Guide)</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -11775,8 +12405,16 @@ text-decoration: underline;
         <translation>Kopiuj wpis.</translation>
     </message>
     <message>
+        <source>Move entry up.</source>
+        <translation>Przesuń wpis w górę.</translation>
+    </message>
+    <message>
+        <source>Move entry down.</source>
+        <translation>Przesuń wpis w dół.</translation>
+    </message>
+    <message>
         <source>Clear all entries.</source>
-        <translation type="unfinished"></translation>
+        <translation>Usuń wszystkie wpisy.</translation>
     </message>
     <message>
         <source>Unknown User Accessible Table</source>
@@ -11791,31 +12429,39 @@ text-decoration: underline;
     <name>UatFrame</name>
     <message>
         <source>Frame</source>
-        <translation type="unfinished">Ramka</translation>
+        <translation>Ramka</translation>
     </message>
     <message>
         <source>Create a new entry.</source>
-        <translation type="unfinished">Stwórz nowy wpis.</translation>
+        <translation>Stwórz nowy wpis.</translation>
     </message>
     <message>
         <source>Remove this entry.</source>
-        <translation type="unfinished">Usuń wpis.</translation>
+        <translation>Usuń wpis.</translation>
     </message>
     <message>
         <source>Copy this entry.</source>
-        <translation type="unfinished">Kopiuj wpis.</translation>
+        <translation>Kopiuj wpis.</translation>
+    </message>
+    <message>
+        <source>Move entry up.</source>
+        <translation>Przesuń wpis w górę.</translation>
+    </message>
+    <message>
+        <source>Move entry down.</source>
+        <translation>Przesuń wpis w dół.</translation>
     </message>
     <message>
         <source>Clear all entries.</source>
-        <translation type="unfinished"></translation>
+        <translation>Usuń wszystkie wpisy.</translation>
     </message>
     <message>
         <source>Unknown User Accessible Table</source>
-        <translation type="unfinished">Nieznana Tabela Użytkownika</translation>
+        <translation>Nieznana Tabela</translation>
     </message>
     <message>
         <source>Open </source>
-        <translation type="unfinished">Otwórz</translation>
+        <translation>Otwórz</translation>
     </message>
 </context>
 <context>
@@ -11826,7 +12472,7 @@ text-decoration: underline;
     </message>
     <message>
         <source>Time of Day</source>
-        <translation type="unfinished">Czas dnia</translation>
+        <translation>Czas dnia</translation>
     </message>
     <message>
         <source>Select &amp;All</source>
@@ -11883,6 +12529,61 @@ text-decoration: underline;
     <message>
         <source>No Audio</source>
         <translation>Brak Audio</translation>
+    </message>
+</context>
+<context>
+    <name>VoipCallsInfoModel</name>
+    <message>
+        <source>On</source>
+        <translation>Włączone</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Wyłączone</translation>
+    </message>
+    <message>
+        <source>Tunneling: %1  Fast Start: %2</source>
+        <translation>Tunelowanie: %1 Szybki start: %2</translation>
+    </message>
+    <message>
+        <source>Start Time</source>
+        <translation>Czas startu</translation>
+    </message>
+    <message>
+        <source>Stop Time</source>
+        <translation>Czas stopu</translation>
+    </message>
+    <message>
+        <source>Initial Speaker</source>
+        <translation>Domyślny Głośnik</translation>
+    </message>
+    <message>
+        <source>From</source>
+        <translation>Od</translation>
+    </message>
+    <message>
+        <source>To</source>
+        <translation>Do</translation>
+    </message>
+    <message>
+        <source>Protocol</source>
+        <translation>Protokół</translation>
+    </message>
+    <message>
+        <source>Duration</source>
+        <translation>Czas trwania</translation>
+    </message>
+    <message>
+        <source>Packets</source>
+        <translation>Pakiety</translation>
+    </message>
+    <message>
+        <source>State</source>
+        <translation>Stan</translation>
+    </message>
+    <message>
+        <source>Comments</source>
+        <translation>Komentarze</translation>
     </message>
 </context>
 <context>
@@ -11960,19 +12661,19 @@ text-decoration: underline;
     <name>WiresharkApplication</name>
     <message>
         <source>Dell Backup and Recovery Found</source>
-        <translation type="unfinished"></translation>
+        <translation>Znaleziono &quot;Dell Backup and Recovery&quot;</translation>
     </message>
     <message>
         <source>You appear to be running Dell Backup and Recovery 1.8.</source>
-        <translation type="unfinished"></translation>
+        <translation>Wygląda na to że używasz Dell Backup and Recovery 1.8.</translation>
     </message>
     <message>
         <source>DBAR can make many applications crash &lt;a href=&quot;https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=12036&quot;&gt;including Wireshark&lt;/a&gt;.</source>
-        <translation type="unfinished"></translation>
+        <translation>DBAR może powodować błędy programów &lt;a href=&quot;https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=12036&quot;&gt;włącznie z Wiresharkiem&lt;/a&gt;.</translation>
     </message>
     <message>
         <source>Offending DLL: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Odpowiedzialna biblioteka DLL: %1</translation>
     </message>
 </context>
 <context>
@@ -12002,7 +12703,7 @@ text-decoration: underline;
     </message>
     <message>
         <source>Percent Retry</source>
-        <translation type="unfinished"></translation>
+        <translation>Próby [%]</translation>
     </message>
     <message>
         <source>Probe Reqs</source>
@@ -12018,7 +12719,7 @@ text-decoration: underline;
     </message>
     <message>
         <source>Retry</source>
-        <translation type="unfinished"></translation>
+        <translation>Próby</translation>
     </message>
     <message>
         <source>Deauths</source>

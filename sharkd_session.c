@@ -6,19 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include <config.h>
@@ -72,16 +60,22 @@
 # include <codecs/speex/speex_resampler.h>
 #endif /* HAVE_SPEEXDSP */
 
-#ifdef HAVE_GEOIP
-# include <GeoIP.h>
-# include <epan/geoip_db.h>
-# include <wsutil/pint.h>
-#endif
+#include <epan/maxmind_db.h>
 
 #include <wsutil/glib-compat.h>
+#include <wsutil/pint.h>
 #include <wsutil/strtoi.h>
 
+#include "globals.h"
+
 #include "sharkd.h"
+
+struct sharkd_filter_item
+{
+	guint8 *filtered;
+};
+
+static GHashTable *filter_table = NULL;
 
 static gboolean
 json_unescape_str(char *input)
@@ -174,27 +168,22 @@ json_print_base64(const guint8 *data, size_t len)
 	putchar('"');
 }
 
-struct filter_item
+static void
+sharkd_session_filter_free(gpointer data)
 {
-	struct filter_item *next;
+	struct sharkd_filter_item *l = (struct sharkd_filter_item *) data;
 
-	char *filter;
-	guint8 *filtered;
-};
-
-static struct filter_item *filter_list = NULL;
+	g_free(l->filtered);
+	g_free(l);
+}
 
 static const guint8 *
 sharkd_session_filter_data(const char *filter)
 {
-	struct filter_item *l;
+	struct sharkd_filter_item *l;
 
-	for (l = filter_list; l; l = l->next)
-	{
-		if (!strcmp(l->filter, filter))
-			return l->filtered;
-	}
-
+	l = (struct sharkd_filter_item *) g_hash_table_lookup(filter_table, filter);
+	if (!l)
 	{
 		guint8 *filtered = NULL;
 
@@ -203,15 +192,13 @@ sharkd_session_filter_data(const char *filter)
 		if (ret == -1)
 			return NULL;
 
-		l = (struct filter_item *) g_malloc(sizeof(struct filter_item));
-		l->filter = g_strdup(filter);
+		l = (struct sharkd_filter_item *) g_malloc(sizeof(struct sharkd_filter_item));
 		l->filtered = filtered;
 
-		l->next = filter_list;
-		filter_list = l;
-
-		return filtered;
+		g_hash_table_insert(filter_table, g_strdup(filter), l);
 	}
+
+	return l->filtered;
 }
 
 struct sharkd_rtp_match
@@ -277,11 +264,11 @@ sharkd_rtp_match_check(const struct sharkd_rtp_match *req, const packet_info *pi
 static gboolean
 sharkd_session_process_info_nstat_cb(const void *key, void *value, void *userdata)
 {
-	stat_tap_table_ui *new_stat_tap = (stat_tap_table_ui *) value;
+	stat_tap_table_ui *stat_tap = (stat_tap_table_ui *) value;
 	int *pi = (int *) userdata;
 
 	printf("%s{", (*pi) ? "," : "");
-		printf("\"name\":\"%s\"", new_stat_tap->title);
+		printf("\"name\":\"%s\"", stat_tap->title);
 		printf(",\"tap\":\"nstat:%s\"", (const char *) key);
 	printf("}");
 
@@ -295,7 +282,7 @@ sharkd_session_process_info_conv_cb(const void* key, void* value, void* userdata
 	struct register_ct *table = (struct register_ct *) value;
 	int *pi = (int *) userdata;
 
-	const char *label = (const char*)key;
+	const char *label = (const char *) key;
 
 	if (get_conversation_packet_func(table))
 	{
@@ -322,7 +309,7 @@ sharkd_session_process_info_conv_cb(const void* key, void* value, void* userdata
 static gboolean
 sharkd_session_seq_analysis_cb(const void *key, void *value, void *userdata)
 {
-	register_analysis_t *analysis = (register_analysis_t*) value;
+	register_analysis_t *analysis = (register_analysis_t *) value;
 	int *pi = (int *) userdata;
 
 	printf("%s{", (*pi) ? "," : "");
@@ -337,7 +324,7 @@ sharkd_session_seq_analysis_cb(const void *key, void *value, void *userdata)
 static gboolean
 sharkd_export_object_visit_cb(const void *key _U_, void *value, void *user_data)
 {
-	register_eo_t *eo = (register_eo_t*)value;
+	register_eo_t *eo = (register_eo_t *) value;
 	int *pi = (int *) user_data;
 
 	const int proto_id = get_eo_proto_id(eo);
@@ -394,7 +381,7 @@ sharkd_rtd_visit_cb(const void *key _U_, void *value, void *user_data)
 static gboolean
 sharkd_follower_visit_cb(const void *key _U_, void *value, void *user_data)
 {
-	register_follow_t *follower = (register_follow_t*) value;
+	register_follow_t *follower = (register_follow_t *) value;
 	int *pi = (int *) user_data;
 
 	const int proto_id = get_follow_proto_id(follower);
@@ -507,7 +494,7 @@ sharkd_session_process_info(void)
 
 	printf(",\"nstat\":[");
 	i = 0;
-	new_stat_tap_iterate_tables(sharkd_session_process_info_nstat_cb, &i);
+	stat_tap_iterate_tables(sharkd_session_process_info_nstat_cb, &i);
 	printf("]");
 
 	printf(",\"convs\":[");
@@ -619,9 +606,9 @@ sharkd_session_process_status(void)
 		g_free(name);
 	}
 
-	if (cfile.wth)
+	if (cfile.provider.wth)
 	{
-		gint64 file_size = wtap_file_size(cfile.wth, NULL);
+		gint64 file_size = wtap_file_size(cfile.provider.wth, NULL);
 
 		if (file_size > 0)
 			printf(",\"filesize\":%" G_GINT64_FORMAT, file_size);
@@ -700,7 +687,7 @@ sharkd_session_process_analyse(void)
 
 	printf(",\"protocols\":[");
 	for (framenum = 1; framenum <= cfile.count; framenum++)
-		sharkd_dissect_request(framenum, &sharkd_session_process_analyse_cb, 0, 0, 0, &analyser);
+		sharkd_dissect_request(framenum, (framenum != 1) ? 1 : 0, framenum - 1, &sharkd_session_process_analyse_cb, 0, 0, 0, &analyser);
 	printf("]");
 
 	if (analyser.first_time)
@@ -734,13 +721,15 @@ sharkd_session_create_columns(column_info *cinfo, const char *buf, const jsmntok
 		if (tok_column == NULL)
 			break;
 
+		columns_custom[i] = NULL;
+		columns_occur[i] = 0;
+
 		if ((custom_sepa = strchr(tok_column, ':')))
 		{
 			*custom_sepa = '\0'; /* XXX, C abuse: discarding-const */
 
 			columns_fmt[i] = COL_CUSTOM;
 			columns_custom[i] = tok_column;
-			columns_occur[i] = 0;
 
 			if (!ws_strtoi16(custom_sepa + 1, NULL, &columns_occur[i]))
 				return NULL;
@@ -795,6 +784,7 @@ sharkd_session_create_columns(column_info *cinfo, const char *buf, const jsmntok
  *   (o) filter - filter to be used
  *   (o) skip=N   - skip N frames
  *   (o) limit=N  - show only N frames
+ *   (o) refs  - list (comma separated) with sorted time reference frame numbers.
  *
  * Output array of frames with attributes:
  *   (m) c   - array of column data
@@ -812,13 +802,15 @@ sharkd_session_process_frames(const char *buf, const jsmntok_t *tokens, int coun
 	const char *tok_column = json_find_attr(buf, tokens, count, "column0");
 	const char *tok_skip   = json_find_attr(buf, tokens, count, "skip");
 	const char *tok_limit  = json_find_attr(buf, tokens, count, "limit");
+	const char *tok_refs   = json_find_attr(buf, tokens, count, "refs");
 
 	const guint8 *filter_data = NULL;
 
 	const char *frame_sepa = "";
 	int col;
 
-	guint32 framenum;
+	guint32 framenum, prev_dis_num = 0;
+	guint32 current_ref_frame = 0, next_ref_frame = G_MAXUINT32;
 	guint32 skip;
 	guint32 limit;
 
@@ -854,10 +846,17 @@ sharkd_session_process_frames(const char *buf, const jsmntok_t *tokens, int coun
 			return;
 	}
 
+	if (tok_refs)
+	{
+		if (!ws_strtou32(tok_refs, &tok_refs, &next_ref_frame))
+			return;
+	}
+
 	printf("[");
 	for (framenum = 1; framenum <= cfile.count; framenum++)
 	{
-		frame_data *fdata = frame_data_sequence_find(cfile.frames, framenum);
+		frame_data *fdata;
+		guint32 ref_frame = (framenum != 1) ? 1 : 0;
 
 		if (filter_data && !(filter_data[framenum / 8] & (1 << (framenum % 8))))
 			continue;
@@ -865,10 +864,37 @@ sharkd_session_process_frames(const char *buf, const jsmntok_t *tokens, int coun
 		if (skip)
 		{
 			skip--;
+			prev_dis_num = framenum;
 			continue;
 		}
 
-		sharkd_dissect_columns(framenum, cinfo, (fdata->color_filter == NULL));
+		if (tok_refs)
+		{
+			if (framenum >= next_ref_frame)
+			{
+				current_ref_frame = next_ref_frame;
+
+				if (*tok_refs != ',')
+					next_ref_frame = G_MAXUINT32;
+
+				while (*tok_refs == ',' && framenum >= next_ref_frame)
+				{
+					current_ref_frame = next_ref_frame;
+
+					if (!ws_strtou32(tok_refs + 1, &tok_refs, &next_ref_frame))
+					{
+						fprintf(stderr, "sharkd_session_process_frames() wrong format for refs: %s\n", tok_refs);
+						break;
+					}
+				}
+			}
+
+			if (current_ref_frame)
+				ref_frame = current_ref_frame;
+		}
+
+		fdata = sharkd_get_frame(framenum);
+		sharkd_dissect_columns(fdata, ref_frame, prev_dis_num, cinfo, (fdata->color_filter == NULL));
 
 		printf("%s{\"c\":[", frame_sepa);
 		for (col = 0; col < cinfo->num_cols; ++col)
@@ -882,8 +908,11 @@ sharkd_session_process_frames(const char *buf, const jsmntok_t *tokens, int coun
 		}
 		printf("],\"num\":%u", framenum);
 
-		if (fdata->flags.has_phdr_comment)
-			printf(",\"ct\":true");
+		if (fdata->flags.has_user_comment || fdata->flags.has_phdr_comment)
+		{
+			if (!fdata->flags.has_user_comment || sharkd_get_user_comment(fdata) != NULL)
+				printf(",\"ct\":true");
+		}
 
 		if (fdata->flags.ignored)
 			printf(",\"i\":true");
@@ -899,6 +928,7 @@ sharkd_session_process_frames(const char *buf, const jsmntok_t *tokens, int coun
 
 		printf("}");
 		frame_sepa = ",";
+		prev_dis_num = framenum;
 
 		if (limit && --limit == 0)
 			break;
@@ -1067,13 +1097,21 @@ static gboolean
 sharkd_session_packet_tap_expert_cb(void *tapdata, packet_info *pinfo _U_, epan_dissect_t *edt _U_, const void *pointer)
 {
 	struct sharkd_expert_tap *etd = (struct sharkd_expert_tap *) tapdata;
-	expert_info_t *ei             = (expert_info_t *) pointer;
+	const expert_info_t *ei       = (const expert_info_t *) pointer;
+	expert_info_t *ei_copy;
 
-	ei = (expert_info_t *) g_memdup(ei, sizeof(*ei));
-	ei->protocol = g_string_chunk_insert_const(etd->text, ei->protocol);
-	ei->summary  = g_string_chunk_insert_const(etd->text, ei->summary);
+	if (ei == NULL)
+		return FALSE;
 
-	etd->details = g_slist_prepend(etd->details, ei);
+	ei_copy = g_new(expert_info_t, 1);
+	/* Note: this is a shallow copy */
+	*ei_copy = *ei;
+
+	/* ei->protocol, ei->summary might be allocated in packet scope, make a copy. */
+	ei_copy->protocol = g_string_chunk_insert_const(etd->text, ei_copy->protocol);
+	ei_copy->summary  = g_string_chunk_insert_const(etd->text, ei_copy->summary);
+
+	etd->details = g_slist_prepend(etd->details, ei_copy);
 
 	return TRUE;
 }
@@ -1177,126 +1215,73 @@ struct sharkd_conv_tap_data
 	gboolean resolve_port;
 };
 
-static int
+static gboolean
 sharkd_session_geoip_addr(address *addr, const char *suffix)
 {
-	int with_geoip = 0;
+	const mmdb_lookup_t *lookup = NULL;
+	gboolean with_geoip = FALSE;
 
-	(void) addr;
-	(void) suffix;
-
-#ifdef HAVE_GEOIP
 	if (addr->type == AT_IPv4)
 	{
 		guint32 ip = pntoh32(addr->data);
 
-		guint num_dbs = geoip_db_num_dbs();
-		guint dbnum;
-
-		for (dbnum = 0; dbnum < num_dbs; dbnum++)
-		{
-			const char *geoip_key = NULL;
-			char *geoip_val;
-
-			int db_type = geoip_db_type(dbnum);
-
-			switch (db_type)
-			{
-				case GEOIP_COUNTRY_EDITION:
-					geoip_key = "geoip_country";
-					break;
-
-				case GEOIP_CITY_EDITION_REV0:
-				case GEOIP_CITY_EDITION_REV1:
-					geoip_key = "geoip_city";
-					break;
-
-				case GEOIP_ORG_EDITION:
-					geoip_key = "geoip_org";
-					break;
-
-				case GEOIP_ISP_EDITION:
-					geoip_key = "geoip_isp";
-					break;
-
-				case GEOIP_ASNUM_EDITION:
-					geoip_key = "geoip_as";
-					break;
-
-				case WS_LAT_FAKE_EDITION:
-					geoip_key = "geoip_lat";
-					break;
-
-				case WS_LON_FAKE_EDITION:
-					geoip_key = "geoip_lon";
-					break;
-			}
-
-			if (geoip_key && (geoip_val = geoip_db_lookup_ipv4(dbnum, ip, NULL)))
-			{
-				printf(",\"%s%s\":", geoip_key, suffix);
-				json_puts_string(geoip_val);
-				with_geoip = 1;
-			}
-		}
+		lookup = maxmind_db_lookup_ipv4(ip);
 	}
-#ifdef HAVE_GEOIP_V6
-	if (addr->type == AT_IPv6)
+	else if (addr->type == AT_IPv6)
 	{
 		const ws_in6_addr *ip6 = (const ws_in6_addr *) addr->data;
 
-		guint num_dbs = geoip_db_num_dbs();
-		guint dbnum;
-
-		for (dbnum = 0; dbnum < num_dbs; dbnum++)
-		{
-			const char *geoip_key = NULL;
-			char *geoip_val;
-
-			int db_type = geoip_db_type(dbnum);
-
-			switch (db_type)
-			{
-				case GEOIP_COUNTRY_EDITION_V6:
-					geoip_key = "geoip_country";
-					break;
-#if NUM_DB_TYPES > 31
-				case GEOIP_CITY_EDITION_REV0_V6:
-				case GEOIP_CITY_EDITION_REV1_V6:
-					geoip_key = "geoip_city";
-					break;
-
-				case GEOIP_ORG_EDITION_V6:
-					geoip_key = "geoip_org";
-					break;
-
-				case GEOIP_ISP_EDITION_V6:
-					geoip_key = "geoip_isp";
-					break;
-
-				case GEOIP_ASNUM_EDITION_V6:
-					geoip_key = "geoip_as";
-					break;
-#endif /* DB_NUM_TYPES */
-				case WS_LAT_FAKE_EDITION:
-					geoip_key = "geoip_lat";
-					break;
-
-				case WS_LON_FAKE_EDITION:
-					geoip_key = "geoip_lon";
-					break;
-			}
-
-			if (geoip_key && (geoip_val = geoip_db_lookup_ipv6(dbnum, *ip6, NULL)))
-			{
-				printf(",\"%s%s\":", geoip_key, suffix);
-				json_puts_string(geoip_val);
-				with_geoip = 1;
-			}
-		}
+		lookup = maxmind_db_lookup_ipv6(ip6);
 	}
-#endif /* HAVE_GEOIP_V6 */
-#endif /* HAVE_GEOIP */
+
+	if (!lookup || !lookup->found)
+		return FALSE;
+
+	if (lookup->country)
+	{
+		printf(",\"geoip_country%s\":", suffix);
+		json_puts_string(lookup->country);
+		with_geoip = TRUE;
+	}
+
+	if (lookup->country_iso)
+	{
+		printf(",\"geoip_country_iso%s\":", suffix);
+		json_puts_string(lookup->country_iso);
+		with_geoip = TRUE;
+	}
+
+	if (lookup->city)
+	{
+		printf(",\"geoip_city%s\":", suffix);
+		json_puts_string(lookup->city);
+		with_geoip = TRUE;
+	}
+
+	if (lookup->as_org)
+	{
+		printf(",\"geoip_as_org%s\":", suffix);
+		json_puts_string(lookup->as_org);
+		with_geoip = TRUE;
+	}
+
+	if (lookup->as_number > 0)
+	{
+		printf(",\"geoip_as%s\":%u", suffix, lookup->as_number);
+		with_geoip = TRUE;
+	}
+
+	if (lookup->latitude >= -90.0 && lookup->latitude <= 90.0)
+	{
+		printf(",\"geoip_lat%s\":%f", suffix, lookup->latitude);
+		with_geoip = TRUE;
+	}
+
+	if (lookup->longitude >= -180.0 && lookup->longitude <= 180.0)
+	{
+		printf(",\"geoip_lon%s\":%f", suffix, lookup->longitude);
+		with_geoip = TRUE;
+	}
 
 	return with_geoip;
 }
@@ -1559,8 +1544,8 @@ sharkd_session_process_tap_conv_cb(void *arg)
 
 			if (proto_with_port)
 			{
-				printf(",\"sport\":\"%s\"", (src_port = get_conversation_port(NULL, iui->src_port, iui->ptype, iu->resolve_port)));
-				printf(",\"dport\":\"%s\"", (dst_port = get_conversation_port(NULL, iui->dst_port, iui->ptype, iu->resolve_port)));
+				printf(",\"sport\":\"%s\"", (src_port = get_conversation_port(NULL, iui->src_port, iui->etype, iu->resolve_port)));
+				printf(",\"dport\":\"%s\"", (dst_port = get_conversation_port(NULL, iui->dst_port, iui->etype, iu->resolve_port)));
 
 				wmem_free(NULL, src_port);
 				wmem_free(NULL, dst_port);
@@ -1607,7 +1592,7 @@ sharkd_session_process_tap_conv_cb(void *arg)
 
 			if (proto_with_port)
 			{
-				printf(",\"port\":\"%s\"", (port_str = get_conversation_port(NULL, host->port, host->ptype, iu->resolve_port)));
+				printf(",\"port\":\"%s\"", (port_str = get_conversation_port(NULL, host->port, host->etype, iu->resolve_port)));
 
 				wmem_free(NULL, port_str);
 			}
@@ -1670,7 +1655,7 @@ sharkd_session_free_tap_conv_cb(void *arg)
 static void
 sharkd_session_process_tap_nstat_cb(void *arg)
 {
-	new_stat_data_t *stat_data = (new_stat_data_t *) arg;
+	stat_data_t *stat_data = (stat_data_t *) arg;
 	guint i, j, k;
 
 	printf("{\"tap\":\"nstat:%s\",\"type\":\"nstat\"", stat_data->stat_tap_data->cli_string);
@@ -1711,14 +1696,14 @@ sharkd_session_process_tap_nstat_cb(void *arg)
 		{
 			stat_tap_table_item_type *field_data;
 
-			field_data = new_stat_tap_get_field_data(table, j, 0);
+			field_data = stat_tap_get_field_data(table, j, 0);
 			if (field_data == NULL || field_data->type == TABLE_ITEM_NONE) /* Nothing for us here */
 				continue;
 
 			printf("%s[", sepa);
 			for (k = 0; k < table->num_fields; k++)
 			{
-				field_data = new_stat_tap_get_field_data(table, j, k);
+				field_data = stat_tap_get_field_data(table, j, k);
 
 				if (k)
 					printf(",");
@@ -1730,7 +1715,7 @@ sharkd_session_process_tap_nstat_cb(void *arg)
 						break;
 
 					case TABLE_ITEM_INT:
-						printf("%d", field_data->value.uint_value);
+						printf("%d", field_data->value.int_value);
 						break;
 
 					case TABLE_ITEM_STRING:
@@ -1764,7 +1749,7 @@ sharkd_session_process_tap_nstat_cb(void *arg)
 static void
 sharkd_session_free_tap_nstat_cb(void *arg)
 {
-	new_stat_data_t *stat_data = (new_stat_data_t *) arg;
+	stat_data_t *stat_data = (stat_data_t *) arg;
 
 	free_stat_tables(stat_data->stat_tap_data, NULL, NULL);
 }
@@ -2012,7 +1997,7 @@ static void
 sharkd_session_process_tap_eo_cb(void *tapdata)
 {
 	export_object_list_t *tap_object = (export_object_list_t *) tapdata;
-	struct sharkd_export_object_list *object_list = (struct sharkd_export_object_list*) tap_object->gui_data;
+	struct sharkd_export_object_list *object_list = (struct sharkd_export_object_list *) tap_object->gui_data;
 	GSList *slist;
 	int i = 0;
 
@@ -2194,7 +2179,7 @@ sharkd_session_process_tap(char *buf, const jsmntok_t *tokens, int count)
 	int i;
 
 	rtpstream_tapinfo_t rtp_tapinfo =
-		{NULL, NULL, NULL, NULL, 0, NULL, 0, TAP_ANALYSE, NULL, NULL, NULL, FALSE};
+		{ NULL, NULL, NULL, NULL, 0, NULL, 0, TAP_ANALYSE, NULL, NULL, NULL, FALSE };
 
 	for (i = 0; i < 16; i++)
 	{
@@ -2323,8 +2308,8 @@ sharkd_session_process_tap(char *buf, const jsmntok_t *tokens, int count)
 		}
 		else if (!strncmp(tok_tap, "nstat:", 6))
 		{
-			stat_tap_table_ui *stat_tap = new_stat_tap_by_name(tok_tap + 6);
-			new_stat_data_t *stat_data;
+			stat_tap_table_ui *stat_tap = stat_tap_by_name(tok_tap + 6);
+			stat_data_t *stat_data;
 
 			if (!stat_tap)
 			{
@@ -2334,7 +2319,7 @@ sharkd_session_process_tap(char *buf, const jsmntok_t *tokens, int count)
 
 			stat_tap->stat_tap_init_cb(stat_tap, NULL, NULL);
 
-			stat_data = g_new0(new_stat_data_t, 1);
+			stat_data = g_new0(stat_data_t, 1);
 			stat_data->stat_tap_data = stat_tap;
 			stat_data->user_data = NULL;
 
@@ -2727,7 +2712,8 @@ sharkd_session_process_frame_cb_tree(epan_dissect_t *edt, proto_tree *tree, tvbu
 			printf(",\"s\":\"%s\"", severity);
 		}
 
-		if (((proto_tree *) node)->first_child) {
+		if (((proto_tree *) node)->first_child)
+		{
 			if (finfo->tree_type != -1)
 				printf(",\"e\":%d", finfo->tree_type);
 			printf(",\"n\":");
@@ -2780,8 +2766,10 @@ sharkd_session_process_frame_cb(epan_dissect_t *edt, proto_tree *tree, struct ep
 
 	printf("\"err\":0");
 
-	if (fdata->flags.has_phdr_comment)
-		pkt_comment = pi->phdr->opt_comment;
+	if (fdata->flags.has_user_comment)
+		pkt_comment = sharkd_get_user_comment(fdata);
+	else if (fdata->flags.has_phdr_comment)
+		pkt_comment = pi->rec->opt_comment;
 
 	if (pkt_comment)
 	{
@@ -2805,7 +2793,7 @@ sharkd_session_process_frame_cb(epan_dissect_t *edt, proto_tree *tree, struct ep
 
 			for (i = 0; i < count; i++)
 			{
-				struct data_source *src = (struct data_source *) g_slist_nth_data((GSList *) data_src, i);
+				const struct data_source *src = (const struct data_source *) g_slist_nth_data((GSList *) data_src, i);
 
 				tvbs[i] = get_data_source_tvb(src);
 			}
@@ -2834,7 +2822,7 @@ sharkd_session_process_frame_cb(epan_dissect_t *edt, proto_tree *tree, struct ep
 
 	if (data_src)
 	{
-		struct data_source *src = (struct data_source *)data_src->data;
+		struct data_source *src = (struct data_source *) data_src->data;
 		const char *ds_sepa = NULL;
 
 		tvbuff_t *tvb;
@@ -2865,7 +2853,7 @@ sharkd_session_process_frame_cb(epan_dissect_t *edt, proto_tree *tree, struct ep
 
 		while (data_src)
 		{
-			src = (struct data_source *)data_src->data;
+			src = (struct data_source *) data_src->data;
 
 			{
 				char *src_name = get_data_source_name(src);
@@ -2944,7 +2932,7 @@ sharkd_session_process_intervals(char *buf, const jsmntok_t *tokens, int count)
 		guint64 bytes;
 	} st, st_total;
 
-	nstime_t *start_ts = NULL;
+	nstime_t *start_ts;
 
 	guint32 interval_ms = 1000; /* default: one per second */
 
@@ -2953,8 +2941,10 @@ sharkd_session_process_intervals(char *buf, const jsmntok_t *tokens, int count)
 	gint64 idx;
 	gint64 max_idx = 0;
 
-	if (tok_interval) {
-		if (!ws_strtou32(tok_interval, NULL, &interval_ms) || interval_ms == 0) {
+	if (tok_interval)
+	{
+		if (!ws_strtou32(tok_interval, NULL, &interval_ms) || interval_ms == 0)
+		{
 			fprintf(stderr, "Invalid interval parameter: %s.\n", tok_interval);
 			return;
 		}
@@ -2977,17 +2967,18 @@ sharkd_session_process_intervals(char *buf, const jsmntok_t *tokens, int count)
 
 	printf("{\"intervals\":[");
 
+	start_ts = (cfile.count >= 1) ? &(sharkd_get_frame(1)->abs_ts) : NULL;
+
 	for (framenum = 1; framenum <= cfile.count; framenum++)
 	{
-		frame_data *fdata = frame_data_sequence_find(cfile.frames, framenum);
+		frame_data *fdata;
 		gint64 msec_rel;
 		gint64 new_idx;
 
-		if (start_ts == NULL)
-			start_ts = &fdata->abs_ts;
-
 		if (filter_data && !(filter_data[framenum / 8] & (1 << (framenum % 8))))
 			continue;
+
+		fdata = sharkd_get_frame(framenum);
 
 		msec_rel = (fdata->abs_ts.secs - start_ts->secs) * (gint64) 1000 + (fdata->abs_ts.nsecs - start_ts->nsecs) / 1000000;
 		new_idx  = msec_rel / interval_ms;
@@ -3031,6 +3022,8 @@ sharkd_session_process_intervals(char *buf, const jsmntok_t *tokens, int count)
  *
  * Input:
  *   (m) frame - requested frame number
+ *   (o) ref_frame - time reference frame number
+ *   (o) prev_frame - previously displayed frame number
  *   (o) proto - set if output frame tree
  *   (o) columns - set if output frame columns
  *   (o) bytes - set if output frame bytes
@@ -3063,16 +3056,26 @@ static void
 sharkd_session_process_frame(char *buf, const jsmntok_t *tokens, int count)
 {
 	const char *tok_frame = json_find_attr(buf, tokens, count, "frame");
+	const char *tok_ref_frame = json_find_attr(buf, tokens, count, "ref_frame");
+	const char *tok_prev_frame = json_find_attr(buf, tokens, count, "prev_frame");
 	int tok_proto   = (json_find_attr(buf, tokens, count, "proto") != NULL);
 	int tok_bytes   = (json_find_attr(buf, tokens, count, "bytes") != NULL);
 	int tok_columns = (json_find_attr(buf, tokens, count, "columns") != NULL);
 
-	guint32 framenum;
+	guint32 framenum, ref_frame_num, prev_dis_num;
 
 	if (!tok_frame || !ws_strtou32(tok_frame, NULL, &framenum) || framenum == 0)
 		return;
 
-	sharkd_dissect_request(framenum, &sharkd_session_process_frame_cb, tok_bytes, tok_columns, tok_proto, NULL);
+	ref_frame_num = (framenum != 1) ? 1 : 0;
+	if (tok_ref_frame && (!ws_strtou32(tok_ref_frame, NULL, &ref_frame_num) || ref_frame_num > framenum))
+		return;
+
+	prev_dis_num = framenum - 1;
+	if (tok_prev_frame && (!ws_strtou32(tok_prev_frame, NULL, &prev_dis_num) || prev_dis_num >= framenum))
+		return;
+
+	sharkd_dissect_request(framenum, ref_frame_num, prev_dis_num, &sharkd_session_process_frame_cb, tok_bytes, tok_columns, tok_proto, NULL);
 }
 
 /**
@@ -3289,6 +3292,39 @@ sharkd_session_process_complete(char *buf, const jsmntok_t *tokens, int count)
 
 	printf("}\n");
 	return 0;
+}
+
+/**
+ * sharkd_session_process_setcomment()
+ *
+ * Process setcomment request
+ *
+ * Input:
+ *   (m) frame - frame number
+ *   (o) comment - user comment
+ *
+ * Output object with attributes:
+ *   (m) err   - error code: 0 succeed
+ */
+static void
+sharkd_session_process_setcomment(char *buf, const jsmntok_t *tokens, int count)
+{
+	const char *tok_frame   = json_find_attr(buf, tokens, count, "frame");
+	const char *tok_comment = json_find_attr(buf, tokens, count, "comment");
+
+	guint32 framenum;
+	frame_data *fdata;
+	int ret;
+
+	if (!tok_frame || !ws_strtou32(tok_frame, NULL, &framenum) || framenum == 0)
+		return;
+
+	fdata = sharkd_get_frame(framenum);
+	if (!fdata)
+		return;
+
+	ret = sharkd_set_user_comment(fdata, tok_comment);
+	printf("{\"err\":%d}\n", ret);
 }
 
 /**
@@ -3777,7 +3813,7 @@ sharkd_session_process_download(char *buf, const jsmntok_t *tokens, int count)
 			printf(",\"mime\":");
 			json_puts_string(mime);
 			printf(",\"data\":");
-			json_print_base64(eo_entry->payload_data, eo_entry->payload_len);
+			json_print_base64(eo_entry->payload_data, (size_t)(eo_entry->payload_len));
 			printf("}\n");
 		}
 	}
@@ -3923,6 +3959,8 @@ sharkd_session_process(char *buf, const jsmntok_t *tokens, int count)
 			sharkd_session_process_intervals(buf, tokens, count);
 		else if (!strcmp(tok_req, "frame"))
 			sharkd_session_process_frame(buf, tokens, count);
+		else if (!strcmp(tok_req, "setcomment"))
+			sharkd_session_process_setcomment(buf, tokens, count);
 		else if (!strcmp(tok_req, "setconf"))
 			sharkd_session_process_setconf(buf, tokens, count);
 		else if (!strcmp(tok_req, "dumpconf"))
@@ -3964,6 +4002,8 @@ sharkd_session_main(void)
 
 	fprintf(stderr, "Hello in child.\n");
 
+	filter_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, sharkd_session_filter_free);
+
 	while (fgets(buf, sizeof(buf), stdin))
 	{
 		/* every command is line seperated JSON */
@@ -3997,6 +4037,7 @@ sharkd_session_main(void)
 		sharkd_session_process(buf, tokens, ret);
 	}
 
+	g_hash_table_destroy(filter_table);
 	g_free(tokens);
 
 	return 0;

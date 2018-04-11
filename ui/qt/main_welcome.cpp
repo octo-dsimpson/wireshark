@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "config.h"
 
@@ -38,26 +25,20 @@
 #include "wireshark_application.h"
 
 #include <QClipboard>
+#include <QDate>
 #include <QDesktopServices>
 #include <QDir>
 #include <QListWidget>
 #include <QMenu>
 #include <QResizeEvent>
-#include <QTreeWidgetItem>
 #include <QUrl>
 #include <QWidget>
-
-#if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
-#include <QGraphicsBlurEffect>
-#endif
 
 #ifndef VERSION_FLAVOR
 #define VERSION_FLAVOR ""
 #endif
 
-#ifdef HAVE_EXTCAP
 #include <extcap.h>
-#endif
 
 MainWelcome::MainWelcome(QWidget *parent) :
     QFrame(parent),
@@ -200,12 +181,6 @@ MainWelcome::MainWelcome(QWidget *parent) :
     connect(recent_files_, SIGNAL(itemActivated(QListWidgetItem *)), this, SLOT(openRecentItem(QListWidgetItem *)));
     updateRecentCaptures();
 
-#if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
-    QGraphicsBlurEffect *blur = new QGraphicsBlurEffect(welcome_ui_->childContainer);
-    blur->setBlurRadius(2);
-    welcome_ui_->childContainer->setGraphicsEffect(blur);
-#endif
-
     splash_overlay_ = new SplashOverlay(this);
 }
 
@@ -247,7 +222,13 @@ void MainWelcome::interfaceListChanged()
 void MainWelcome::appInitialized()
 {
     // XXX Add a "check for updates" link?
-    QString full_release = tr("You are running Wireshark ");
+    QString full_release;
+    QDate today = QDate::currentDate();
+    if ((today.month() == 4 && today.day() == 1) || (today.month() == 7 && today.day() == 14)) {
+        full_release = tr("You are sniffing the glue that holds the Internet together using Wireshark ");
+    } else {
+        full_release = tr("You are running Wireshark ");
+    }
     full_release += get_ws_vcs_version_info();
     full_release += tr(".");
 #ifdef HAVE_SOFTWARE_UPDATE
@@ -262,10 +243,6 @@ void MainWelcome::appInitialized()
     // also add a link to the download page.
 #endif
     welcome_ui_->fullReleaseLabel->setText(full_release);
-
-#if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
-    welcome_ui_->childContainer->setGraphicsEffect(NULL);
-#endif
 
 #ifdef HAVE_LIBPCAP
     welcome_ui_->captureFilterComboBox->lineEdit()->setText(global_capture_opts.default_options.cfilter);
@@ -339,12 +316,10 @@ void MainWelcome::interfaceSelected()
     emit interfacesChanged();
 }
 
-#ifdef HAVE_EXTCAP
 void MainWelcome::on_interfaceFrame_showExtcapOptions(QString device_name)
 {
     emit showExtcapOptions(device_name);
 }
-#endif
 
 void MainWelcome::on_interfaceFrame_startCapture()
 {

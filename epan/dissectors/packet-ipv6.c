@@ -9,19 +9,7 @@
  *
  * MobileIPv6 support added by Tomislav Borosa <tomislav.borosa@siemens.hr>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -32,6 +20,7 @@
 #include <epan/expert.h>
 #include <epan/ip_opts.h>
 #include <epan/addr_resolv.h>
+#include <epan/maxmind_db.h>
 #include <epan/prefs.h>
 #include <epan/conversation_table.h>
 #include <epan/dissector_filters.h>
@@ -54,11 +43,6 @@
 #include "packet-vxlan.h"
 #include "packet-mpls.h"
 #include "packet-nsh.h"
-
-#ifdef HAVE_GEOIP_V6
-#include <GeoIP.h>
-#include <epan/geoip_db.h>
-#endif /* HAVE_GEOIP_V6 */
 
 void proto_register_ipv6(void);
 void proto_reg_handoff_ipv6(void);
@@ -281,29 +265,29 @@ static int hf_ipv6_routing_srh_flag_unused2     = -1;
 static int hf_ipv6_routing_srh_reserved         = -1;
 static int hf_ipv6_routing_srh_addr             = -1;
 
-#ifdef HAVE_GEOIP_V6
 static int hf_geoip_country             = -1;
+static int hf_geoip_country_iso         = -1;
 static int hf_geoip_city                = -1;
-static int hf_geoip_org                 = -1;
-static int hf_geoip_isp                 = -1;
-static int hf_geoip_asnum               = -1;
-static int hf_geoip_lat                 = -1;
-static int hf_geoip_lon                 = -1;
+static int hf_geoip_as_number           = -1;
+static int hf_geoip_as_org              = -1;
+static int hf_geoip_latitude            = -1;
+static int hf_geoip_longitude           = -1;
+static int hf_geoip_src_summary         = -1;
 static int hf_geoip_src_country         = -1;
+static int hf_geoip_src_country_iso     = -1;
 static int hf_geoip_src_city            = -1;
-static int hf_geoip_src_org             = -1;
-static int hf_geoip_src_isp             = -1;
-static int hf_geoip_src_asnum           = -1;
-static int hf_geoip_src_lat             = -1;
-static int hf_geoip_src_lon             = -1;
+static int hf_geoip_src_as_number       = -1;
+static int hf_geoip_src_as_org          = -1;
+static int hf_geoip_src_latitude        = -1;
+static int hf_geoip_src_longitude       = -1;
+static int hf_geoip_dst_summary         = -1;
 static int hf_geoip_dst_country         = -1;
+static int hf_geoip_dst_country_iso     = -1;
 static int hf_geoip_dst_city            = -1;
-static int hf_geoip_dst_org             = -1;
-static int hf_geoip_dst_isp             = -1;
-static int hf_geoip_dst_asnum           = -1;
-static int hf_geoip_dst_lat             = -1;
-static int hf_geoip_dst_lon             = -1;
-#endif /* HAVE_GEOIP_V6 */
+static int hf_geoip_dst_as_number       = -1;
+static int hf_geoip_dst_as_org          = -1;
+static int hf_geoip_dst_latitude        = -1;
+static int hf_geoip_dst_longitude       = -1;
 
 static gint ett_ipv6_proto              = -1;
 static gint ett_ipv6_traffic_class      = -1;
@@ -321,9 +305,7 @@ static gint ett_ipv6_fragments          = -1;
 static gint ett_ipv6_fragment           = -1;
 static gint ett_ipv6_dstopts_proto      = -1;
 
-#ifdef HAVE_GEOIP_V6
 static gint ett_geoip_info              = -1;
-#endif /* HAVE_GEOIP_V6 */
 
 static expert_field ei_ipv6_routing_invalid_length = EI_INIT;
 static expert_field ei_ipv6_routing_invalid_segleft = EI_INIT;
@@ -346,6 +328,7 @@ static expert_field ei_ipv6_opt_unknown_data = EI_INIT;
 static expert_field ei_ipv6_opt_deprecated = EI_INIT;
 static expert_field ei_ipv6_hopopts_not_first = EI_INIT;
 static expert_field ei_ipv6_plen_exceeds_framing = EI_INIT;
+static expert_field ei_ipv6_plen_zero = EI_INIT;
 static expert_field ei_ipv6_bogus_ipv6_version = EI_INIT;
 static expert_field ei_ipv6_invalid_header = EI_INIT;
 static expert_field ei_ipv6_opt_header_mismatch = EI_INIT;
@@ -451,7 +434,7 @@ ipv6_conversation_packet(void *pct, packet_info *pinfo, epan_dissect_t *edt _U_,
 
     add_conversation_table_data(hash, &ip6->ip6_src, &ip6->ip6_dst, 0, 0, 1,
             pinfo->fd->pkt_len, &pinfo->rel_ts, &pinfo->abs_ts,
-            &ipv6_ct_dissector_info, PT_NONE);
+            &ipv6_ct_dissector_info, ENDPOINT_NONE);
 
     return 1;
 }
@@ -473,9 +456,9 @@ ipv6_hostlist_packet(void *pit, packet_info *pinfo, epan_dissect_t *edt _U_, con
     const ipv6_tap_info_t *ip6 = (const ipv6_tap_info_t *)vip;
 
     add_hostlist_table_data(hash, &ip6->ip6_src, 0, TRUE, 1,
-                pinfo->fd->pkt_len, &ipv6_host_dissector_info, PT_NONE);
+                pinfo->fd->pkt_len, &ipv6_host_dissector_info, ENDPOINT_NONE);
     add_hostlist_table_data(hash, &ip6->ip6_dst, 0, FALSE, 1,
-                pinfo->fd->pkt_len, &ipv6_host_dissector_info, PT_NONE);
+                pinfo->fd->pkt_len, &ipv6_host_dissector_info, ENDPOINT_NONE);
 
     return 1;
 }
@@ -534,10 +517,8 @@ static gboolean ipv6_reassemble = TRUE;
 /* Place IPv6 summary in proto tree */
 static gboolean ipv6_summary_in_tree = TRUE;
 
-#ifdef HAVE_GEOIP_V6
-/* Look up addresses in GeoIP */
+/* Look up addresses via mmdbresolve */
 static gboolean ipv6_use_geoip = TRUE;
-#endif /* HAVE_GEOIP_V6 */
 
 /* Perform strict RFC adherence checking */
 static gboolean g_ipv6_rpl_srh_strict_rfc_checking = FALSE;
@@ -550,6 +531,9 @@ static gboolean ipv6_exthdr_under_root = FALSE;
 
 /* Hide extension header generated field for length */
 static gboolean ipv6_exthdr_hide_len_oct_field = FALSE;
+
+/* Assume TSO and correct zero-length IP packets */
+static gboolean ipv6_tso_supported = FALSE;
 
 /*
  * defragmentation of IPv6
@@ -721,107 +705,103 @@ capture_ipv6_exthdr(const guchar *pd, int offset, int len, capture_packet_info_t
     return try_capture_dissector("ip.proto", nxt, pd, offset, len, cpinfo, pseudo_header);
 }
 
-#ifdef HAVE_GEOIP_V6
 static void
-add_geoip_info_entry(proto_tree *geoip_info_tree, proto_item *geoip_info_item, tvbuff_t *tvb, gint offset, const ws_in6_addr *ip, int isdst)
+add_geoip_info_entry(proto_tree *tree, tvbuff_t *tvb, gint offset, const ws_in6_addr *ip6, int isdst)
 {
-    guint       num_dbs  = geoip_db_num_dbs();
-    guint       item_cnt = 0;
-    guint       dbnum;
+    const mmdb_lookup_t *lookup = maxmind_db_lookup_ipv6(ip6);
+    if (!lookup->found) return;
 
-    for (dbnum = 0; dbnum < num_dbs; dbnum++) {
-        char *geoip_str = geoip_db_lookup_ipv6(dbnum, *ip, NULL);
-        int db_type = geoip_db_type(dbnum);
-
-        int geoip_hf, geoip_local_hf;
-
-        switch (db_type) {
-        case GEOIP_COUNTRY_EDITION_V6:
-            geoip_hf = hf_geoip_country;
-            geoip_local_hf = (isdst) ? hf_geoip_dst_country : hf_geoip_src_country;
-            break;
-#if NUM_DB_TYPES > 31
-        case GEOIP_CITY_EDITION_REV0_V6:
-        case GEOIP_CITY_EDITION_REV1_V6:
-            geoip_hf = hf_geoip_city;
-            geoip_local_hf = (isdst) ? hf_geoip_dst_city : hf_geoip_src_city;
-            break;
-        case GEOIP_ORG_EDITION_V6:
-            geoip_hf = hf_geoip_org;
-            geoip_local_hf = (isdst) ? hf_geoip_dst_org : hf_geoip_src_org;
-            break;
-        case GEOIP_ISP_EDITION_V6:
-            geoip_hf = hf_geoip_isp;
-            geoip_local_hf = (isdst) ? hf_geoip_dst_isp : hf_geoip_src_isp;
-            break;
-        case GEOIP_ASNUM_EDITION_V6:
-            geoip_hf = hf_geoip_asnum;
-            geoip_local_hf = (isdst) ? hf_geoip_dst_asnum : hf_geoip_src_asnum;
-            break;
-#endif /* DB_NUM_TYPES */
-        case WS_LAT_FAKE_EDITION:
-            geoip_hf = hf_geoip_lat;
-            geoip_local_hf = (isdst) ? hf_geoip_dst_lat : hf_geoip_src_lat;
-            break;
-        case WS_LON_FAKE_EDITION:
-            geoip_hf = hf_geoip_lon;
-            geoip_local_hf = (isdst) ? hf_geoip_dst_lon : hf_geoip_src_lon;
-            break;
-        default:
-            continue;
-        }
-
-        if (geoip_str) {
-            proto_item *item;
-            if (db_type == WS_LAT_FAKE_EDITION || db_type == WS_LON_FAKE_EDITION) {
-                /* Convert latitude, longitude to double. Fix bug #5077 */
-                item = proto_tree_add_double_format_value(geoip_info_tree, geoip_local_hf, tvb,
-                                                          offset, 16, g_ascii_strtod(geoip_str, NULL), "%s", geoip_str);
-                PROTO_ITEM_SET_GENERATED(item);
-                item  = proto_tree_add_double_format_value(geoip_info_tree, geoip_hf, tvb,
-                                                           offset, 16, g_ascii_strtod(geoip_str, NULL), "%s", geoip_str);
-                PROTO_ITEM_SET_GENERATED(item);
-                PROTO_ITEM_SET_HIDDEN(item);
-            } else {
-                item = proto_tree_add_string(geoip_info_tree, geoip_local_hf, tvb,
-                                             offset, 16, geoip_str);
-                PROTO_ITEM_SET_GENERATED(item);
-                item  = proto_tree_add_string(geoip_info_tree, geoip_hf, tvb,
-                                              offset, 16, geoip_str);
-                PROTO_ITEM_SET_GENERATED(item);
-                PROTO_ITEM_SET_HIDDEN(item);
-            }
-
-            item_cnt++;
-            proto_item_append_text(geoip_info_item, "%s%s", plurality(item_cnt, "", ", "), geoip_str);
-            wmem_free(NULL, geoip_str);
-        }
+    wmem_strbuf_t *summary = wmem_strbuf_new(wmem_packet_scope(), "");
+    if (lookup->city) {
+        wmem_strbuf_append(summary, lookup->city);
+    }
+    if (lookup->country_iso) {
+        if (wmem_strbuf_get_len(summary) > 0) wmem_strbuf_append(summary, ", ");
+        wmem_strbuf_append(summary, lookup->country_iso);
+    } else if (lookup->country) {
+        if (wmem_strbuf_get_len(summary) > 0) wmem_strbuf_append(summary, ", ");
+        wmem_strbuf_append(summary, lookup->country);
+    }
+    if (lookup->as_number > 0) {
+        if (wmem_strbuf_get_len(summary) > 0) wmem_strbuf_append(summary, ", ");
+        wmem_strbuf_append_printf(summary, "ASN %u", lookup->as_number);
+    }
+    if (lookup->as_org) {
+        if (wmem_strbuf_get_len(summary) > 0) wmem_strbuf_append(summary, ", ");
+        wmem_strbuf_append(summary, lookup->as_org);
     }
 
-    if (item_cnt == 0)
-        proto_item_append_text(geoip_info_item, "Unknown");
+    int addr_offset = offset + isdst ? IP6H_DST : IP6H_SRC;
+    int dir_hf = isdst ? hf_geoip_dst_summary : hf_geoip_src_summary;
+    proto_item *geoip_info_item = proto_tree_add_string(tree, dir_hf, tvb, addr_offset, 16, wmem_strbuf_finalize(summary));
+    PROTO_ITEM_SET_GENERATED(geoip_info_item);
+    proto_tree *geoip_info_tree = proto_item_add_subtree(geoip_info_item, ett_geoip_info);
+
+    proto_item *item;
+
+    if (lookup->city) {
+        dir_hf = isdst ? hf_geoip_dst_city : hf_geoip_src_city;
+        item = proto_tree_add_string(geoip_info_tree, dir_hf, tvb, addr_offset, 16, lookup->city);
+        PROTO_ITEM_SET_GENERATED(item);
+        item = proto_tree_add_string(geoip_info_tree, hf_geoip_city, tvb, addr_offset, 16, lookup->city);
+        PROTO_ITEM_SET_GENERATED(item);
+    }
+
+    if (lookup->country) {
+        dir_hf = isdst ? hf_geoip_dst_country : hf_geoip_src_country;
+        item = proto_tree_add_string(geoip_info_tree, dir_hf, tvb, addr_offset, 16, lookup->country);
+        PROTO_ITEM_SET_GENERATED(item);
+        item = proto_tree_add_string(geoip_info_tree, hf_geoip_country, tvb, addr_offset, 16, lookup->country);
+        PROTO_ITEM_SET_GENERATED(item);
+    }
+
+    if (lookup->country_iso) {
+        dir_hf = isdst ? hf_geoip_dst_country_iso : hf_geoip_src_country_iso;
+        item = proto_tree_add_string(geoip_info_tree, dir_hf, tvb, addr_offset, 16, lookup->country_iso);
+        PROTO_ITEM_SET_GENERATED(item);
+        item = proto_tree_add_string(geoip_info_tree, hf_geoip_country_iso, tvb, addr_offset, 16, lookup->country_iso);
+        PROTO_ITEM_SET_GENERATED(item);
+    }
+
+    if (lookup->as_number > 0) {
+        dir_hf = isdst ? hf_geoip_dst_as_number : hf_geoip_src_as_number;
+        item = proto_tree_add_uint(geoip_info_tree, dir_hf, tvb, addr_offset, 16, lookup->as_number);
+        PROTO_ITEM_SET_GENERATED(item);
+        item = proto_tree_add_uint(geoip_info_tree, hf_geoip_as_number, tvb, addr_offset, 16, lookup->as_number);
+        PROTO_ITEM_SET_GENERATED(item);
+    }
+
+    if (lookup->as_org) {
+        dir_hf = isdst ? hf_geoip_dst_as_org : hf_geoip_src_as_org;
+        item = proto_tree_add_string(geoip_info_tree, dir_hf, tvb, addr_offset, 16, lookup->as_org);
+        PROTO_ITEM_SET_GENERATED(item);
+        item = proto_tree_add_string(geoip_info_tree, hf_geoip_as_org, tvb, addr_offset, 16, lookup->as_org);
+        PROTO_ITEM_SET_GENERATED(item);
+    }
+
+    if (lookup->latitude >= -90.0 && lookup->latitude <= 90.0) {
+        dir_hf = isdst ? hf_geoip_dst_latitude : hf_geoip_src_latitude;
+        item = proto_tree_add_double(geoip_info_tree, dir_hf, tvb, addr_offset, 16, lookup->latitude);
+        PROTO_ITEM_SET_GENERATED(item);
+        item = proto_tree_add_double(geoip_info_tree, hf_geoip_latitude, tvb, addr_offset, 16, lookup->latitude);
+        PROTO_ITEM_SET_GENERATED(item);
+    }
+
+    if (lookup->longitude >= -180.0 && lookup->longitude <= 180.0) {
+        dir_hf = isdst ? hf_geoip_dst_longitude : hf_geoip_src_longitude;
+        item = proto_tree_add_double(geoip_info_tree, dir_hf, tvb, addr_offset, 16, lookup->longitude);
+        PROTO_ITEM_SET_GENERATED(item);
+        item = proto_tree_add_double(geoip_info_tree, hf_geoip_longitude, tvb, addr_offset, 16, lookup->longitude);
+        PROTO_ITEM_SET_GENERATED(item);
+    }
 }
 
 static void
 add_geoip_info(proto_tree *tree, tvbuff_t *tvb, gint offset, const ws_in6_addr *src, const ws_in6_addr *dst)
 {
-    guint       num_dbs;
-    proto_item *geoip_info_item;
-    proto_tree *geoip_info_tree;
-
-    num_dbs = geoip_db_num_dbs();
-    if (num_dbs < 1)
-        return;
-
-    geoip_info_tree = proto_tree_add_subtree(tree, tvb, offset + IP6H_SRC, 16, ett_geoip_info, &geoip_info_item, "Source GeoIP: ");
-    PROTO_ITEM_SET_GENERATED(geoip_info_item);
-    add_geoip_info_entry(geoip_info_tree, geoip_info_item, tvb, offset + IP6H_SRC, src, 0);
-
-    geoip_info_tree = proto_tree_add_subtree(tree, tvb, offset + IP6H_DST, 16, ett_geoip_info, &geoip_info_item, "Destination GeoIP: ");
-    PROTO_ITEM_SET_GENERATED(geoip_info_item);
-    add_geoip_info_entry(geoip_info_tree, geoip_info_item, tvb, offset + IP6H_DST, dst, 1);
+    add_geoip_info_entry(tree, tvb, offset, src, FALSE);
+    add_geoip_info_entry(tree, tvb, offset, dst, TRUE);
 }
-#endif /* HAVE_GEOIP_V6 */
 
 /* Returns TRUE if reassembled */
 static gboolean
@@ -2181,7 +2161,7 @@ add_ipv6_address_slaac(proto_tree *tree, tvbuff_t *tvb, int offset, gint hf_slaa
     };
     proto_item *ti;
     for (int i = 0; i < 2; i++) {
-        ti = proto_tree_add_ether(tree, hf[i].mac, tvb, offset + 8, 6, mac_addr);
+        ti = proto_tree_add_ether(tree, hf[i].mac, tvb, offset + 8, 8, mac_addr);
         ADDRESS_SET_GENERATED_HIDDEN(ti);
     }
 }
@@ -2308,13 +2288,28 @@ dissect_ipv6(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_
     proto_tree_add_item_ret_uint(ipv6_tree, hf_ipv6_flow, tvb,
                         offset + IP6H_CTL_FLOW, 4, ENC_BIG_ENDIAN, &ip6_flow);
 
-    ti_ipv6_plen = proto_tree_add_item(ipv6_tree, hf_ipv6_plen, tvb,
-                        offset + IP6H_CTL_PLEN, 2, ENC_BIG_ENDIAN);
     ipv6_pinfo->ip6_plen = tvb_get_guint16(tvb, offset + IP6H_CTL_PLEN, ENC_BIG_ENDIAN);
+
+    ip6_nxt = tvb_get_guint8(tvb, offset + IP6H_CTL_NXT);
+
+    if (ipv6_tso_supported && ipv6_pinfo->ip6_plen == 0 && ip6_nxt != IP_PROTO_HOPOPTS && ip6_nxt != IP_PROTO_NONE) {
+        ipv6_pinfo->ip6_plen = tvb_reported_length(tvb) - IPv6_HDR_SIZE;
+        pi = proto_tree_add_uint_format_value(ipv6_tree, hf_ipv6_plen, tvb, offset + IP6H_CTL_PLEN, 2,
+          ipv6_pinfo->ip6_plen,
+          "%u bytes (reported as 0, presumed to be because of \"TCP segmentation offload\" (TSO))",
+          ipv6_pinfo->ip6_plen);
+        PROTO_ITEM_SET_GENERATED(pi);
+    } else {
+            ti_ipv6_plen = proto_tree_add_item(ipv6_tree, hf_ipv6_plen, tvb,
+                                offset + IP6H_CTL_PLEN, 2, ENC_BIG_ENDIAN);
+            if (ipv6_pinfo->ip6_plen == 0 && ip6_nxt != IP_PROTO_HOPOPTS && ip6_nxt != IP_PROTO_NONE) {
+                expert_add_info(pinfo, ti_ipv6_plen, &ei_ipv6_plen_zero);
+            }
+    }
+
     ipv6_pinfo->frag_plen = ipv6_pinfo->ip6_plen;
 
     proto_tree_add_item(ipv6_tree, hf_ipv6_nxt, tvb, offset + IP6H_CTL_NXT, 1, ENC_NA);
-    ip6_nxt = tvb_get_guint8(tvb, offset + IP6H_CTL_NXT);
 
     proto_tree_add_item(ipv6_tree, hf_ipv6_hlim, tvb,
                         offset + IP6H_CTL_HLIM, 1, ENC_BIG_ENDIAN);
@@ -2358,13 +2353,11 @@ dissect_ipv6(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_
 
         add_ipv6_address_embed_ipv4(ipv6_tree, tvb, offset + IP6H_SRC, hf_ipv6_src_embed_ipv4);
         add_ipv6_address_embed_ipv4(ipv6_tree, tvb, offset + IP6H_DST, hf_ipv6_dst_embed_ipv4);
-    }
 
-#ifdef HAVE_GEOIP_V6
-    if (tree && ipv6_use_geoip) {
-        add_geoip_info(ipv6_tree, tvb, offset, ip6_src, ip6_dst);
+        if (ipv6_use_geoip) {
+            add_geoip_info(ipv6_tree, tvb, offset, ip6_src, ip6_dst);
+        }
     }
-#endif
 
     /* Increment offset to point to next header (may be an extension header) */
     offset += IPv6_HDR_SIZE;
@@ -2668,9 +2661,13 @@ proto_register_ipv6(void)
                 "IPv4-Embedded IPv6 Address with Well-Known Prefix", HFILL }
         },
 
-#ifdef HAVE_GEOIP_V6
         { &hf_geoip_country,
             { "Source or Destination GeoIP Country", "ipv6.geoip.country",
+                FT_STRING, STR_UNICODE, NULL, 0x0,
+                NULL, HFILL }
+        },
+        { &hf_geoip_country_iso,
+            { "Source or Destination GeoIP ISO Two Letter Country Code", "ipv6.geoip.country_iso",
                 FT_STRING, STR_UNICODE, NULL, 0x0,
                 NULL, HFILL }
         },
@@ -2679,33 +2676,38 @@ proto_register_ipv6(void)
                 FT_STRING, STR_UNICODE, NULL, 0x0,
                 NULL, HFILL }
         },
-        { &hf_geoip_org,
-            { "Source or Destination GeoIP Organization", "ipv6.geoip.org",
-                FT_STRING, STR_UNICODE, NULL, 0x0,
-                NULL, HFILL }
-        },
-        { &hf_geoip_isp,
-            { "Source or Destination GeoIP ISP", "ipv6.geoip.isp",
-                FT_STRING, STR_UNICODE, NULL, 0x0,
-                NULL, HFILL }
-        },
-        { &hf_geoip_asnum,
+        { &hf_geoip_as_number,
             { "Source or Destination GeoIP AS Number", "ipv6.geoip.asnum",
+                FT_UINT32, BASE_DEC, NULL, 0x0,
+                NULL, HFILL }
+        },
+        { &hf_geoip_as_org,
+            { "Source or Destination GeoIP AS Organization", "ipv6.geoip.org",
                 FT_STRING, STR_UNICODE, NULL, 0x0,
                 NULL, HFILL }
         },
-        { &hf_geoip_lat,
+        { &hf_geoip_latitude,
             { "Source or Destination GeoIP Latitude", "ipv6.geoip.lat",
                 FT_DOUBLE, BASE_NONE, NULL, 0x0,
                 NULL, HFILL }
         },
-        { &hf_geoip_lon,
+        { &hf_geoip_longitude,
             { "Source or Destination GeoIP Longitude", "ipv6.geoip.lon",
                 FT_DOUBLE, BASE_NONE, NULL, 0x0,
                 NULL, HFILL }
         },
+        { &hf_geoip_src_summary,
+            { "Source GeoIP", "ipv6.geoip.src_summary",
+                FT_STRING, STR_UNICODE, NULL, 0x0,
+                NULL, HFILL }
+        },
         { &hf_geoip_src_country,
             { "Source GeoIP Country", "ipv6.geoip.src_country",
+                FT_STRING, STR_UNICODE, NULL, 0x0,
+                NULL, HFILL }
+        },
+        { &hf_geoip_src_country_iso,
+            { "Source GeoIP ISO Two Letter Country Code", "ipv6.geoip.src_country_iso",
                 FT_STRING, STR_UNICODE, NULL, 0x0,
                 NULL, HFILL }
         },
@@ -2714,33 +2716,38 @@ proto_register_ipv6(void)
                 FT_STRING, STR_UNICODE, NULL, 0x0,
                 NULL, HFILL }
         },
-        { &hf_geoip_src_org,
-            { "Source GeoIP Organization", "ipv6.geoip.src_org",
-                FT_STRING, STR_UNICODE, NULL, 0x0,
-                NULL, HFILL }
-        },
-        { &hf_geoip_src_isp,
-            { "Source GeoIP ISP", "ipv6.geoip.src_isp",
-                FT_STRING, STR_UNICODE, NULL, 0x0,
-                NULL, HFILL }
-        },
-        { &hf_geoip_src_asnum,
+        { &hf_geoip_src_as_number,
             { "Source GeoIP AS Number", "ipv6.geoip.src_asnum",
+                FT_UINT32, BASE_DEC, NULL, 0x0,
+                NULL, HFILL }
+        },
+        { &hf_geoip_src_as_org,
+            { "Source GeoIP AS Organization", "ipv6.geoip.src_org",
                 FT_STRING, STR_UNICODE, NULL, 0x0,
                 NULL, HFILL }
         },
-        { &hf_geoip_src_lat,
+        { &hf_geoip_src_latitude,
             { "Source GeoIP Latitude", "ipv6.geoip.src_lat",
                 FT_DOUBLE, BASE_NONE, NULL, 0x0,
                 NULL, HFILL }
         },
-        { &hf_geoip_src_lon,
+        { &hf_geoip_src_longitude,
             { "Source GeoIP Longitude", "ipv6.geoip.src_lon",
                 FT_DOUBLE, BASE_NONE, NULL, 0x0,
                 NULL, HFILL }
         },
+        { &hf_geoip_dst_summary,
+            { "Destination GeoIP", "ipv6.geoip.dst_summary",
+                FT_STRING, STR_UNICODE, NULL, 0x0,
+                NULL, HFILL }
+        },
         { &hf_geoip_dst_country,
             { "Destination GeoIP Country", "ipv6.geoip.dst_country",
+                FT_STRING, STR_UNICODE, NULL, 0x0,
+                NULL, HFILL }
+        },
+        { &hf_geoip_dst_country_iso,
+            { "Destination GeoIP ISO Two Letter Country Code", "ipv6.geoip.dst_country_iso",
                 FT_STRING, STR_UNICODE, NULL, 0x0,
                 NULL, HFILL }
         },
@@ -2749,32 +2756,26 @@ proto_register_ipv6(void)
                 FT_STRING, STR_UNICODE, NULL, 0x0,
                 NULL, HFILL }
         },
-        { &hf_geoip_dst_org,
-            { "Destination GeoIP Organization", "ipv6.geoip.dst_org",
-                FT_STRING, STR_UNICODE, NULL, 0x0,
-                NULL, HFILL }
-        },
-        { &hf_geoip_dst_isp,
-            { "Destination GeoIP ISP", "ipv6.geoip.dst_isp",
-                FT_STRING, STR_UNICODE, NULL, 0x0,
-                NULL, HFILL }
-        },
-        { &hf_geoip_dst_asnum,
+        { &hf_geoip_dst_as_number,
             { "Destination GeoIP AS Number", "ipv6.geoip.dst_asnum",
+                FT_UINT32, BASE_DEC, NULL, 0x0,
+                NULL, HFILL }
+        },
+        { &hf_geoip_dst_as_org,
+            { "Destination GeoIP AS Organization", "ipv6.geoip.dst_org",
                 FT_STRING, STR_UNICODE, NULL, 0x0,
                 NULL, HFILL }
         },
-        { &hf_geoip_dst_lat,
+        { &hf_geoip_dst_latitude,
             { "Destination GeoIP Latitude", "ipv6.geoip.dst_lat",
                 FT_DOUBLE, BASE_NONE, NULL, 0x0,
                 NULL, HFILL }
         },
-        { &hf_geoip_dst_lon,
+        { &hf_geoip_dst_longitude,
             { "Destination GeoIP Longitude", "ipv6.geoip.dst_lon",
                 FT_DOUBLE, BASE_NONE, NULL, 0x0,
                 NULL, HFILL }
         },
-#endif /* HAVE_GEOIP_V6 */
 
         { &hf_ipv6_opt,
             { "IPv6 Option", "ipv6.opt",
@@ -3362,9 +3363,7 @@ proto_register_ipv6(void)
     static gint *ett_ipv6[] = {
         &ett_ipv6_proto,
         &ett_ipv6_traffic_class,
-#ifdef HAVE_GEOIP_V6
         &ett_geoip_info,
-#endif /* HAVE_GEOIP_V6 */
         &ett_ipv6_opt,
         &ett_ipv6_opt_type,
         &ett_ipv6_opt_rpl,
@@ -3420,6 +3419,10 @@ proto_register_ipv6(void)
         { &ei_ipv6_plen_exceeds_framing,
             { "ipv6.plen_exceeds_framing", PI_PROTOCOL, PI_WARN,
                 "IPv6 payload length does not match expected framing length", EXPFILL }
+        },
+        { &ei_ipv6_plen_zero,
+            { "ipv6.plen_zero", PI_PROTOCOL, PI_CHAT,
+                "IPv6 payload length equals 0 (maybe because of \"TCP segmentation offload\" (TSO))", EXPFILL }
         },
         { &ei_ipv6_bogus_ipv6_version,
             { "ipv6.bogus_ipv6_version", PI_MALFORMED, PI_ERROR,
@@ -3565,12 +3568,10 @@ proto_register_ipv6(void)
                                    "Show IPv6 summary in protocol tree",
                                    "Whether the IPv6 summary line should be shown in the protocol tree",
                                    &ipv6_summary_in_tree);
-#ifdef HAVE_GEOIP_V6
     prefs_register_bool_preference(ipv6_module, "use_geoip" ,
-                                   "Enable GeoIP lookups",
-                                   "Whether to look up IPv6 addresses in each GeoIP database we have loaded",
+                                   "Enable IPv6 geolocation",
+                                   "Whether to look up IPv6 addresses in each MaxMind database we have loaded",
                                    &ipv6_use_geoip);
-#endif /* HAVE_GEOIP_V6 */
 
     /* RPL Strict Header Checking */
     prefs_register_bool_preference(ipv6_module, "perform_strict_rpl_srh_rfc_checking",
@@ -3592,6 +3593,11 @@ proto_register_ipv6(void)
                                    "Use a single field for IPv6 extension header length",
                                    "If enabled the Length field in octets will be hidden",
                                    &ipv6_exthdr_hide_len_oct_field);
+
+    prefs_register_bool_preference(ipv6_module, "tso_support",
+                                    "Support packet-capture from IPv6 TSO-enabled hardware",
+                                    "Whether to correct for TSO-enabled (TCP segmentation offload) hardware "
+                                    "captures, such as spoofing the IPv6 packet length", &ipv6_tso_supported);
 
     ipv6_handle = register_dissector("ipv6", dissect_ipv6, proto_ipv6);
     reassembly_table_register(&ipv6_reassembly_table,

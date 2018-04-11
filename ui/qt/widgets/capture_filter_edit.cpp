@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "config.h"
 
@@ -53,25 +40,76 @@
 
 static const QString libpcap_primitive_chars_ = "-0123456789abcdefghijklmnopqrstuvwxyz";
 
-// grep '^[a-z].*return [A-Z].*;$' scanner.l | awk '{gsub(/\|/, "\n") ; print "    << \"" $1 "\""}' | sort
-// Remove "and" and "or".
+// Primitives are from pcap-filter.manmisc
 static const QStringList libpcap_primitives_ = QStringList()
-        << "aarp" << "action" << "address1" << "address2" << "address3" << "address4"
-        << "ah" << "arp" << "atalk" << "bcc" << "broadcast" << "byte" << "carp"
-        << "clnp" << "connectmsg" << "csnp" << "decnet" << "direction" << "dpc"
-        << "dst" << "es-is" << "esis" << "esp" << "fddi" << "fisu" << "gateway"
-        << "greater" << "hdpc" << "hfisu" << "hlssu" << "hmsu" << "hopc" << "host"
-        << "hsio" << "hsls" << "icmp" << "icmp6" << "igmp" << "igrp" << "iih" << "ilmic"
-        << "inbound" << "ip" << "ip6" << "ipx" << "is-is" << "isis" << "iso" << "l1"
-        << "l2" << "lane" << "lat" << "len" << "less" << "link" << "llc" << "lsp"
-        << "lssu" << "lsu" << "mask" << "metac" << "metaconnect" << "mopdl" << "moprc"
-        << "mpls" << "msu" << "multicast" << "net" << "netbeui" << "oam" << "oamf4"
-        << "oamf4ec" << "oamf4sc" << "on" << "opc" << "outbound" << "pim"
-        << "port" << "portrange" << "pppoed" << "pppoes" << "proto" << "psnp" << "ra"
-        << "radio" << "rarp" << "reason" << "rnr" << "rset" << "sc" << "sca" << "sctp"
-        << "sio" << "sls" << "snp" << "src" << "srnr" << "stp" << "subtype" << "ta"
-        << "tcp" << "type" << "udp" << "vci" << "vlan" << "vpi" << "vrrp"
-        ;
+        // "Abbreviations for..."
+        << "ether proto"
+        << "ip" << "ip6" << "arp" << "rarp" << "atalk" << "aarp" << "decnet" << "iso" << "stp" << "ipx" << "netbeui"
+        << "moprc" << "mopdl"
+        // ip proto
+        << "tcp" << "udp" << "icmp"
+        // iso proto
+        << "clnp" << "esis" << "isis"
+        // IS‐IS PDU types
+        << "l1" << "l2" << "iih" << "lsp" << "snp" << "csnp" << "psnp"
+
+        // grep -E '^\.IP "\\fB.*\\f(R"|P)$' pcap-filter.manmisc | sed -e 's/^\.IP "\\fB/<< "/' -e 's/ *\\f.*/"/' | sort -u
+        << "action"
+        << "clnp"
+        << "decnet dst"
+        << "decnet host"
+        << "decnet src"
+        << "dir"
+        << "dst host"
+        << "dst net"
+        << "dst port"
+        << "dst portrange"
+        << "ether broadcast"
+        << "ether dst"
+        << "ether host"
+        << "ether multicast"
+        << "ether src"
+        << "gateway"
+        << "greater"
+        << "host"
+        << "ifname"
+        << "ip broadcast"
+        << "ip multicast"
+        << "ip proto"
+        << "ip protochain"
+        << "ip6 multicast"
+        << "ip6 proto"
+        << "ip6 protochain"
+        << "iso proto"
+        << "l1"
+        << "lat"
+        << "less"
+        << "mpls"
+        << "net"
+        << "on"
+        << "port"
+        << "portrange"
+        << "reason"
+        << "rnr"
+        << "rset"
+        << "rulenum"
+        << "ruleset"
+        << "src host"
+        << "src net"
+        << "src port"
+        << "src portrange"
+        << "srnr"
+        << "subrulenum"
+        << "subtype"
+        << "type"
+        << "vlan"
+        << "wlan addr1"
+        << "wlan addr2"
+        << "wlan addr3"
+        << "wlan addr4"
+        << "wlan ra"
+        << "wlan ta"
+           ;
 
 CaptureFilterEdit::CaptureFilterEdit(QWidget *parent, bool plain) :
     SyntaxLineEdit(parent),

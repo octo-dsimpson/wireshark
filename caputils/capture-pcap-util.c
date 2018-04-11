@@ -5,20 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "config.h"
 
@@ -266,7 +253,7 @@ add_unix_interface_ifinfo(if_info_t *if_info, const char *name,
  * name, and there is no vendor description.  ("Other UN*Xes"
  * currently means "FreeBSD and OpenBSD".)
  */
-void
+static void
 add_unix_interface_ifinfo(if_info_t *if_info, const char *name _U_,
 			  const char *description)
 {
@@ -288,9 +275,7 @@ if_info_new(const char *name, const char *description, gboolean loopback)
 	if_info->friendly_name = NULL;	/* default - unknown */
 	if_info->vendor_description = NULL;
 	if_info->type = IF_WIRED;	/* default */
-#ifdef HAVE_EXTCAP
 	if_info->extcap = g_strdup("");
-#endif
 #ifdef _WIN32
 	/*
 	 * Get the interface type.
@@ -555,10 +540,7 @@ free_if_cb(gpointer data, gpointer user_data _U_)
 	g_free(if_info->name);
 	g_free(if_info->friendly_name);
 	g_free(if_info->vendor_description);
-#ifdef HAVE_EXTCAP
 	g_free(if_info->extcap);
-#endif
-
 	g_slist_foreach(if_info->addrs, free_if_info_addr_cb, NULL);
 	g_slist_free(if_info->addrs);
 	g_free(if_info);
@@ -1162,9 +1144,9 @@ open_capture_device_pcap_create(capture_options *capture_opts
 
 #ifdef HAVE_PCAP_SET_TSTAMP_PRECISION
 		/*
-		 * If we're writing pcap-ng files, try to enable
+		 * If we're writing pcapng files, try to enable
 		 * nanosecond-resolution capture; any code that
-		 * can read pcap-ng files must be able to handle
+		 * can read pcapng files must be able to handle
 		 * nanosecond-resolution time stamps.  We don't
 		 * care whether it succeeds or fails - if it fails,
 		 * we just use the microsecond-precision time stamps

@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "sequence_dialog.h"
 #include <ui_sequence_dialog.h>
@@ -25,9 +12,11 @@
 #include "epan/addr_resolv.h"
 
 #include "file.h"
+
 #include "wsutil/nstime.h"
 #include "wsutil/utf8_entities.h"
 #include "wsutil/file_util.h"
+#include <wsutil/report_message.h>
 
 #include <ui/qt/utils/color_utils.h>
 #include "progress_frame.h"
@@ -403,6 +392,7 @@ void SequenceDialog::on_buttonBox_accepted()
             if (outfile != NULL) {
                 sequence_analysis_dump_to_file(outfile, info_->sainfo(), 0);
                 save_ok = true;
+                fclose(outfile);
             } else {
                 save_ok = false;
             }
@@ -432,12 +422,17 @@ void SequenceDialog::fillDiagram()
         register_analysis_t* analysis = sequence_analysis_find_by_name(info_->sainfo()->name);
         if (analysis != NULL)
         {
+            GString *error_string;
             const char *filter = NULL;
             if (ui->displayFilterCheckBox->checkState() == Qt::Checked)
                 filter = cap_file_.capFile()->dfilter;
 
-            register_tap_listener(sequence_analysis_get_tap_listener_name(analysis), info_->sainfo(), filter, sequence_analysis_get_tap_flags(analysis),
+            error_string = register_tap_listener(sequence_analysis_get_tap_listener_name(analysis), info_->sainfo(), filter, sequence_analysis_get_tap_flags(analysis),
                                        NULL, sequence_analysis_get_packet_func(analysis), NULL);
+            if (error_string) {
+                report_failure("Sequence dialog - tap registration failed: %s", error_string->str);
+                g_string_free(error_string, TRUE);
+            }
 
             cf_retap_packets(cap_file_.capFile());
             remove_tap_listener(info_->sainfo());

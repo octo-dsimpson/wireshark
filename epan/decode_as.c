@@ -5,19 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -52,7 +40,7 @@ void register_decode_as(decode_as_t* reg)
         dissector_table_allow_decode_as(decode_table);
     }
 
-    decode_as_list = g_list_append(decode_as_list, reg);
+    decode_as_list = g_list_prepend(decode_as_list, reg);
 }
 
 static void next_proto_prompt(packet_info *pinfo _U_, gchar *result)
@@ -69,7 +57,7 @@ static build_valid_func next_proto_values[] = { next_proto_value };
 static decode_as_value_t next_proto_da_values =
                         { next_proto_prompt, 1, next_proto_values };
 
-dissector_table_t register_decode_as_next_proto(int proto, const gchar *title, const gchar *table_name, const gchar *ui_name, build_label_func* label_func)
+dissector_table_t register_decode_as_next_proto(int proto, const gchar *title, const gchar *table_name, const gchar *ui_name, build_label_func label_func)
 {
     decode_as_t *da;
 
@@ -87,7 +75,7 @@ dissector_table_t register_decode_as_next_proto(int proto, const gchar *title, c
     else
     {
         da->values = wmem_new(wmem_epan_scope(), decode_as_value_t);
-        da->values->label_func = *label_func;
+        da->values->label_func = label_func;
         da->values->num_values = 1;
         da->values->build_values = next_proto_values;
     }
@@ -150,7 +138,7 @@ gboolean decode_as_default_reset(const gchar *name, gconstpointer pattern)
     case FT_STRINGZ:
     case FT_UINT_STRING:
     case FT_STRINGZPAD:
-        dissector_reset_string(name, (!pattern)?"":(gchar *) pattern);
+        dissector_reset_string(name, (!pattern)?"":(const gchar *) pattern);
         return TRUE;
     default:
         return FALSE;
@@ -177,7 +165,7 @@ gboolean decode_as_default_change(const gchar *name, gconstpointer pattern, gpoi
         case FT_STRINGZ:
         case FT_UINT_STRING:
         case FT_STRINGZPAD:
-            dissector_change_string(name, (!pattern)?"":(gchar *) pattern, *dissector);
+            dissector_change_string(name, (!pattern)?"":(const gchar *) pattern, *dissector);
             return TRUE;
         default:
             return FALSE;
@@ -272,7 +260,7 @@ read_set_decode_as_entries(gchar *key, const gchar *value,
                         }
 
                         prefs_add_decode_as_value(pref_value, (guint)long_value, replace);
-                        module->prefs_changed = TRUE;
+                        module->prefs_changed_flags |= prefs_get_effect_flags(pref_value);
                     }
 
                 }

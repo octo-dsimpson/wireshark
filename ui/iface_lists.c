@@ -6,20 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "config.h"
 
@@ -184,9 +171,8 @@ scan_local_interfaces(void (*update_cb)(void))
         temp.vendor_description = g_strdup(if_info->vendor_description);
         temp.loopback = if_info->loopback;
         temp.type = if_info->type;
-#ifdef HAVE_EXTCAP
         temp.extcap = g_strdup(if_info->extcap);
-#endif
+
         /* Is this interface hidden and, if so, should we include it anyway? */
 
         descr = capture_dev_user_descr_find(if_info->name);
@@ -315,10 +301,9 @@ scan_local_interfaces(void (*update_cb)(void))
             global_capture_opts.num_selected++;
         }
 
-#ifdef HAVE_EXTCAP
         /* Extcap devices start with no cached args */
         device.external_cap_args_settings = NULL;
-#endif
+
         if (global_capture_opts.all_ifaces->len <= count) {
             g_array_append_val(global_capture_opts.all_ifaces, device);
             count = global_capture_opts.all_ifaces->len;
@@ -381,9 +366,7 @@ scan_local_interfaces(void (*update_cb)(void))
             device.if_info.vendor_description = g_strdup(interface_opts->descr);
             device.if_info.addrs = NULL;
             device.if_info.loopback = FALSE;
-#ifdef HAVE_EXTCAP
             device.if_info.extcap = g_strdup(interface_opts->extcap);
-#endif
 
             g_array_append_val(global_capture_opts.all_ifaces, device);
             global_capture_opts.num_selected++;

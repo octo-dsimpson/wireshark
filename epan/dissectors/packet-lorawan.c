@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -694,9 +682,9 @@ dissect_lorawan(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, void *d
 	if (mac_mtype == LORAWAN_MAC_MTYPE_JOINREQUEST) {
 		tf = proto_tree_add_item(lorawan_tree, hf_lorawan_join_request_type, tvb, current_offset, 18, ENC_NA);
 		field_tree = proto_item_add_subtree(tf, ett_lorawan_join_request);
-		proto_tree_add_item(field_tree, hf_lorawan_join_request_appeui_type, tvb, current_offset, 8, ENC_NA);
+		proto_tree_add_item(field_tree, hf_lorawan_join_request_appeui_type, tvb, current_offset, 8, ENC_LITTLE_ENDIAN);
 		current_offset += 8;
-		proto_tree_add_item(field_tree, hf_lorawan_join_request_deveui_type, tvb, current_offset, 8, ENC_NA);
+		proto_tree_add_item(field_tree, hf_lorawan_join_request_deveui_type, tvb, current_offset, 8, ENC_LITTLE_ENDIAN);
 		current_offset += 8;
 		proto_tree_add_item(field_tree, hf_lorawan_join_request_devnonce_type, tvb, current_offset, 2, ENC_NA);
 		current_offset += 2;
@@ -1184,13 +1172,13 @@ proto_register_lorawan(void)
 	},
 	{ &hf_lorawan_join_request_appeui_type,
 		{ "AppEUI", "lorawan.join_request.appeui",
-		FT_BYTES, BASE_NONE,
+		FT_EUI64, BASE_NONE,
 		NULL, 0x0,
 		NULL, HFILL }
 	},
 	{ &hf_lorawan_join_request_deveui_type,
 		{ "DevEUI", "lorawan.join_request.deveui",
-		FT_BYTES, BASE_NONE,
+		FT_EUI64, BASE_NONE,
 		NULL, 0x0,
 		NULL, HFILL }
 	},

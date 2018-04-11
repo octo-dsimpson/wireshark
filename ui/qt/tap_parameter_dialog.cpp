@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 /*
  * @file Tap parameter dialog class
@@ -251,19 +238,19 @@ QByteArray TapParameterDialog::getTreeAsString(st_format_type format)
     switch (format) {
     case ST_FORMAT_PLAIN:
     {
+        // Iterating over trees.
         QTreeWidgetItemIterator width_it(it);
         QString plain_header;
         while (*width_it) {
-            QList<QVariant> tid = treeItemData((*width_it));
-            int col = 0;
-            foreach (QVariant var, tid) {
+            // Iterating over items within this tree.
+            for (int col=0; col < ui->statsTreeWidget->columnCount(); col++) {
                 if (col_widths.size() <= col) {
                     col_widths.append(ui->statsTreeWidget->headerItem()->text(col).length());
                 }
+                QVariant var = ui->statsTreeWidget->headerItem()->data(col, Qt::DisplayRole);
                 if (var.type() == QVariant::String) {
                     col_widths[col] = qMax(col_widths[col], itemDataToPlain(var).length());
                 }
-                col++;
             }
             ++width_it;
         }

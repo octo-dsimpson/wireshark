@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 /* This module provides udp and tcp follow stream capabilities to tshark.
  * It is only used by tshark and not wireshark.
@@ -123,17 +110,19 @@ flow_register(const void *key _U_, void *value, void *userdata _U_)
     register_analysis_t* analysis = (register_analysis_t*)value;
     stat_tap_ui flow_ui;
     GString *cmd_str = g_string_new(STR_FLOW);
+    gchar *cli_string;
 
     g_string_append(cmd_str, sequence_analysis_get_name(analysis));
+    cli_string = g_string_free(cmd_str, FALSE);
 
     flow_ui.group = REGISTER_STAT_GROUP_GENERIC;
     flow_ui.title = NULL;   /* construct this from the protocol info? */
-    flow_ui.cli_string = g_string_free(cmd_str, FALSE);
+    flow_ui.cli_string = cli_string;
     flow_ui.tap_init_cb = flow_init;
     flow_ui.nparams = 0;
     flow_ui.params = NULL;
     register_stat_tap_ui(&flow_ui, analysis);
-    g_free((char*)flow_ui.cli_string);
+    g_free(cli_string);
     return FALSE;
 }
 

@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "config.h"
 
@@ -29,9 +16,7 @@
 #include "capture_opts.h"
 #include "ui/capture_globals.h"
 #endif
-#ifdef HAVE_EXTCAP
 #include "extcap.h"
-#endif
 
 #include "capture_filter_syntax_worker.h"
 #include <ui/qt/widgets/syntax_line_edit.h>
@@ -63,9 +48,7 @@ void CaptureFilterSyntaxWorker::start() {
     forever {
         QString filter;
         QSet<gint> active_dlts;
-#ifdef HAVE_EXTCAP
         QSet<guint> active_extcap;
-#endif
         struct bpf_program fcode;
         pcap_t *pd;
         int pc_err;
@@ -93,9 +76,7 @@ void CaptureFilterSyntaxWorker::start() {
 
             device = &g_array_index(global_capture_opts.all_ifaces, interface_t, if_idx);
             if (device->selected) {
-#ifdef HAVE_EXTCAP
                 if (device->if_info.extcap == NULL || strlen(device->if_info.extcap) == 0) {
-#endif
                     if (device->active_dlt >= DLT_USER0 && device->active_dlt <= DLT_USER15) {
                         // Capture filter for DLT_USER is unknown
                         state = SyntaxLineEdit::Deprecated;
@@ -103,11 +84,9 @@ void CaptureFilterSyntaxWorker::start() {
                     } else {
                         active_dlts.insert(device->active_dlt);
                     }
-#ifdef HAVE_EXTCAP
                 } else {
                     active_extcap.insert(if_idx);
                 }
-#endif
             }
         }
 
@@ -142,7 +121,6 @@ void CaptureFilterSyntaxWorker::start() {
 
             if (state == SyntaxLineEdit::Invalid) break;
         }
-#ifdef HAVE_EXTCAP
         // If it's already invalid, don't bother to check extcap
         if (state != SyntaxLineEdit::Invalid) {
             foreach (guint extcapif, active_extcap.toList()) {
@@ -165,7 +143,6 @@ void CaptureFilterSyntaxWorker::start() {
                 g_free (error);
             }
         }
-#endif
         emit syntaxResult(filter, state, err_str);
 
         DEBUG_SYNTAX_CHECK("known", "idle");

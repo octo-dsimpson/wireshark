@@ -6,19 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 /*
@@ -225,7 +213,7 @@ dissect_packed_repeated_field_values(proto_tree *value_tree, tvbuff_t *tvb, guin
 
     /* add varints into the packed-repeated subtree */
     while (offset < max_offset) {
-        sub_value_length = tvb_get_varint(tvb, offset, max_offset - offset, &sub_value);
+        sub_value_length = tvb_get_varint(tvb, offset, max_offset - offset, &sub_value, ENC_VARINT_PROTOBUF);
         if (sub_value_length == 0) {
             /* not a valid packed repeated field */
             return 0;
@@ -408,7 +396,7 @@ dissect_one_protobuf_field(tvbuff_t *tvb, guint* offset, guint maxlen, packet_in
     field_tree = proto_tree_add_subtree(protobuf_tree,  tvb, *offset, 0, ett_protobuf_field, &ti_field, "Field");
 
     /* parsing Tag */
-    tag_length = tvb_get_varint(tvb, *offset, maxlen, &tag_value);
+    tag_length = tvb_get_varint(tvb, *offset, maxlen, &tag_value, ENC_VARINT_PROTOBUF);
 
     if (tag_length == 0) { /* not found a valid varint */
         expert_add_info(pinfo, ti_field, &ei_protobuf_failed_parse_tag);
@@ -426,7 +414,7 @@ dissect_one_protobuf_field(tvbuff_t *tvb, guint* offset, guint maxlen, packet_in
     {
     case PROTOBUF_WIRETYPE_VARINT: /* varint, format: tag + varint */
         /* get value length and real value */
-        value_length = tvb_get_varint(tvb, *offset, maxlen - tag_length, &value_uint64);
+        value_length = tvb_get_varint(tvb, *offset, maxlen - tag_length, &value_uint64, ENC_VARINT_PROTOBUF);
         if (value_length == 0) {
             expert_add_info(pinfo, ti_wire, &ei_protobuf_failed_parse_field);
             return FALSE;
@@ -446,7 +434,7 @@ dissect_one_protobuf_field(tvbuff_t *tvb, guint* offset, guint maxlen, packet_in
 
     case PROTOBUF_WIRETYPE_LENGTH_DELIMITED: /* Length-delimited, format: tag + length(varint) + bytes_value */
         /* this time value_uint64 is the length of following value bytes */
-        value_length_size = tvb_get_varint(tvb, *offset, maxlen - tag_length, &value_uint64);
+        value_length_size = tvb_get_varint(tvb, *offset, maxlen - tag_length, &value_uint64, ENC_VARINT_PROTOBUF);
         if (value_length_size == 0) {
             expert_add_info(pinfo, ti_field, &ei_protobuf_failed_parse_length_delimited_field);
             return FALSE;
@@ -532,7 +520,7 @@ dissect_protobuf(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
         proto_item_append_text(ti, ": %s", (const gchar*)data);
     }
 
-    /* each time we dissec one protobuf field. */
+    /* each time we dissect one protobuf field. */
     while (tvb_reported_length_remaining(tvb, offset) > 0)
     {
         if (!dissect_one_protobuf_field(tvb, &offset, tvb_reported_length_remaining(tvb, offset), pinfo, protobuf_tree, data))
@@ -674,6 +662,8 @@ proto_register_protobuf(void)
 void
 proto_reg_handoff_protobuf(void)
 {
+    dissector_add_uint_range_with_preference("udp.port", "", protobuf_handle);
+
     dissector_add_string("grpc_message_type", "application/grpc", protobuf_handle);
     dissector_add_string("grpc_message_type", "application/grpc+proto", protobuf_handle);
 }

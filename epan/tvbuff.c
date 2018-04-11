@@ -18,19 +18,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -844,7 +832,16 @@ tvb_get_guint8(tvbuff_t *tvb, const gint offset)
 {
 	const guint8 *ptr;
 
-	ptr = fast_ensure_contiguous(tvb, offset, sizeof(guint8));
+	ptr = fast_ensure_contiguous(tvb, offset, 1);
+	return *ptr;
+}
+
+gint8
+tvb_get_gint8(tvbuff_t *tvb, const gint offset)
+{
+	const guint8 *ptr;
+
+	ptr = fast_ensure_contiguous(tvb, offset, 1);
 	return *ptr;
 }
 
@@ -853,7 +850,16 @@ tvb_get_ntohs(tvbuff_t *tvb, const gint offset)
 {
 	const guint8 *ptr;
 
-	ptr = fast_ensure_contiguous(tvb, offset, sizeof(guint16));
+	ptr = fast_ensure_contiguous(tvb, offset, 2);
+	return pntoh16(ptr);
+}
+
+gint16
+tvb_get_ntohis(tvbuff_t *tvb, const gint offset)
+{
+	const guint8 *ptr;
+
+	ptr = fast_ensure_contiguous(tvb, offset, 2);
 	return pntoh16(ptr);
 }
 
@@ -866,12 +872,31 @@ tvb_get_ntoh24(tvbuff_t *tvb, const gint offset)
 	return pntoh24(ptr);
 }
 
+gint32
+tvb_get_ntohi24(tvbuff_t *tvb, const gint offset)
+{
+	guint32 ret;
+
+	ret = ws_sign_ext32(tvb_get_ntoh24(tvb, offset), 24);
+
+	return (gint32)ret;
+}
+
 guint32
 tvb_get_ntohl(tvbuff_t *tvb, const gint offset)
 {
 	const guint8 *ptr;
 
-	ptr = fast_ensure_contiguous(tvb, offset, sizeof(guint32));
+	ptr = fast_ensure_contiguous(tvb, offset, 4);
+	return pntoh32(ptr);
+}
+
+gint32
+tvb_get_ntohil(tvbuff_t *tvb, const gint offset)
+{
+	const guint8 *ptr;
+
+	ptr = fast_ensure_contiguous(tvb, offset, 4);
 	return pntoh32(ptr);
 }
 
@@ -937,7 +962,16 @@ tvb_get_ntoh64(tvbuff_t *tvb, const gint offset)
 {
 	const guint8 *ptr;
 
-	ptr = fast_ensure_contiguous(tvb, offset, sizeof(guint64));
+	ptr = fast_ensure_contiguous(tvb, offset, 8);
+	return pntoh64(ptr);
+}
+
+gint64
+tvb_get_ntohi64(tvbuff_t *tvb, const gint offset)
+{
+	const guint8 *ptr;
+
+	ptr = fast_ensure_contiguous(tvb, offset, 8);
 	return pntoh64(ptr);
 }
 
@@ -950,6 +984,15 @@ tvb_get_guint16(tvbuff_t *tvb, const gint offset, const guint encoding) {
 	}
 }
 
+gint16
+tvb_get_gint16(tvbuff_t *tvb, const gint offset, const guint encoding) {
+	if (encoding & ENC_LITTLE_ENDIAN) {
+		return tvb_get_letohis(tvb, offset);
+	} else {
+		return tvb_get_ntohis(tvb, offset);
+	}
+}
+
 guint32
 tvb_get_guint24(tvbuff_t *tvb, const gint offset, const guint encoding) {
 	if (encoding & ENC_LITTLE_ENDIAN) {
@@ -959,12 +1002,30 @@ tvb_get_guint24(tvbuff_t *tvb, const gint offset, const guint encoding) {
 	}
 }
 
+gint32
+tvb_get_gint24(tvbuff_t *tvb, const gint offset, const guint encoding) {
+	if (encoding & ENC_LITTLE_ENDIAN) {
+		return tvb_get_letohi24(tvb, offset);
+	} else {
+		return tvb_get_ntohi24(tvb, offset);
+	}
+}
+
 guint32
 tvb_get_guint32(tvbuff_t *tvb, const gint offset, const guint encoding) {
 	if (encoding & ENC_LITTLE_ENDIAN) {
 		return tvb_get_letohl(tvb, offset);
 	} else {
 		return tvb_get_ntohl(tvb, offset);
+	}
+}
+
+gint32
+tvb_get_gint32(tvbuff_t *tvb, const gint offset, const guint encoding) {
+	if (encoding & ENC_LITTLE_ENDIAN) {
+		return tvb_get_letohil(tvb, offset);
+	} else {
+		return tvb_get_ntohil(tvb, offset);
 	}
 }
 
@@ -1031,6 +1092,15 @@ tvb_get_guint64(tvbuff_t *tvb, const gint offset, const guint encoding) {
 	}
 }
 
+gint64
+tvb_get_gint64(tvbuff_t *tvb, const gint offset, const guint encoding) {
+	if (encoding & ENC_LITTLE_ENDIAN) {
+		return tvb_get_letohi64(tvb, offset);
+	} else {
+		return tvb_get_ntohi64(tvb, offset);
+	}
+}
+
 gfloat
 tvb_get_ieee_float(tvbuff_t *tvb, const gint offset, const guint encoding) {
 	if (encoding & ENC_LITTLE_ENDIAN) {
@@ -1055,19 +1125,19 @@ tvb_get_ieee_double(tvbuff_t *tvb, const gint offset, const guint encoding) {
  *
  * For now, we treat only the VAX as such a platform.
  *
- * XXX - other non-IEEE boxes that can run UNIX include some Crays,
- * and possibly other machines.
- *
- * It appears that the official Linux port to System/390 and
- * zArchitecture uses IEEE format floating point (not a
- * huge surprise).
- *
- * I don't know whether there are any other machines that
- * could run Wireshark and that don't use IEEE format.
- * As far as I know, all of the main commercial microprocessor
- * families on which OSes that support Wireshark can run
- * use IEEE format (x86, 68k, SPARC, MIPS, PA-RISC, Alpha,
- * IA-64, and so on).
+ * XXX - other non-IEEE boxes that can run UN*X include some Crays,
+ * and possibly other machines.  However, I don't know whether there
+ * are any other machines that could run Wireshark and that don't use
+ * IEEE format.  As far as I know, all of the main current and past
+ * commercial microprocessor families on which OSes that support
+ * Wireshark can run use IEEE format (x86, ARM, 68k, SPARC, MIPS,
+ * PA-RISC, Alpha, IA-64, and so on), and it appears that the official
+ * Linux port to System/390 and zArchitecture uses IEEE format floating-
+ * point rather than IBM hex floating-point (not a huge surprise), so
+ * I'm not sure that leaves any 32-bit or larger UN*X or Windows boxes,
+ * other than VAXes, that don't use IEEE format.  If you're not running
+ * UN*X or Windows, the floating-point format is probably going to be
+ * the least of your problems in a port.
  */
 
 #if defined(vax)
@@ -1238,7 +1308,7 @@ tvb_get_ntohieee_double(tvbuff_t *tvb, const int offset)
 	} ieee_fp_union;
 #endif
 
-#ifdef WORDS_BIGENDIAN
+#if G_BYTE_ORDER == G_BIG_ENDIAN
 	ieee_fp_union.w[0] = tvb_get_ntohl(tvb, offset);
 	ieee_fp_union.w[1] = tvb_get_ntohl(tvb, offset+4);
 #else
@@ -1257,7 +1327,16 @@ tvb_get_letohs(tvbuff_t *tvb, const gint offset)
 {
 	const guint8 *ptr;
 
-	ptr = fast_ensure_contiguous(tvb, offset, sizeof(guint16));
+	ptr = fast_ensure_contiguous(tvb, offset, 2);
+	return pletoh16(ptr);
+}
+
+gint16
+tvb_get_letohis(tvbuff_t *tvb, const gint offset)
+{
+	const guint8 *ptr;
+
+	ptr = fast_ensure_contiguous(tvb, offset, 2);
 	return pletoh16(ptr);
 }
 
@@ -1270,12 +1349,31 @@ tvb_get_letoh24(tvbuff_t *tvb, const gint offset)
 	return pletoh24(ptr);
 }
 
+gint32
+tvb_get_letohi24(tvbuff_t *tvb, const gint offset)
+{
+	guint32 ret;
+
+	ret = ws_sign_ext32(tvb_get_letoh24(tvb, offset), 24);
+
+	return (gint32)ret;
+}
+
 guint32
 tvb_get_letohl(tvbuff_t *tvb, const gint offset)
 {
 	const guint8 *ptr;
 
-	ptr = fast_ensure_contiguous(tvb, offset, sizeof(guint32));
+	ptr = fast_ensure_contiguous(tvb, offset, 4);
+	return pletoh32(ptr);
+}
+
+gint32
+tvb_get_letohil(tvbuff_t *tvb, const gint offset)
+{
+	const guint8 *ptr;
+
+	ptr = fast_ensure_contiguous(tvb, offset, 4);
 	return pletoh32(ptr);
 }
 
@@ -1341,7 +1439,16 @@ tvb_get_letoh64(tvbuff_t *tvb, const gint offset)
 {
 	const guint8 *ptr;
 
-	ptr = fast_ensure_contiguous(tvb, offset, sizeof(guint64));
+	ptr = fast_ensure_contiguous(tvb, offset, 8);
+	return pletoh64(ptr);
+}
+
+gint64
+tvb_get_letohi64(tvbuff_t *tvb, const gint offset)
+{
+	const guint8 *ptr;
+
+	ptr = fast_ensure_contiguous(tvb, offset, 8);
 	return pletoh64(ptr);
 }
 
@@ -1388,7 +1495,7 @@ tvb_get_letohieee_double(tvbuff_t *tvb, const int offset)
 	} ieee_fp_union;
 #endif
 
-#ifdef WORDS_BIGENDIAN
+#if G_BYTE_ORDER == G_BIG_ENDIAN
 	ieee_fp_union.w[0] = tvb_get_letohl(tvb, offset+4);
 	ieee_fp_union.w[1] = tvb_get_letohl(tvb, offset);
 #else
@@ -3649,20 +3756,45 @@ tvb_get_ds_tvb(tvbuff_t *tvb)
 }
 
 guint
-tvb_get_varint(tvbuff_t *tvb, guint offset, guint maxlen, guint64 *value)
+tvb_get_varint(tvbuff_t *tvb, guint offset, guint maxlen, guint64 *value, const guint encoding)
 {
-	guint i;
-	guint64 b; /* current byte */
 	*value = 0;
 
-	for (i = 0; ((i < FT_VARINT_MAX_LEN) && (i < maxlen)); ++i) {
-		b = tvb_get_guint8(tvb, offset++);
-		*value |= ((b & 0x7F) << (i * 7)); /* add lower 7 bits to val */
+	if (encoding & ENC_VARINT_PROTOBUF) {
+		guint i;
+		guint64 b; /* current byte */
 
-		if (b < 0x80) {
-			/* end successfully becauseof last byte's msb(most significant bit) is zero */
-			return i + 1;
+		for (i = 0; ((i < FT_VARINT_MAX_LEN) && (i < maxlen)); ++i) {
+			b = tvb_get_guint8(tvb, offset++);
+			*value |= ((b & 0x7F) << (i * 7)); /* add lower 7 bits to val */
+
+			if (b < 0x80) {
+				/* end successfully becauseof last byte's msb(most significant bit) is zero */
+				return i + 1;
+			}
 		}
+	} else if (encoding & ENC_VARINT_QUIC) {
+
+		/* calculate variable length */
+		*value = tvb_get_guint8(tvb, offset);
+		switch((*value) >> 6) {
+		case 0: /* 0b00 => 1 byte length (6 bits Usable) */
+			(*value) &= 0x3F;
+			return 1;
+		case 1: /* 0b01 => 2 bytes length (14 bits Usable) */
+			*value = tvb_get_ntohs(tvb, offset) & 0x3FFF;
+			return 2;
+		case 2: /* 0b10 => 4 bytes length (30 bits Usable) */
+			*value = tvb_get_ntohl(tvb, offset) & 0x3FFFFFFF;
+			return 4;
+		case 3: /* 0b11 => 8 bytes length (62 bits Usable) */
+			*value = tvb_get_ntoh64(tvb, offset) & G_GUINT64_CONSTANT(0x3FFFFFFFFFFFFFFF);
+			return 8;
+		default: /* No Possible */
+			g_assert_not_reached();
+			break;
+		}
+
 	}
 
 	return 0; /* 10 bytes scanned, but no bytes' msb is zero */

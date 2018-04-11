@@ -14,19 +14,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -386,6 +374,7 @@ const value_string vals_http_status_code[] = {
 	{ 100, "Continue" },
 	{ 101, "Switching Protocols" },
 	{ 102, "Processing" },                     /* RFC 2518 */
+	{ 103, "Early Hints" },                    /* RFC-ietf-httpbis-early-hints-05 */
 	{ 199, "Informational - Others" },
 
 	{ 200, "OK"},
@@ -649,6 +638,289 @@ http_stats_tree_packet(stats_tree* st, packet_info* pinfo _U_, epan_dissect_t* e
 
 	return 1;
 }
+
+/*
+Generates a referer tree - a best-effort representation of which web request led to which.
+
+Some challenges:
+A user can be forwarded to a single sites from multiple sources. For example,
+google.com -> foo.com and bing.com -> foo.com. A URI alone is not unique.
+
+Additionally, if a user has a subsequent request to foo.com -> bar.com, the
+full chain could either be:
+	google.com -> foo.com -> bar.com, or
+	bing.com   -> foo.com -> bar.com,
+
+This indicates that a URI and its referer are not unique. Only a URI and its
+full referer chain are unique. However, HTTP requests only contain the URI
+and the immediate referer. This means that any attempt at generating a
+referer tree is inherently going to be a best-effort approach.
+
+This code assumes that the referer in a request is from the most-recent request
+to that referer.
+
+* To maintain readability of the statistics, whenever a site is visited, all
+prior referers are 'ticked' as well, so that one can easily see the breakdown.
+*/
+
+/* Root node for all referer statistics */
+static int st_node_requests_by_referer = -1;
+/* Referer statistics root node's text */
+static const gchar *st_str_request_sequences = "HTTP Request Sequences";
+
+/* Mapping of URIs to the most-recently seen node id */
+static wmem_map_t* refstats_uri_to_node_id_hash = NULL;
+/* Mapping of node ids to the node's URI ('name' value) */
+static wmem_map_t* refstats_node_id_to_uri_hash = NULL;
+/* Mapping of node ids to the parent node id */
+static wmem_map_t* refstats_node_id_to_parent_node_id_hash = NULL;
+
+
+/* HTTP/Request Sequences stats init function */
+static void
+http_seq_stats_tree_init(stats_tree* st)
+{
+	gint root_node_id = 0;
+	gpointer root_node_id_p = GINT_TO_POINTER(root_node_id);
+	gpointer node_id_p = NULL;
+	gchar *uri = NULL;
+
+	refstats_node_id_to_parent_node_id_hash = wmem_map_new(wmem_file_scope(), g_direct_hash, g_direct_equal);
+	refstats_node_id_to_uri_hash = wmem_map_new(wmem_file_scope(), g_direct_hash, g_direct_equal);
+	refstats_uri_to_node_id_hash = wmem_map_new(wmem_file_scope(), wmem_str_hash, g_str_equal);
+
+	/* Add the root node and its mappings */
+	st_node_requests_by_referer = stats_tree_create_node(st, st_str_request_sequences, root_node_id, TRUE);
+	node_id_p = GINT_TO_POINTER(st_node_requests_by_referer);
+	uri = wmem_strdup(wmem_file_scope(), st_str_request_sequences);
+
+	wmem_map_insert(refstats_uri_to_node_id_hash, uri, node_id_p);
+	wmem_map_insert(refstats_node_id_to_uri_hash, node_id_p, uri);
+	wmem_map_insert(refstats_node_id_to_parent_node_id_hash, node_id_p, root_node_id_p);
+}
+
+static gint
+http_seq_stats_tick_referer(stats_tree* st, const gchar* arg_referer_uri)
+{
+	gint root_node_id = st_node_requests_by_referer;
+	gpointer root_node_id_p = GINT_TO_POINTER(st_node_requests_by_referer);
+	gint referer_node_id;
+	gpointer referer_node_id_p;
+	gint referer_parent_node_id;
+	gpointer referer_parent_node_id_p;
+	gchar *referer_uri;
+
+	/* Tick the referer's URI */
+	/* Does the node exist? */
+	if (!wmem_map_lookup_extended(refstats_uri_to_node_id_hash, arg_referer_uri, NULL, &referer_node_id_p)) {
+		/* The node for the referer didn't already exist, create the mappings */
+		referer_node_id = tick_stat_node(st, arg_referer_uri, root_node_id, TRUE);
+		referer_node_id_p = GINT_TO_POINTER(referer_node_id);
+		referer_parent_node_id_p = root_node_id_p;
+
+		referer_uri = wmem_strdup(wmem_file_scope(), arg_referer_uri);
+		wmem_map_insert(refstats_uri_to_node_id_hash, referer_uri, referer_node_id_p);
+		wmem_map_insert(refstats_node_id_to_uri_hash, referer_node_id_p, referer_uri);
+		wmem_map_insert(refstats_node_id_to_parent_node_id_hash, referer_node_id_p, referer_parent_node_id_p);
+	} else {
+		/* The node for the referer already exists, tick it */
+		referer_parent_node_id_p = wmem_map_lookup(refstats_node_id_to_parent_node_id_hash, referer_node_id_p);
+		referer_parent_node_id = GPOINTER_TO_INT(referer_parent_node_id_p);
+		referer_node_id = tick_stat_node(st, arg_referer_uri, referer_parent_node_id, TRUE);
+	}
+	return referer_node_id;
+}
+
+static void
+http_seq_stats_tick_request(stats_tree* st, const gchar* arg_full_uri, gint referer_node_id)
+{
+	gpointer referer_node_id_p = GINT_TO_POINTER(referer_node_id);
+	gint node_id;
+	gpointer node_id_p;
+	gchar *uri;
+
+	node_id = tick_stat_node(st, arg_full_uri, referer_node_id, TRUE);
+	node_id_p = GINT_TO_POINTER(node_id);
+
+	/* Update the mappings. Even if the URI was already seen, the URI->node mapping may need to be updated */
+
+	/* Is this a new node? */
+	uri = (gchar *) wmem_map_lookup(refstats_node_id_to_uri_hash, node_id_p);
+	if (!uri) {
+		/* node not found, add mappings for the node and uri */
+		uri = wmem_strdup(wmem_file_scope(), arg_full_uri);
+
+		wmem_map_insert(refstats_uri_to_node_id_hash, uri, node_id_p);
+		wmem_map_insert(refstats_node_id_to_uri_hash, node_id_p, uri);
+		wmem_map_insert(refstats_node_id_to_parent_node_id_hash, node_id_p, referer_node_id_p);
+	} else {
+		/* We've seen the node id before. Update the URI mapping refer to this node id*/
+		wmem_map_insert(refstats_uri_to_node_id_hash, uri, node_id_p);
+	}
+}
+
+static gchar*
+determine_http_location_target(const gchar *base_url, const gchar * location_url)
+{
+	/* Resolving a base URI + relative URI to an absolute URI ("Relative Resolution")
+	is complicated. Because of that, we take shortcuts that may result in
+	inaccurate results, but is also significantly simpler.
+	It would be best to use an external library to do this for us.
+	For reference, the RFC is located at https://tools.ietf.org/html/rfc3986#section-5.4
+
+	Returns NULL if the resolution fails
+	*/
+	gchar *final_target;
+
+	/* base_url must be an absolute URL.*/
+	if (strstr(base_url, "://") == NULL){
+		return NULL;
+	}
+
+	/* Empty Location */
+	if (location_url[0] == '\0') {
+		final_target = wmem_strdup(wmem_packet_scope(), base_url);
+		return final_target;
+	}
+	/* Protocol Relative */
+	else if (g_str_has_prefix(location_url, "//") ) {
+		char *base_scheme = g_uri_parse_scheme(base_url);
+		if (base_scheme == NULL) {
+			return NULL;
+		}
+		final_target = wmem_strdup_printf(wmem_packet_scope(), "%s:%s", base_scheme, location_url);
+		g_free(base_scheme);
+		return final_target;
+	}
+	/* Absolute URL*/
+	else if (strstr(location_url, "://") != NULL) {
+		final_target = wmem_strdup(wmem_packet_scope(), location_url);
+		return final_target;
+	}
+	/* Relative */
+	else {
+		gchar *start_fragment = strstr(base_url, "#");
+		gchar *start_query = NULL;
+		gchar *base_url_no_fragment = NULL;
+		gchar *base_url_no_query = NULL;
+
+		/* Strip off the fragment (which should never be present)*/
+		if (start_fragment == NULL) {
+			base_url_no_fragment = wmem_strdup(wmem_packet_scope(), base_url);
+		}
+		else {
+			base_url_no_fragment = wmem_strndup(wmem_packet_scope(), base_url, start_fragment - base_url);
+		}
+
+		/* Strip off the query (Queries are stripped from all relative URIs) */
+		start_query = strstr(base_url_no_fragment, "?");
+		if (start_query == NULL) {
+			base_url_no_query = wmem_strdup(wmem_packet_scope(), base_url_no_fragment);
+		}
+		else {
+			base_url_no_query = wmem_strndup(wmem_packet_scope(), base_url_no_fragment, start_query - base_url_no_fragment);
+		}
+
+		/* A leading question mark (?) means to replace the old query with the new*/
+		if (g_str_has_prefix(location_url, "?")) {
+			final_target = wmem_strdup_printf(wmem_packet_scope(), "%s%s", base_url_no_query, location_url);
+			return final_target;
+		}
+		/* A leading slash means to put the location after the netloc */
+		else if (g_str_has_prefix(location_url, "/")) {
+			gchar *scheme_end = strstr(base_url_no_query, "://") + 3;
+			gchar *netloc_end;
+			gint netloc_length;
+			if (scheme_end[0] == '\0') {
+				return NULL;
+			}
+			netloc_end = strstr(scheme_end, "/");
+			if (netloc_end == NULL) {
+				return NULL;
+			}
+			netloc_length = (gint) (netloc_end - base_url_no_query);
+			final_target = wmem_strdup_printf(wmem_packet_scope(), "%.*s%s", netloc_length, base_url_no_query, location_url);
+			return final_target;
+		}
+		/* Otherwise, it replaces the last element in the URI */
+		else {
+			gchar *scheme_end = strstr(base_url_no_query, "://") + 3;
+			gchar *end_of_path = g_strrstr(scheme_end, "/");
+
+			if (end_of_path != NULL) {
+				gint base_through_path = (gint) (end_of_path - base_url_no_query);
+				final_target = wmem_strdup_printf(wmem_packet_scope(), "%.*s/%s", base_through_path, base_url_no_query, location_url);
+			}
+			else {
+				final_target = wmem_strdup_printf(wmem_packet_scope(), "%s/%s", base_url_no_query, location_url);
+			}
+
+			return final_target;
+		}
+	}
+	return NULL;
+}
+
+/* HTTP/Request Sequences stats packet function */
+static int
+http_seq_stats_tree_packet(stats_tree* st, packet_info* pinfo _U_, epan_dissect_t* edt _U_, const void* p)
+{
+	const http_info_value_t* v = (const http_info_value_t*)p;
+
+	/* Track HTTP Redirects */
+	if (v->location_target && v->location_base_uri) {
+		gint referer_node_id;
+		gint parent_node_id;
+		gpointer parent_node_id_p;
+		gpointer current_node_id_p;
+		gchar *uri = NULL;
+
+		gchar *absolute_target = determine_http_location_target(v->location_base_uri, v->location_target);
+		/* absolute_target is NULL if the resolution fails */
+		if (absolute_target != NULL) {
+			/* We assume the user makes the request to the absolute_target */
+			/* Tick the base URI */
+			referer_node_id = http_seq_stats_tick_referer(st, v->location_base_uri);
+
+			/* Tick the location header's resolved URI */
+			http_seq_stats_tick_request(st, absolute_target, referer_node_id);
+
+			/* Tick all stats nodes above the location */
+			current_node_id_p = GINT_TO_POINTER(referer_node_id);
+			while (wmem_map_lookup_extended(refstats_node_id_to_parent_node_id_hash, current_node_id_p, NULL, &parent_node_id_p)) {
+				parent_node_id = GPOINTER_TO_INT(parent_node_id_p);
+				uri = (gchar *) wmem_map_lookup(refstats_node_id_to_uri_hash, current_node_id_p);
+				tick_stat_node(st, uri, parent_node_id, TRUE);
+				current_node_id_p = parent_node_id_p;
+			}
+		}
+	}
+
+	/* Track HTTP Requests/Referers */
+	if (v->request_method && v->referer_uri && v->full_uri) {
+		gint referer_node_id;
+		gint parent_node_id;
+		gpointer parent_node_id_p;
+		gpointer current_node_id_p;
+		gchar *uri = NULL;
+		/* Tick the referer's URI */
+		referer_node_id = http_seq_stats_tick_referer(st, v->referer_uri);
+
+		/* Tick the request's URI */
+		http_seq_stats_tick_request(st, v->full_uri, referer_node_id);
+
+		/* Tick all stats nodes above the referer */
+		current_node_id_p = GINT_TO_POINTER(referer_node_id);
+		while (wmem_map_lookup_extended(refstats_node_id_to_parent_node_id_hash, current_node_id_p, NULL, &parent_node_id_p)) {
+			parent_node_id = GPOINTER_TO_INT(parent_node_id_p);
+			uri = (gchar *) wmem_map_lookup(refstats_node_id_to_uri_hash, current_node_id_p);
+			tick_stat_node(st, uri, parent_node_id, TRUE);
+			current_node_id_p = parent_node_id_p;
+		}
+	}
+	return 0;
+}
+
 
 static void
 dissect_http_ntlmssp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
@@ -934,7 +1206,11 @@ dissect_http_message(tvbuff_t *tvb, int offset, packet_info *pinfo,
 	stat_info->response_code = 0;
 	stat_info->request_method = NULL;
 	stat_info->request_uri = NULL;
+	stat_info->referer_uri = NULL;
 	stat_info->http_host = NULL;
+	stat_info->full_uri = NULL;
+	stat_info->location_target = NULL;
+	stat_info->location_base_uri = NULL;
 
 	orig_offset = offset;
 
@@ -1151,8 +1427,7 @@ dissect_http_message(tvbuff_t *tvb, int offset, packet_info *pinfo,
 		}
 		offset = next_offset;
 	}
-
-	if (tree && stat_info->http_host && stat_info->request_uri) {
+	if (stat_info->http_host && stat_info->request_uri) {
 		proto_item *e_ti;
 		gchar      *uri;
 
@@ -1166,13 +1441,16 @@ dissect_http_message(tvbuff_t *tvb, int offset, packet_info *pinfo,
 				    is_ssl ? "https" : "http",
 				    g_strstrip(wmem_strdup(wmem_packet_scope(), stat_info->http_host)), stat_info->request_uri);
 		}
-
-		e_ti = proto_tree_add_string(http_tree,
+		stat_info->full_uri = wmem_strdup(wmem_packet_scope(), uri);
+		conv_data->full_uri = wmem_strdup(wmem_file_scope(), uri);
+		if (tree) {
+			e_ti = proto_tree_add_string(http_tree,
 					     hf_http_request_full_uri, tvb, 0,
 					     0, uri);
 
-		PROTO_ITEM_SET_URL(e_ti);
-		PROTO_ITEM_SET_GENERATED(e_ti);
+			PROTO_ITEM_SET_URL(e_ti);
+			PROTO_ITEM_SET_GENERATED(e_ti);
+		}
 	}
 
 	if (!PINFO_FD_VISITED(pinfo)) {
@@ -2193,7 +2471,7 @@ http_payload_subdissector(tvbuff_t *tvb, proto_tree *tree,
 			destport = pinfo->destport;
 		}
 
-		conv = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, PT_TCP, srcport, destport, 0);
+		conv = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, ENDPOINT_TCP, srcport, destport, 0);
 
 		/* We may get stuck in a recursion loop if we let process_tcp_payload() call us.
 		 * So, if the port in the URI is one we're registered for or we have set up a
@@ -2444,6 +2722,8 @@ typedef struct {
 #define HDR_COOKIE			9
 #define HDR_WEBSOCKET_PROTOCOL		10
 #define HDR_WEBSOCKET_EXTENSIONS	11
+#define HDR_REFERER			12
+#define HDR_LOCATION			13
 
 static const header_info headers[] = {
 	{ "Authorization", &hf_http_authorization, HDR_AUTHORIZATION },
@@ -2460,13 +2740,13 @@ static const header_info headers[] = {
 	{ "Connection", &hf_http_connection, HDR_NO_SPECIAL },
 	{ "Cookie", &hf_http_cookie, HDR_COOKIE },
 	{ "Accept", &hf_http_accept, HDR_NO_SPECIAL },
-	{ "Referer", &hf_http_referer, HDR_NO_SPECIAL },
+	{ "Referer", &hf_http_referer, HDR_REFERER },
 	{ "Accept-Language", &hf_http_accept_language, HDR_NO_SPECIAL },
 	{ "Accept-Encoding", &hf_http_accept_encoding, HDR_NO_SPECIAL },
 	{ "Date", &hf_http_date, HDR_NO_SPECIAL },
 	{ "Cache-Control", &hf_http_cache_control, HDR_NO_SPECIAL },
 	{ "Server", &hf_http_server, HDR_NO_SPECIAL },
-	{ "Location", &hf_http_location, HDR_NO_SPECIAL },
+	{ "Location", &hf_http_location, HDR_LOCATION },
 	{ "Sec-WebSocket-Accept", &hf_http_sec_websocket_accept, HDR_NO_SPECIAL },
 	{ "Sec-WebSocket-Extensions", &hf_http_sec_websocket_extensions, HDR_WEBSOCKET_EXTENSIONS },
 	{ "Sec-WebSocket-Key", &hf_http_sec_websocket_key, HDR_NO_SPECIAL },
@@ -2924,6 +3204,17 @@ process_header(tvbuff_t *tvb, int offset, int next_offset,
 		case HDR_WEBSOCKET_EXTENSIONS:
 			if (http_type == HTTP_RESPONSE) {
 				conv_data->websocket_extensions = wmem_strndup(wmem_file_scope(), value, value_len);
+			}
+			break;
+
+		case HDR_REFERER:
+			stat_info->referer_uri = wmem_strndup(wmem_packet_scope(), value, value_len);
+			break;
+
+		case HDR_LOCATION:
+			if (conv_data->request_uri){
+				stat_info->location_target = wmem_strndup(wmem_packet_scope(), value, value_len);
+				stat_info->location_base_uri = wmem_strdup(wmem_packet_scope(), conv_data->full_uri);
 			}
 			break;
 		}
@@ -3815,6 +4106,7 @@ proto_reg_handoff_http(void)
 	stats_tree_register("http", "http",     "HTTP/Packet Counter",   0, http_stats_tree_packet,      http_stats_tree_init, NULL );
 	stats_tree_register("http", "http_req", "HTTP/Requests",         0, http_req_stats_tree_packet,  http_req_stats_tree_init, NULL );
 	stats_tree_register("http", "http_srv", "HTTP/Load Distribution",0, http_reqs_stats_tree_packet, http_reqs_stats_tree_init, NULL );
+	stats_tree_register("http", "http_seq", "HTTP/Request Sequences",0, http_seq_stats_tree_packet,  http_seq_stats_tree_init, NULL );
 }
 
 /*

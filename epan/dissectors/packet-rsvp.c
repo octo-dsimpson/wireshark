@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 /*
@@ -2102,7 +2090,7 @@ rsvp_conversation_packet(void *pct, packet_info *pinfo, epan_dissect_t *edt _U_,
     const rsvp_conversation_info *rsvph = (const rsvp_conversation_info *)vip;
 
     add_conversation_table_data(hash, &rsvph->source, &rsvph->destination,
-        0, 0, 1, pinfo->fd->pkt_len, &pinfo->rel_ts, &pinfo->abs_ts, &rsvp_ct_dissector_info, PT_NONE);
+        0, 0, 1, pinfo->fd->pkt_len, &pinfo->rel_ts, &pinfo->abs_ts, &rsvp_ct_dissector_info, ENDPOINT_NONE);
 
     return 1;
 }
@@ -2128,8 +2116,8 @@ rsvp_hostlist_packet(void *pit, packet_info *pinfo, epan_dissect_t *edt _U_, con
      * itself). XXX - this could probably be done more efficiently inside
      * hostlist_table
      */
-    add_hostlist_table_data(hash, &rsvph->source, 0, TRUE, 1, pinfo->fd->pkt_len, &rsvp_host_dissector_info, PT_NONE);
-    add_hostlist_table_data(hash, &rsvph->destination, 0, FALSE, 1, pinfo->fd->pkt_len, &rsvp_host_dissector_info, PT_NONE);
+    add_hostlist_table_data(hash, &rsvph->source, 0, TRUE, 1, pinfo->fd->pkt_len, &rsvp_host_dissector_info, ENDPOINT_NONE);
+    add_hostlist_table_data(hash, &rsvph->destination, 0, FALSE, 1, pinfo->fd->pkt_len, &rsvp_host_dissector_info, ENDPOINT_NONE);
     return 1;
 }
 
@@ -9881,9 +9869,9 @@ proto_register_rsvp(void)
       { &hf_rsvp_template_filter_source_address_ipv6, { "Source address", "rsvp.template_filter.source_address_ipv6", FT_IPv6, BASE_NONE, NULL, 0x0, NULL, HFILL }},
       { &hf_rsvp_template_filter_source_port, { "Source port", "rsvp.template_filter.source_port", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
       { &hf_rsvp_template_filter_ipv4_tunnel_sender_address, { "IPv4 Tunnel Sender Address", "rsvp.template_filter.ipv4_tunnel_sender_address", FT_IPv4, BASE_NONE, NULL, 0x0, NULL, HFILL }},
-      { &hf_rsvp_template_filter_ipv6_tunnel_sender_address, { "IPv6 Tunnel Sender Address", "rsvp.template_filter.ipv4_tunnel_sender_address", FT_IPv6, BASE_NONE, NULL, 0x0, NULL, HFILL }},
+      { &hf_rsvp_template_filter_ipv6_tunnel_sender_address, { "IPv6 Tunnel Sender Address", "rsvp.template_filter.ipv6_tunnel_sender_address", FT_IPv6, BASE_NONE, NULL, 0x0, NULL, HFILL }},
       { &hf_rsvp_template_filter_sub_group_originator_id, { "Sub-Group Originator ID", "rsvp.template_filter.sub_group_originator_id", FT_BYTES, BASE_NONE, NULL, 0x0, NULL, HFILL }},
-      { &hf_rsvp_template_filter_sub_group_id, { "Sub-Group ID", "rsvp.template_filter.sub_group_originator_id", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
+      { &hf_rsvp_template_filter_sub_group_id, { "Sub-Group ID", "rsvp.template_filter.sub_group_id", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
       { &hf_rsvp_template_filter_data, { "Data", "rsvp.template_filter.data", FT_BYTES, BASE_NONE, NULL, 0x0, NULL, HFILL }},
       { &hf_rsvp_eth_tspec_length, { "Length", "rsvp.eth_tspec.length", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
       { &hf_rsvp_eth_tspec_profile, { "Profile", "rsvp.eth_tspec.profile", FT_UINT8, BASE_HEX, NULL, 0x0, NULL, HFILL }},

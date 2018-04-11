@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  * Ref: 3GPP TS 29.274 version 11.1.0 Release 11 ETSI TS 129 274 V8.1.1 (2009-04)
  */
 
@@ -71,7 +59,7 @@ static int hf_gtpv2_teid = -1;
 static int hf_gtpv2_seq = -1;
 static int hf_gtpv2_msg_prio = -1;
 static int hf_gtpv2_spare = -1;
-
+static int hf_gtpv2_spare_w0 = -1;
 
 static int hf_gtpv2_ie = -1;
 static int hf_gtpv2_ie_len = -1;
@@ -588,11 +576,32 @@ static int hf_gtpv2_node_name = -1;
 static int hf_gtpv2_length_of_node_realm = -1;
 static int hf_gtpv2_node_realm = -1;
 static int hf_gtpv2_ms_ts = -1;
+static int hf_gtpv2_rohc_profiles_bit0 = -1;
+static int hf_gtpv2_rohc_profiles_bit1 = -1;
+static int hf_gtpv2_rohc_profiles_bit2 = -1;
+static int hf_gtpv2_rohc_profiles_bit3 = -1;
+static int hf_gtpv2_rohc_profiles_bit4 = -1;
+static int hf_gtpv2_rohc_profiles_bit5 = -1;
+static int hf_gtpv2_rohc_profiles_bit6 = -1;
+static int hf_gtpv2_rohc_profiles_bit7 = -1;
+static int hf_gtpv2_max_cid = -1;
 static int hf_gtpv2_uplink_rate_limit = -1;
 static int hf_gtpv2_downlink_rate_limit = -1;
 static int hf_gtpv2_timestamp_value = -1;
 static int hf_gtpv2_counter_value = -1;
 static int hf_gtpv2_uli_flags = -1;
+static int hf_gtpv2_rohc_profile_flags = -1;
+static int hf_gtpv2_dcnr = -1;
+
+static int hf_gtpv2_secondary_rat_usage_data_report = -1;
+static int hf_gtpv2_secondary_rat_usage_data_report_spare_bits = -1;
+static int hf_gtpv2_secondary_rat_usage_data_report_bit2 = -1;
+static int hf_gtpv2_secondary_rat_usage_data_report_bit1 = -1;
+static int hf_gtpv2_secondary_rat_usage_data_report_rat_type = -1;
+static int hf_gtpv2_secondary_rat_usage_data_report_start_timestamp = -1;
+static int hf_gtpv2_secondary_rat_usage_data_report_end_timestamp = -1;
+static int hf_gtpv2_secondary_rat_usage_data_report_usage_data_dl = -1;
+static int hf_gtpv2_secondary_rat_usage_data_report_usage_data_ul = -1;
 
 static gint ett_gtpv2 = -1;
 static gint ett_gtpv2_flags = -1;
@@ -651,6 +660,8 @@ static gint ett_gtpv2_load_control_inf = -1;
 static gint ett_gtpv2_eci = -1;
 static gint ett_gtpv2_twan_flags = -1;
 static gint ett_gtpv2_ciot_support_ind = -1;
+static gint ett_gtpv2_rohc_profile_flags = -1;
+static gint ett_gtpv2_secondary_rat_usage_data_report = -1;
 
 static expert_field ei_gtpv2_ie_data_not_dissected = EI_INIT;
 static expert_field ei_gtpv2_ie_len_invalid = EI_INIT;
@@ -993,13 +1004,17 @@ static gint ett_gtpv2_ies[NUM_GTPV2_IES];
 #define GTPV2_IE_CIOT_OPT_SUPPORT_IND   194
 /*
 195	SCEF PDN Connection
-196	Header Compression Configuration
 */
-#define GTPV2_IE_EXTENDED_PCO           197
-#define GTPV2_IE_SERV_PLMN_RATE_CONTROL 198
-#define GTPV2_IE_COUNTER                199
+#define GTPV2_IE_HEADER_COMP_CONF           196
+#define GTPV2_IE_EXTENDED_PCO               197
+#define GTPV2_IE_SERV_PLMN_RATE_CONTROL     198
+#define GTPV2_IE_COUNTER                    199
+
+/* 200	Mapped UE Usage Type */
+#define GTPV2_IE_SECONDARY_RAT_USAGE_DATA_REPORT     201
+#define GTPV2_IE_UP_FUNC_SEL_INDI_FLG       202
 /*
-200 to 253	Spare. For future use.
+203 to 253	Spare. For future use.
 254	Special IE type for IE Type Extension
 255	Private Extension
 256 to 65535	Spare. For future use.
@@ -1175,7 +1190,10 @@ static const value_string gtpv2_element_type_vals[] = {
     {197, "Extended Protocol Configuration Options(ePCO)"},                     /* Variable Length / 8.128 */
     {198, "Serving PLMN Rate Control"},                                         /* Extendable / 8.129 */
     {199, "Counter" },                                                          /* Extendable / 8.130 */
-                                                                                /* 200 to 254    Spare. For future use.    */
+    {200, "Mapped UE Usage Type" },                                             /* Extendable / 8.131 */
+    {201, "Secondary RAT Usage Data Report" },                                  /* Extendable / 8.132 */
+    {202, "UP Function Selection Indication Flags" },                           /* Extendable / 8.133 */
+                                                                                /* 203 to 254    Spare. For future use.    */
     {255, "Private Extension"},                                                 /* Variable Length / 8.67 */
     {0, NULL}
 };
@@ -6592,6 +6610,41 @@ dissect_gtpv2_ciot_opt_support_ind(tvbuff_t *tvb, packet_info *pinfo, proto_tree
 }
 
 /*
+ * 8.127 Header Compression Configuration
+ */
+
+
+
+static void
+dissect_gtpv2_header_comp_comf(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree, proto_item *item _U_, guint16 length _U_, guint8 message_type _U_, guint8 instance _U_, session_args_t * args _U_)
+{
+    int offset = 0;
+
+    static const int * gtpv2_rohc_profile_flags_flags[] = {
+        &hf_gtpv2_rohc_profiles_bit7,
+        &hf_gtpv2_rohc_profiles_bit6,
+        &hf_gtpv2_rohc_profiles_bit5,
+        &hf_gtpv2_rohc_profiles_bit4,
+        &hf_gtpv2_rohc_profiles_bit3,
+        &hf_gtpv2_rohc_profiles_bit2,
+        &hf_gtpv2_rohc_profiles_bit1,
+        &hf_gtpv2_rohc_profiles_bit0,
+        NULL
+    };
+
+    /* Octet 5 to 6   ROHC Profiles */
+
+    proto_tree_add_bitmask_with_flags(tree, tvb, offset, hf_gtpv2_rohc_profile_flags,
+        ett_gtpv2_rohc_profile_flags, gtpv2_rohc_profile_flags_flags, ENC_BIG_ENDIAN, BMT_NO_FALSE | BMT_NO_INT);
+    offset++;
+    proto_tree_add_item(tree, hf_gtpv2_spare_w0, tvb, offset, 1, ENC_BIG_ENDIAN);
+    offset++;
+    /* Octet 7 to 8 MAX_CID*/
+    proto_tree_add_item(tree, hf_gtpv2_max_cid, tvb, offset, 2, ENC_BIG_ENDIAN);
+
+}
+
+/*
  * 8.129 Serving PLMN Rate Control
  */
 static void
@@ -6623,6 +6676,94 @@ dissect_gtpv2_counter(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree, p
     proto_tree_add_item(tree, hf_gtpv2_counter_value, tvb, offset, 1, ENC_BIG_ENDIAN);
 }
 
+/*
+ * 8.131 Mapped UE Usage Type
+ */
+
+/*
+ * 8.132 Secondary RAT Usage Data Report
+ */
+static const value_string gtpv2_secondary_rat_type_vals[] = {
+    { 0, "NR" },
+    { 0, NULL }
+};
+
+static void
+dissect_gtpv2_secondary_rat_usage_data_report(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, proto_item *item _U_, guint16 length, guint8 message_type _U_, guint8 instance _U_, session_args_t * args _U_)
+{
+   int offset = 0;
+   const gchar *time_str;
+   static const int *secondary_rat_usage_data_report_flags[] = {
+       &hf_gtpv2_secondary_rat_usage_data_report_spare_bits,
+       &hf_gtpv2_secondary_rat_usage_data_report_bit2,
+       &hf_gtpv2_secondary_rat_usage_data_report_bit1,
+       NULL
+   };
+
+  /*
+   * The following bits within Octet 5 shall indicate:
+   * Bit 8 to 3 - Spare, for future use and set to zero.
+   * Bit 2 - IRSGW (Intended Receiver SGW)
+   * Bit 1 - IRPGW (Intended Receiver PGW)
+   */
+   proto_tree_add_bitmask_with_flags(tree, tvb, 0, hf_gtpv2_secondary_rat_usage_data_report,
+     ett_gtpv2_secondary_rat_usage_data_report, secondary_rat_usage_data_report_flags, ENC_BIG_ENDIAN, BMT_NO_APPEND);
+   offset += 1;
+
+    /* Octet 6 RAT Type */
+    proto_tree_add_item(tree, hf_gtpv2_secondary_rat_usage_data_report_rat_type, tvb, offset, 1, ENC_BIG_ENDIAN);
+    offset += 1;
+
+    /* Octet 7 EPS Bearer ID */
+    /* Spare (all bits set to 0) B8 - B5 */
+    proto_tree_add_bits_item(tree, hf_gtpv2_spare_bits, tvb, offset << 3, 4, ENC_BIG_ENDIAN);
+    /* EPS Bearer ID (EBI) B4 - B1 */
+    proto_tree_add_item(tree, hf_gtpv2_ebi, tvb, offset, 1, ENC_BIG_ENDIAN);
+    offset += 1;
+
+    /*
+    * Octets 8 to 11 and 12 to 15 shall be encoded in the same format as the first four octets of the 64-bit timestamp
+    * format as defined in section 6 of IETF RFC 5905
+    */
+
+    /* Octets 8 to 11 Start timestamp */
+    time_str = tvb_ntp_fmt_ts_sec(tvb, 0);
+    proto_tree_add_string(tree, hf_gtpv2_secondary_rat_usage_data_report_start_timestamp, tvb, offset, 4, time_str);
+    offset += 4;
+
+    /* Octets 12 to 15 End timestamp */
+    time_str = tvb_ntp_fmt_ts_sec(tvb, 0);
+    proto_tree_add_string(tree, hf_gtpv2_secondary_rat_usage_data_report_end_timestamp, tvb, offset, 4, time_str);
+    offset += 4;
+
+    /* 16 to 23 Usage Data DL */
+    proto_tree_add_item(tree, hf_gtpv2_secondary_rat_usage_data_report_usage_data_dl, tvb, offset, 8, ENC_BIG_ENDIAN);
+    offset += 8;
+
+    /* 24 to 32 Usage Data UL */
+    proto_tree_add_item(tree, hf_gtpv2_secondary_rat_usage_data_report_usage_data_ul, tvb, offset, 8, ENC_BIG_ENDIAN);
+    offset += 8;
+
+   if (length - offset) {
+      proto_tree_add_expert_format(tree, pinfo, &ei_gtpv2_ie_data_not_dissected, tvb, offset, -1, "The rest of the IE not dissected yet");
+   }
+}
+
+
+
+/*
+ * 8.133 UP Function Selection Indication Flags
+ */
+
+static void
+dissect_gtpv2_up_func_slec_indic_flg(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree, proto_item *item _U_, guint16 length _U_, guint8 message_type _U_, guint8 instance _U_, session_args_t * args _U_)
+{
+    int offset = 0;
+
+    proto_tree_add_bits_item(tree, hf_gtpv2_spare_bits, tvb, offset << 3, 7, ENC_BIG_ENDIAN);
+    proto_tree_add_item(tree, hf_gtpv2_dcnr, tvb, offset, 1, ENC_BIG_ENDIAN);
+
+}
 
 typedef struct _gtpv2_ie {
     int ie_type;
@@ -6774,10 +6915,12 @@ static const gtpv2_ie_t gtpv2_ies[] = {
                                                                              /* 193, 8.124 Remote UE IP Information */
     {GTPV2_IE_CIOT_OPT_SUPPORT_IND, dissect_gtpv2_ciot_opt_support_ind},     /* 194, 8.125 CIoT Optimizations Support Indication */
                                                                              /* 195, 8.126 SCEF PDN Connection */
-                                                                             /* 196, 8.127 Header Compression Configuration */
+    {GTPV2_IE_HEADER_COMP_CONF, dissect_gtpv2_header_comp_comf},             /* 196, 8.127 Header Compression Configuration */
     {GTPV2_IE_EXTENDED_PCO, dissect_gtpv2_pco},                              /* 197, 8.128 Extended Protocol Configuration Options (ePCO) */
     {GTPV2_IE_SERV_PLMN_RATE_CONTROL, dissect_gtpv2_serv_plmn_rate_control}, /* 198, 8.129 Serving PLMN Rate Control */
     {GTPV2_IE_COUNTER, dissect_gtpv2_counter},                               /* 199, 8.130 Counter */
+    {GTPV2_IE_SECONDARY_RAT_USAGE_DATA_REPORT, dissect_gtpv2_secondary_rat_usage_data_report}, /* 201, 8.132 Secondary RAT Usage Data Report */
+    {GTPV2_IE_UP_FUNC_SEL_INDI_FLG, dissect_gtpv2_up_func_slec_indic_flg },  /* 202, 8.1333 UP Function Selection Indication Flags */
 
     {GTPV2_IE_PRIVATE_EXT, dissect_gtpv2_private_ext},
 
@@ -7317,6 +7460,11 @@ void proto_register_gtpv2(void)
           {"Spare", "gtpv2.spare",
            FT_UINT16, BASE_DEC, NULL, 0x0,
            NULL, HFILL}
+        },
+        { &hf_gtpv2_spare_w0,
+        { "Spare", "gtpv2.spare.w0",
+        FT_UINT8, BASE_DEC, NULL, 0x0,
+        NULL, HFILL }
         },
         { &hf_gtpv2_ie,
           {"IE Type", "gtpv2.ie_type",
@@ -9415,6 +9563,56 @@ void proto_register_gtpv2(void)
           FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
           NULL, HFILL }
       },
+      { &hf_gtpv2_rohc_profile_flags,
+      { "ROHC Profiles flags", "gtpv2.rohc_profile_flags",
+          FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_rohc_profiles_bit0,
+      { "Profile Identifier: 0x0002, UDP/IP", "gtpv2.rohc_profiles.b0",
+          FT_BOOLEAN, 8, TFS(&tfs_allowed_not_allowed), 0x0001,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_rohc_profiles_bit1,
+      { "Profile Identifier: 0x0003, ESP/IP", "gtpv2.rohc_profiles.b1",
+          FT_BOOLEAN, 8, TFS(&tfs_allowed_not_allowed), 0x0002,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_rohc_profiles_bit2,
+      { "Profile Identifier: 0x0004, IP", "gtpv2.rohc_profiles.b2",
+          FT_BOOLEAN, 8, TFS(&tfs_allowed_not_allowed), 0x0004,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_rohc_profiles_bit3,
+      { "Profile Identifier: 0x0006, TCP/IP", "gtpv2.rohc_profiles.b3",
+          FT_BOOLEAN, 8, TFS(&tfs_allowed_not_allowed), 0x0008,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_rohc_profiles_bit4,
+      { "Profile Identifier: 0x0102, UDP/IP", "gtpv2.rohc_profiles.b4",
+          FT_BOOLEAN, 8, TFS(&tfs_allowed_not_allowed), 0x0010,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_rohc_profiles_bit5,
+      { "Profile Identifier: 0x0103, ESP/IP", "gtpv2.rohc_profiles.b5",
+          FT_BOOLEAN, 8, TFS(&tfs_allowed_not_allowed), 0x0020,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_rohc_profiles_bit6,
+      { "Profile Identifier: 0x0104, IP", "gtpv2.rohc_profiles.b6",
+          FT_BOOLEAN, 8, TFS(&tfs_allowed_not_allowed), 0x0040,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_rohc_profiles_bit7,
+      { "Spare", "gtpv2.rohc_profiles.b7",
+          FT_BOOLEAN, 8, NULL, 0x0080,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_max_cid,
+      { "MAX_CID", "gtpv2.max_cid",
+          FT_UINT16, BASE_DEC, NULL, 0x0,
+          NULL, HFILL }
+      },
       { &hf_gtpv2_uplink_rate_limit,
       { "Uplink Rate Limit", "gtpv2.uplink_rate_limit",
           FT_UINT16, BASE_DEC, NULL, 0x0,
@@ -9440,10 +9638,60 @@ void proto_register_gtpv2(void)
           FT_UINT8, BASE_HEX, NULL, 0x0,
           NULL, HFILL }
       },
+      { &hf_gtpv2_dcnr,
+      { "DCNR (Dual connectivity with NR)", "gtpv2.dcnr",
+          FT_BOOLEAN, 8, TFS(&tfs_set_notset), 0x01,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_secondary_rat_usage_data_report,
+          { "Secondary RAT Usage Data Report", "gtpv2.secondary_rat_usage_data_report",
+          FT_UINT8, BASE_DEC, NULL, 0x0,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_secondary_rat_usage_data_report_spare_bits,
+          { "Spare", "gtpv2.secondary_rat_usage_data_report.spare_bits",
+          FT_UINT8, BASE_HEX, NULL, 0xFC,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_secondary_rat_usage_data_report_bit2,
+          { "IRSGW  (Intended Receiver SGW)", "gtpv2.secondary_rat_usage_data_report.irsgw",
+          FT_BOOLEAN, 8, TFS(&tfs_set_notset), 0x02,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_secondary_rat_usage_data_report_bit1,
+          { "IRPGW (Intended Receiver PGW)", "gtpv2.secondary_rat_usage_data_report.irpgw",
+          FT_BOOLEAN, 8, TFS(&tfs_set_notset), 0x01,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_secondary_rat_usage_data_report_rat_type,
+          {"RAT Type", "gtpv2.secondary_rat_usage_data_report.rat_type",
+          FT_UINT8, BASE_DEC, VALS(gtpv2_secondary_rat_type_vals), 0xFF,
+          NULL, HFILL}
+      },
+      { &hf_gtpv2_secondary_rat_usage_data_report_start_timestamp,
+      { "Start timestamp", "gtpv2.secondary_rat_usage_data_report.start_timestamp",
+          FT_STRING, BASE_NONE, NULL, 0x0,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_secondary_rat_usage_data_report_end_timestamp,
+      { "End timestamp", "gtpv2.secondary_rat_usage_data_report.end_timestamp",
+          FT_STRING, BASE_NONE, NULL, 0x0,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_secondary_rat_usage_data_report_usage_data_dl,
+      { "Usage Data DL", "gtpv2.secondary_rat_usage_data_report.usage_data_dl",
+          FT_UINT64, BASE_DEC, NULL, 0x0,
+          NULL, HFILL }
+      },
+      { &hf_gtpv2_secondary_rat_usage_data_report_usage_data_ul,
+      { "Usage Data UL", "gtpv2.secondary_rat_usage_data_report.usage_data_ul",
+          FT_UINT64, BASE_DEC, NULL, 0x0,
+          NULL, HFILL }
+      },
     };
 
     /* Setup protocol subtree array */
-#define GTPV2_NUM_INDIVIDUAL_ELEMS    57
+#define GTPV2_NUM_INDIVIDUAL_ELEMS    59
     static gint *ett_gtpv2_array[GTPV2_NUM_INDIVIDUAL_ELEMS + NUM_GTPV2_IES];
 
     ett_gtpv2_array[0] = &ett_gtpv2;
@@ -9503,6 +9751,8 @@ void proto_register_gtpv2(void)
     ett_gtpv2_array[54] = &ett_gtpv2_eci;
     ett_gtpv2_array[55] = &ett_gtpv2_twan_flags;
     ett_gtpv2_array[56] = &ett_gtpv2_ciot_support_ind;
+    ett_gtpv2_array[57] = &ett_gtpv2_rohc_profile_flags;
+    ett_gtpv2_array[58] = &ett_gtpv2_secondary_rat_usage_data_report;
 
     last_offset = GTPV2_NUM_INDIVIDUAL_ELEMS;
 

@@ -10,19 +10,7 @@
  *
  * Copied from packet-cops.c
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  * REF: 3GPP TS 48.058 version 6.1.0 Release 6
  * http://www.3gpp.org/ftp/Specs/html-info/48058.htm
@@ -312,6 +300,7 @@ static const value_string rsl_msg_disc_vals[] = {
 #define RSL_MSG_REL_CONF                 8   /* 0x08 */
 #define RSL_MSG_REL_IND                  9   /* 0x09 */
 #define RSL_MSG_UNIT_DATA_REQ           10  /* 0x0a */
+#define RSL_MSG_UNIT_DATA_IND           11  /* 0x0b */
 /* Common Channel Management messages */
 #define RSL_MSG_BCCH_INFO               17  /* 0x11 */
 #define RSL_MSG_CCCH_LOAD_IND           18  /* 0x12 */
@@ -425,6 +414,7 @@ static const value_string rsl_msg_type_vals[] = {
 /* 0x08 */ {  RSL_MSG_REL_CONF,          "RELease CONFirm" },                            /* 8.3.8 */
 /* 0x09 */ {  RSL_MSG_REL_IND,           "RELease INDication" },                         /* 8.3.9 */
 /* 0x0a */ {  RSL_MSG_UNIT_DATA_REQ,     "UNIT DATA REQuest" },                          /* 8.3.10 */
+/* 0x0b */ {  RSL_MSG_UNIT_DATA_IND,     "UNIT DATA INDication" },                       /* 8.3.11 */
     /* 0 0 0 1 - - - - Common Channel Management/TRX Management messages: */
 /* 0x11 */ {  RSL_MSG_BCCH_INFO,         "BCCH INFOrmation" },                           /* 8.5.1 */
 /* 0x12 */ {  RSL_MSG_CCCH_LOAD_IND,     "CCCH LOAD INDication" },                       /* 8.5.2 */
@@ -3642,6 +3632,15 @@ dissct_rsl_msg(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, int offset)
         if (tvb_reported_length_remaining(tvb, offset) > 0)
             offset = dissect_rsl_ie_L3_inf(tvb, pinfo, tree, offset, FALSE, L3_INF_OTHER);
         break;
+    /* 8.3.11 UNIT DATA INDICATION */
+    case RSL_MSG_UNIT_DATA_IND:
+        /*  Channel number          9.3.1   M TV 2               */
+        offset = dissect_rsl_ie_ch_no(tvb, pinfo, tree, offset, TRUE);
+        /*  Link Identifier         9.3.2   M TV 2               */
+        offset = dissect_rsl_ie_link_id(tvb, pinfo, tree, offset, TRUE);
+        /*  L3 Information          9.3.11  M TLV 3-25           */
+        offset = dissect_rsl_ie_L3_inf(tvb, pinfo, tree, offset, TRUE, L3_INF_OTHER);
+        break;
 /* Common Channel Management/TRX Management messages */
     /* 8.5.1 BCCH INFORMATION 17*/
     case RSL_MSG_BCCH_INFO:
@@ -4346,22 +4345,22 @@ void proto_register_rsl(void)
         },
         { &hf_rsl_rxlev_full_up,
           { "RXLEV.FULL.up",           "gsm_abis_rsl.rxlev_full_up",
-            FT_UINT8, BASE_DEC, NULL, 0x3f,
+            FT_UINT8, BASE_DEC|BASE_EXT_STRING, &gsm_a_rr_rxlev_vals_ext, 0x3f,
             NULL, HFILL }
         },
         { &hf_rsl_rxlev_sub_up,
           { "RXLEV.SUB.up",           "gsm_abis_rsl.rxlev_sub_up",
-            FT_UINT8, BASE_DEC, NULL, 0x3f,
+            FT_UINT8, BASE_DEC|BASE_EXT_STRING, &gsm_a_rr_rxlev_vals_ext, 0x3f,
             NULL, HFILL }
         },
         { &hf_rsl_rxqual_full_up,
           { "RXQUAL.FULL.up",           "gsm_abis_rsl.rxqual_full_up",
-            FT_UINT8, BASE_DEC, NULL, 0x38,
+            FT_UINT8, BASE_DEC, VALS(gsm_a_rr_rxqual_vals), 0x38,
             NULL, HFILL }
         },
         { &hf_rsl_rxqual_sub_up,
           { "RXQUAL.SUB.up",           "gsm_abis_rsl.rxqual_sub_up",
-            FT_UINT8, BASE_DEC, NULL, 0x07,
+            FT_UINT8, BASE_DEC, VALS(gsm_a_rr_rxqual_vals), 0x07,
             NULL, HFILL }
         },
         { &hf_rsl_acc_delay,

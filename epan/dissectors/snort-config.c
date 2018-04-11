@@ -6,19 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -603,17 +591,16 @@ static void process_rule_option(Rule_t *rule, char *options, int option_start_of
 
     if (colon_offset != 0) {
         /* Name and value */
-        g_snprintf(name, colon_offset-option_start_offset, "%s", options+option_start_offset);
+        g_strlcpy(name, options+option_start_offset, colon_offset-option_start_offset);
         if (options[colon_offset] == ' ') {
             spaces_after_colon = 1;
         }
-        g_snprintf(value, options_end_offset-spaces_after_colon-colon_offset, "%s",
-                   options+colon_offset+spaces_after_colon);
+        g_strlcpy(value, options+colon_offset+spaces_after_colon, options_end_offset-spaces_after_colon-colon_offset);
         value_length = (gint)strlen(value);
     }
     else {
         /* Just name */
-        g_snprintf(name, options_end_offset-option_start_offset, "%s", options+option_start_offset);
+        g_strlcpy(name, options+option_start_offset, options_end_offset-option_start_offset);
     }
 
     /* Do this extraction in one place (may not be number but should be OK) */

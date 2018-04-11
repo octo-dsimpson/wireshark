@@ -7,20 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include <ui/qt/models/uat_delegate.h>
 #include "epan/value_string.h"
@@ -35,6 +22,9 @@
 #include <ui/qt/widgets/field_filter_edit.h>
 #include <ui/qt/widgets/editor_file_dialog.h>
 #include <ui/qt/widgets/editor_color_dialog.h>
+
+// The Qt docs suggest overriding updateEditorGeometry, but the
+// defaults seem sane.
 
 UatDelegate::UatDelegate(QObject *parent) : QStyledItemDelegate(parent)
 {
@@ -55,12 +45,10 @@ QWidget *UatDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &
     case PT_TXTMOD_DIRECTORYNAME:
         if (index.isValid()) {
             QString filename_old = index.model()->data(index, Qt::EditRole).toString();
-            EditorFileDialog* fileDialog = new EditorFileDialog(index, parent, QString(field->title), filename_old);
-
-            fileDialog->setFileMode(QFileDialog::DirectoryOnly);
+            EditorFileDialog* fileDialog = new EditorFileDialog(index, EditorFileDialog::Directory, parent, QString(field->title), filename_old);
 
             //Use signals to accept data from cell
-            connect(fileDialog, SIGNAL(acceptEdit(const QModelIndex &)), this, SLOT(applyDirectory(const QModelIndex&)));
+            connect(fileDialog, SIGNAL(acceptEdit(const QModelIndex &)), this, SLOT(applyFilename(const QModelIndex&)));
             return fileDialog;
         }
 
@@ -70,9 +58,8 @@ QWidget *UatDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &
     case PT_TXTMOD_FILENAME:
         if (index.isValid()) {
             QString filename_old = index.model()->data(index, Qt::EditRole).toString();
-            EditorFileDialog* fileDialog = new EditorFileDialog(index, parent, QString(field->title), filename_old);
+            EditorFileDialog* fileDialog = new EditorFileDialog(index, EditorFileDialog::ExistingFile, parent, QString(field->title), filename_old);
 
-            fileDialog->setFileMode(QFileDialog::ExistingFile);
             fileDialog->setOption(QFileDialog::DontConfirmOverwrite);
 
             //Use signals to accept data from cell
@@ -86,9 +73,7 @@ QWidget *UatDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &
    case PT_TXTMOD_COLOR:
         if (index.isValid()) {
             QColor color(index.model()->data(index, Qt::DecorationRole).toString());
-            EditorColorDialog *colorDialog = new EditorColorDialog(index, color, new QWidget(parent));
-
-            colorDialog->setWindowFlags(Qt::Window);
+            EditorColorDialog *colorDialog = new EditorColorDialog(index, color, parent);
 
             //Use signals to accept data from cell
             connect(colorDialog, SIGNAL(acceptEdit(const QModelIndex &)), this, SLOT(applyColor(const QModelIndex &)));
@@ -162,14 +147,7 @@ void UatDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
     {
         QComboBox *combobox = static_cast<QComboBox *>(editor);
         const QString &data = index.model()->data(index, Qt::EditRole).toString();
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
         combobox->setCurrentText(data);
-#else
-        int new_index = combobox->findText(data);
-        if (new_index >= 0) {
-            combobox->setCurrentIndex(new_index);
-        }
-#endif
 
         break;
     }
@@ -192,8 +170,6 @@ void UatDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
         model->setData(index, data, Qt::EditRole);
         break;
     }
-    case PT_TXTMOD_DIRECTORYNAME:
-    case PT_TXTMOD_FILENAME:
     case PT_TXTMOD_COLOR:
         //do nothing, dialog signals will update table
         break;
@@ -203,58 +179,18 @@ void UatDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
     }
 }
 
-void UatDelegate::updateEditorGeometry(QWidget *editor,
-        const QStyleOptionViewItem &option, const QModelIndex &index) const
-{
-    uat_field_t *field = indexToField(index);
-
-    switch (field->mode) {
-    case PT_TXTMOD_DIRECTORYNAME:
-    {
-        QRect rect = option.rect;
-        rect.setBottom(rect.width());
-        editor->setGeometry(rect);
-        break;
-    }
-    case PT_TXTMOD_FILENAME:
-    {
-        QRect rect = option.rect;
-        rect.setWidth(600);
-        rect.setHeight(600);
-        editor->setGeometry(rect);
-        break;
-    }
-    default:
-        //the defaults for other editors seem sane.
-        QStyledItemDelegate::updateEditorGeometry(editor, option, index);
-    }
-}
-
 void UatDelegate::applyFilename(const QModelIndex& index)
 {
     if (index.isValid()) {
         EditorFileDialog* fileDialog = static_cast<EditorFileDialog*>(sender());
-
-        QStringList files = fileDialog->selectedFiles();
-        if (files.size() > 0) {
-            ((QAbstractItemModel *)index.model())->setData(index, files[0], Qt::EditRole);
-        }
-    }
-}
-
-void UatDelegate::applyDirectory(const QModelIndex& index)
-{
-    if (index.isValid()) {
-        EditorFileDialog* fileDialog = static_cast<EditorFileDialog*>(sender());
-        const QString &data = fileDialog->directory().absolutePath();
-        ((QAbstractItemModel *)index.model())->setData(index, data, Qt::EditRole);
+        ((QAbstractItemModel *)index.model())->setData(index, fileDialog->text(), Qt::EditRole);
     }
 }
 
 void UatDelegate::applyColor(const QModelIndex& index)
 {
     if (index.isValid()) {
-        QColorDialog *colorDialog = static_cast<QColorDialog*>(sender());
+        EditorColorDialog *colorDialog = static_cast<EditorColorDialog*>(sender());
         QColor newColor = colorDialog->currentColor();
         ((QAbstractItemModel *)index.model())->setData(index, newColor.name(), Qt::EditRole);
     }

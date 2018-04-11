@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include <ui/qt/widgets/overlay_scroll_bar.h>
 
@@ -118,9 +105,7 @@ void OverlayScrollBar::setNearOverlayImage(QImage &overlay_image, int packet_cou
 
     if (old_width != packet_map_img_.width()) {
         qreal dp_ratio = 1.0;
-    #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
         dp_ratio = devicePixelRatio();
-    #endif
 
         packet_map_width_ = packet_map_img_.width() / dp_ratio;
 
@@ -132,9 +117,7 @@ void OverlayScrollBar::setNearOverlayImage(QImage &overlay_image, int packet_cou
 void OverlayScrollBar::setMarkedPacketImage(QImage &mp_image)
 {
     qreal dp_ratio = 1.0;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
     dp_ratio = devicePixelRatio();
-#endif
 
     marked_packet_img_ = mp_image;
     marked_packet_width_ = mp_image.width() / dp_ratio;
@@ -164,10 +147,8 @@ void OverlayScrollBar::paintEvent(QPaintEvent *event)
 {
     qreal dp_ratio = 1.0;
     QSize pm_size(packet_map_width_, geometry().height());
-#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
     dp_ratio = devicePixelRatio();
     pm_size *= dp_ratio;
-#endif
 
     QPainter painter(this);
 
@@ -203,9 +184,7 @@ void OverlayScrollBar::paintEvent(QPaintEvent *event)
         pm_painter.restore();
 
         // Draw the map.
-#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
         packet_map.setDevicePixelRatio(dp_ratio);
-#endif
         painter.drawImage(0, 0, packet_map);
     }
 }
@@ -220,12 +199,10 @@ bool OverlayScrollBar::eventFilter(QObject *watched, QEvent *event)
 
         if (!marked_packet_img_.isNull()) {
             QRect groove_rect = grooveRect();
-#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
             qreal dp_ratio = 1.0;
             dp_ratio = devicePixelRatio();
             groove_rect.setTopLeft(groove_rect.topLeft() * dp_ratio);
             groove_rect.setSize(groove_rect.size() * dp_ratio);
-#endif
 
             QImage marked_map(groove_rect.width(), groove_rect.height(), QImage::Format_ARGB32_Premultiplied);
             marked_map.fill(Qt::transparent);
@@ -236,9 +213,7 @@ bool OverlayScrollBar::eventFilter(QObject *watched, QEvent *event)
             QRect far_dest(0, 0, groove_rect.width(), groove_rect.height());
             mm_painter.drawImage(far_dest, marked_packet_img_.scaled(far_dest.size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
 
-    #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
             marked_map.setDevicePixelRatio(dp_ratio);
-    #endif
             QPainter painter(&child_sb_);
             painter.drawImage(groove_rect.left(), groove_rect.top(), marked_map);
         }

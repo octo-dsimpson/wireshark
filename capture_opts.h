@@ -5,19 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 
@@ -200,10 +188,8 @@ typedef struct interface_tag {
     if_info_t       if_info;
     gboolean        selected;
     gboolean        hidden;
-#ifdef HAVE_EXTCAP
     /* External capture cached data */
     GHashTable     *external_cap_args_settings;
-#endif
     gchar          *timestamp_type;
 } interface_t;
 
@@ -211,12 +197,6 @@ typedef struct link_row_tag {
     gchar *name;
     gint dlt;
 } link_row;
-
-#ifdef _WIN32
-#define INVALID_EXTCAP_PID INVALID_HANDLE_VALUE
-#else
-#define INVALID_EXTCAP_PID (GPid)-1
-#endif
 
 typedef struct interface_options_tag {
     gchar            *name;                 /* the name of the interface provided to winpcap/libpcap to specify the interface */
@@ -228,12 +208,11 @@ typedef struct interface_options_tag {
     int               linktype;
     gboolean          promisc_mode;
     interface_type    if_type;
-#ifdef HAVE_EXTCAP
     gchar            *extcap;
     gchar            *extcap_fifo;
     GHashTable       *extcap_args;
-    GPid              extcap_pid;           /* pid of running process or INVALID_EXTCAP_PID */
-    gpointer          extcap_userdata;
+    GPid              extcap_pid;           /* pid of running process or WS_INVALID_PID */
+    gpointer          extcap_pipedata;
     guint             extcap_child_watch;
 #ifdef _WIN32
     HANDLE            extcap_pipe_h;
@@ -242,7 +221,6 @@ typedef struct interface_options_tag {
 #endif
     gchar            *extcap_control_in;
     gchar            *extcap_control_out;
-#endif
 #ifdef CAN_SET_CAPTURE_BUFFER_SIZE
     int               buffer_size;
 #endif

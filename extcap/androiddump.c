@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 #include "config.h"
 
@@ -33,6 +21,7 @@
 #include <wsutil/strtoi.h>
 #include <wsutil/filesystem.h>
 #include <wsutil/cmdarg_err.h>
+#include <wsutil/inet_addr.h>
 
 #include "ui/failure_message.h"
 
@@ -129,12 +118,14 @@
 
 #define PACKET_LENGTH 65535
 
-#define SOCKET_RW_TIMEOUT_MS          500
+#define SOCKET_RW_TIMEOUT_MS         2000
 #define SOCKET_CONNECT_TIMEOUT_TRIES   10
 #define SOCKET_CONNECT_DELAY_US      1000 /* (1000us = 1ms) * SOCKET_CONNECT_TIMEOUT_TRIES (10) = 10ms worst-case  */
 
 #define ADB_HEX4_FORMAT "%04zx"
 #define ADB_HEX4_LEN    4
+
+#define BTSNOOP_HDR_LEN 16
 
 enum exit_code {
     EXIT_CODE_SUCCESS = 0,
@@ -233,6 +224,17 @@ struct exported_pdu_header {
 typedef struct _own_pcap_bluetooth_h4_header {
     uint32_t direction;
 } own_pcap_bluetooth_h4_header;
+
+typedef struct pcap_hdr_s {
+        guint32 magic_number;   /* magic number */
+        guint16 version_major;  /* major version number */
+        guint16 version_minor;  /* minor version number */
+        gint32  thiszone;       /* GMT to local correction */
+        guint32 sigfigs;        /* accuracy of timestamps */
+        guint32 snaplen;        /* max length of captured packets, in octets */
+        guint32 network;        /* data link type */
+} pcap_hdr_t;
+
 
 typedef struct pcaprec_hdr_s {
         guint32 ts_sec;         /* timestamp seconds */
@@ -442,10 +444,7 @@ static struct extcap_dumper extcap_dumper_open(char *fifo, int encap) {
 #else
     int err = 0;
 
-    wtap_init();
-#ifdef HAVE_PLUGINS
-    register_all_wiretap_modules();
-#endif
+    wtap_init(FALSE);
 
     extcap_dumper.dumper.wtap = wtap_dump_open(fifo, WTAP_FILE_TYPE_SUBTYPE_PCAP_NSEC, encap, PACKET_LENGTH, FALSE, &err);
     if (!extcap_dumper.dumper.wtap) {
@@ -478,20 +477,20 @@ static gboolean extcap_dumper_dump(struct extcap_dumper extcap_dumper,
 #else
     int                 err = 0;
     char               *err_info;
-    struct wtap_pkthdr  hdr;
+    wtap_rec            rec;
 
-    hdr.presence_flags = WTAP_HAS_TS;
-    hdr.caplen = (guint32) captured_length;
-    hdr.len = (guint32) reported_length;
+    rec.rec_type = REC_TYPE_PACKET;
+    rec.presence_flags = WTAP_HAS_TS;
+    rec.rec_header.packet_header.caplen = (guint32) captured_length;
+    rec.rec_header.packet_header.len = (guint32) reported_length;
 
-    hdr.ts.secs = seconds;
-    hdr.ts.nsecs = (int) nanoseconds;
+    rec.ts.secs = seconds;
+    rec.ts.nsecs = (int) nanoseconds;
 
-    hdr.opt_comment = 0;
-    hdr.opt_comment = NULL;
-    hdr.drop_count = 0;
-    hdr.pack_flags = 0;
-    hdr.rec_type = REC_TYPE_PACKET;
+    rec.opt_comment = 0;
+    rec.opt_comment = NULL;
+    rec.rec_header.packet_header.drop_count = 0;
+    rec.rec_header.packet_header.pack_flags = 0;
 
 /*  NOTE: Try to handle pseudoheaders manually */
     if (extcap_dumper.encap == EXTCAP_ENCAP_BLUETOOTH_H4_WITH_PHDR) {
@@ -499,22 +498,22 @@ static gboolean extcap_dumper_dump(struct extcap_dumper extcap_dumper,
 
         SET_DATA(direction, value_u32, buffer)
 
-        hdr.pseudo_header.bthci.sent = GINT32_FROM_BE(*direction) ? 0 : 1;
+        rec.rec_header.packet_header.pseudo_header.bthci.sent = GINT32_FROM_BE(*direction) ? 0 : 1;
 
-        hdr.len -= (guint32)sizeof(own_pcap_bluetooth_h4_header);
-        hdr.caplen -= (guint32)sizeof(own_pcap_bluetooth_h4_header);
+        rec.rec_header.packet_header.len -= (guint32)sizeof(own_pcap_bluetooth_h4_header);
+        rec.rec_header.packet_header.caplen -= (guint32)sizeof(own_pcap_bluetooth_h4_header);
 
         buffer += sizeof(own_pcap_bluetooth_h4_header);
-        hdr.pkt_encap = WTAP_ENCAP_BLUETOOTH_H4_WITH_PHDR;
+        rec.rec_header.packet_header.pkt_encap = WTAP_ENCAP_BLUETOOTH_H4_WITH_PHDR;
     }
     else if (extcap_dumper.encap == EXTCAP_ENCAP_ETHERNET) {
-        hdr.pkt_encap = WTAP_ENCAP_ETHERNET;
+        rec.rec_header.packet_header.pkt_encap = WTAP_ENCAP_ETHERNET;
     }
     else {
-        hdr.pkt_encap = WTAP_ENCAP_WIRESHARK_UPPER_PDU;
+        rec.rec_header.packet_header.pkt_encap = WTAP_ENCAP_WIRESHARK_UPPER_PDU;
     }
 
-    if (!wtap_dump(extcap_dumper.dumper.wtap, &hdr, (const guint8 *) buffer, &err, &err_info)) {
+    if (!wtap_dump(extcap_dumper.dumper.wtap, &rec, (const guint8 *) buffer, &err, &err_info)) {
         cfile_write_failure_message("androiddump", NULL, fifo, err, err_info,
                                     0, WTAP_FILE_TYPE_SUBTYPE_PCAP_NSEC);
         return FALSE;
@@ -539,7 +538,7 @@ static socket_handle_t adb_connect(const char *server_ip, unsigned short *server
 
     server.sin_family = AF_INET;
     server.sin_port = GINT16_TO_BE(*server_tcp_port);
-    server.sin_addr.s_addr = inet_addr(server_ip);
+    ws_inet_pton4(server_ip, &(server.sin_addr.s_addr));
 
     if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET) {
         g_warning("Cannot open system TCP socket: %s", strerror(errno));
@@ -550,6 +549,22 @@ static socket_handle_t adb_connect(const char *server_ip, unsigned short *server
     while (tries < SOCKET_CONNECT_TIMEOUT_TRIES) {
         status = connect(sock, (struct sockaddr *) &server, (socklen_t)sizeof(server));
         tries += 1;
+
+#ifdef _WIN32
+        if ((status == SOCKET_ERROR) && (WSAGetLastError() == WSAEWOULDBLOCK)) {
+            const struct timeval timeout = {
+                .tv_sec = 0,
+                .tv_usec = SOCKET_CONNECT_DELAY_US,
+            };
+            fd_set fdset;
+            FD_ZERO(&fdset);
+            FD_SET(sock, &fdset);
+            if ((select(0, NULL, &fdset, NULL, &timeout) != 0) && (FD_ISSET(sock, &fdset))) {
+                status = 0;
+            }
+        }
+#endif
+
         if (status != SOCKET_ERROR)
             break;
         g_usleep(SOCKET_CONNECT_DELAY_US);
@@ -814,7 +829,7 @@ static int adb_send(socket_handle_t sock, const char *adb_service) {
     }
 
     if (memcmp(buffer, "OKAY", 4)) {
-        g_warning("Error while receiving by ADB for <%s>", adb_service);
+        g_debug("Error while receiving by ADB for <%s>", adb_service);
 
         return EXIT_CODE_ERROR_WHILE_RECEIVING_ADB_PACKET_DATA;
     }
@@ -900,7 +915,7 @@ static void new_fake_interface_for_list_dlts(extcap_parameters * extcap_conf,
 static int add_tcpdump_interfaces(extcap_parameters * extcap_conf, const char *adb_server_ip, unsigned short *adb_server_tcp_port, const char *serial_number)
 {
     static const char *const adb_tcpdump_list = "shell:tcpdump -D";
-    static const char *const regex_ifaces = "\\d+\\.(?<iface>\\S+)\\s+?(?:(?:\\(.*\\))*)\\s*?\\[(?<flags>.*?)\\]";
+    static const char *const regex_ifaces = "\\d+\\.(?<iface>\\S+)(\\s+?(?:(?:\\(.*\\))*)(\\s*?\\[(?<flags>.*?)\\])?)?";
     static char recv_buffer[PACKET_LENGTH];
     char *response;
     gssize data_length;
@@ -910,6 +925,7 @@ static int add_tcpdump_interfaces(extcap_parameters * extcap_conf, const char *a
     GMatchInfo *match = NULL;
     char* tok;
     char iface_name[80];
+    gboolean flags_supported;
 
     sock = adb_connect_transport(adb_server_ip, adb_server_tcp_port, serial_number);
     if (sock == INVALID_SOCKET) {
@@ -932,6 +948,8 @@ static int add_tcpdump_interfaces(extcap_parameters * extcap_conf, const char *a
         return EXIT_CODE_GENERIC;
     }
 
+    flags_supported = (strstr(response, "[") != 0) && (strstr(response, "]") != 0);
+
     tok = strtok(response, "\n");
     while (tok != NULL) {
         g_regex_match(regex, tok, (GRegexMatchFlags)0, &match);
@@ -939,7 +957,7 @@ static int add_tcpdump_interfaces(extcap_parameters * extcap_conf, const char *a
             gchar *iface = g_match_info_fetch_named(match, "iface");
             gchar *flags = g_match_info_fetch_named(match, "flags");
 
-            if (strstr(flags, "Up")) {
+            if (!flags_supported || (flags && strstr(flags, "Up"))) {
                 g_snprintf(iface_name, sizeof(iface_name), INTERFACE_ANDROID_TCPDUMP_FORMAT, iface);
                 new_interface(extcap_conf, iface_name, iface, serial_number, "Android tcpdump");
             }
@@ -970,6 +988,7 @@ static int register_interfaces(extcap_parameters * extcap_conf, const char *adb_
     const char            *adb_ps_droid_bluetooth = "shell:ps droid.bluetooth";
     const char            *adb_ps_bluetooth_app   = "shell:ps com.android.bluetooth";
     const char            *adb_ps_with_grep       = "shell:ps | grep com.android.bluetooth";
+    const char            *adb_ps_all_with_grep   = "shell:ps -A | grep com.android.bluetooth";
     char                   serial_number[SERIAL_NUMBER_LENGTH_MAX];
     char                   model_name[MODEL_NAME_LENGTH_MAX];
     int                    result;
@@ -1106,7 +1125,7 @@ static int register_interfaces(extcap_parameters * extcap_conf, const char *adb_
             closesocket(sock);
             if (!response || data_length < 1) {
                 g_warning("Error while getting Bluetooth application process id by <%s> "
-                    "(%p len=%"G_GSSIZE_FORMAT")", adb_hcidump_version, (void*)response, data_length);
+                    "(%p len=%"G_GSSIZE_FORMAT")", adb_ps_droid_bluetooth, (void*)response, data_length);
                 g_debug( "Android Bluetooth application PID for %s is unknown", serial_number);
                 disable_interface = 1;
             } else {
@@ -1160,7 +1179,9 @@ static int register_interfaces(extcap_parameters * extcap_conf, const char *adb_
             const char* ps_cmd;
             disable_interface = 0;
 
-            if (api_level >= 24) {
+            if (api_level >= 26) {
+                ps_cmd = adb_ps_all_with_grep;
+            } else if (api_level >= 24) {
                 ps_cmd = adb_ps_with_grep;
             } else if (api_level >= 23) {
                 ps_cmd = adb_ps_bluetooth_app;
@@ -1175,7 +1196,7 @@ static int register_interfaces(extcap_parameters * extcap_conf, const char *adb_
 
             if (!response || data_length < 1) {
                 g_warning("Error while getting Bluetooth application process id by <%s> "
-                    "(%p len=%"G_GSSIZE_FORMAT")", adb_hcidump_version, (void*)response, data_length);
+                    "(%p len=%"G_GSSIZE_FORMAT")", ps_cmd, (void*)response, data_length);
                 g_debug("Android Bluetooth application PID for %s is unknown", serial_number);
                 disable_interface = 1;
             } else {
@@ -1209,11 +1230,15 @@ static int register_interfaces(extcap_parameters * extcap_conf, const char *adb_
                         disable_interface = 1;
                     } else {
                         response[data_length] = '\0';
-
-                        data_str = strchr(response, '\n');
-                        if (data_str && sscanf(data_str, "%*s %15s", pid) == 1 && strlen(pid) > 10 && strcmp(pid + 9, "22A8") == 0) {
-                            g_debug("Btsnoop Net Port for %s is %s", serial_number, pid + 9);
-                        } else {
+                        data_str = strtok(response, "\n");
+                        while (data_str != NULL) {
+                            if (data_str && sscanf(data_str, "%*s %15s", pid) == 1 && strlen(pid) > 10 && strcmp(pid + 9, "22A8") == 0) {
+                                g_debug("Btsnoop Net Port for %s is %s", serial_number, pid + 9);
+                                break;
+                            }
+                            data_str = strtok(NULL, "\n");
+                        }
+                        if (data_str == NULL) {
                             disable_interface = 1;
                             g_debug("Btsnoop Net Port for %s is unknown", serial_number);
                         }
@@ -1680,7 +1705,7 @@ static int capture_android_bluetooth_external_parser(char *interface,
         memset(&server, 0 , sizeof(server));
         server.sin_family = AF_INET;
         server.sin_port = GINT16_TO_BE(*bt_local_tcp_port);
-        server.sin_addr.s_addr = inet_addr(bt_local_ip);
+        ws_inet_pton4(bt_local_ip, &(server.sin_addr.s_addr));
 
         useSndTimeout(sock);
 
@@ -1755,7 +1780,7 @@ static int capture_android_bluetooth_external_parser(char *interface,
 
                 server.sin_family = AF_INET;
                 server.sin_port = GINT16_TO_BE(*bt_local_tcp_port);
-                server.sin_addr.s_addr = inet_addr(bt_local_ip);
+                ws_inet_pton4(bt_local_ip, &(server.sin_addr.s_addr));
 
                 useSndTimeout(sock);
 
@@ -1903,20 +1928,15 @@ static int capture_android_bluetooth_btsnoop_net(char *interface, char *fifo,
     }
 
     /* Read "btsnoop" header - 16 bytes */
-    while (used_buffer_length < 16) {
-        length = recv(sock, packet + used_buffer_length,  (int)(PACKET_LENGTH - used_buffer_length), 0);
-
+    while (used_buffer_length < BTSNOOP_HDR_LEN) {
+        length = recv(sock, packet + used_buffer_length,  (int)(BTSNOOP_HDR_LEN - used_buffer_length), 0);
         if (length <= 0) {
             g_warning("Broken socket connection.");
             closesocket(sock);
             return EXIT_CODE_GENERIC;
         }
-
         used_buffer_length += length;
     }
-    if (used_buffer_length > 16)
-        memmove(packet, packet + 16, used_buffer_length - 16);
-
     used_buffer_length = 0;
 
     while (endless_loop) {
@@ -2279,36 +2299,6 @@ static int capture_android_logcat(char *interface, char *fifo,
     return EXIT_CODE_SUCCESS;
 }
 
-/* Translate tcpdump data link type strings to EXTCAP_ENCAP_ types
- * For info about available data link types see:
- * http://www.tcpdump.org/linktypes.html
- */
-static int linktype_to_extcap_encap(const char* linktype)
-{
-    struct dlt_encap {
-        int extcap_encap;
-        const char* const dlt;
-    };
-    const struct dlt_encap lookup[] = {
-        { EXTCAP_ENCAP_LINUX_SLL, "LINUX_SLL" },
-        { EXTCAP_ENCAP_ETHERNET, "EN10MB" },
-        { EXTCAP_ENCAP_IEEE802_11_RADIO, "IEEE802_11_RADIO" },
-        { EXTCAP_ENCAP_NETLINK, "NETLINK" },
-        { -1, NULL }
-    };
-    int i;
-    int ret = EXTCAP_ENCAP_ETHERNET;
-
-    if (!linktype)
-        return ret;
-    for (i = 0; lookup[i].dlt; i++) {
-        if (!strcmp(lookup[i].dlt, linktype)) {
-            ret = lookup[i].extcap_encap;
-        }
-    }
-    return ret;
-}
-
 
 /*----------------------------------------------------------------------------*/
 /* Android Wifi Tcpdump                                                       */
@@ -2317,24 +2307,21 @@ static int linktype_to_extcap_encap(const char* linktype)
 /*----------------------------------------------------------------------------*/
 static int capture_android_tcpdump(char *interface, char *fifo,
         const char *adb_server_ip, unsigned short *adb_server_tcp_port) {
-    static const char                       *const adb_shell_tcpdump_format = "shell:tcpdump -n -s 0 -u -i %s -w -";
+    static const char                       *const adb_shell_tcpdump_format = "exec:tcpdump -U -n -s 0 -u -i %s -w - 2>/dev/null";
     static const char                       *const regex_interface = INTERFACE_ANDROID_TCPDUMP "-(?<iface>.*?)-(?<serial>.*)";
-    static const char                       *const regex_linktype = "tcpdump: listening on .*?, link-type (?<linktype>.*?) ";
     struct extcap_dumper                     extcap_dumper;
     static char                              data[PACKET_LENGTH];
     gssize                                   length;
     gssize                                   used_buffer_length =  0;
-    gssize                                   filter_buffer_length = 0;
     gssize                                   frame_length=0;
     socket_handle_t                          sock;
     gint                                     result;
     char                                    *iface = NULL;
     char                                    *serial_number = NULL;
-    static char                              filter_buffer[PACKET_LENGTH];
-    gint                                     device_endiness = G_LITTLE_ENDIAN;
-    gboolean                                 global_header_skipped=FALSE;
+    gboolean                                 nanosecond_timestamps;
+    gboolean                                 swap_byte_order;
+    pcap_hdr_t                              *global_header;
     pcaprec_hdr_t                            p_header;
-    char                                    *linktype = NULL;
     GRegex                                  *regex = NULL;
     GError                                  *err = NULL;
     GMatchInfo                              *match = NULL;
@@ -2360,33 +2347,76 @@ static int capture_android_tcpdump(char *interface, char *fifo,
 
     /* First check for the device if it is connected or not */
     sock = adb_connect_transport(adb_server_ip, adb_server_tcp_port, serial_number);
+    g_free(serial_number);
     if (sock == INVALID_SOCKET) {
         g_free(iface);
-        g_free(serial_number);
         return EXIT_CODE_INVALID_SOCKET_11;
     }
 
     g_snprintf(tcpdump_cmd, sizeof(tcpdump_cmd), adb_shell_tcpdump_format, iface);
     g_free(iface);
-    g_free(serial_number);
-
     result = adb_send(sock, tcpdump_cmd);
-
     if (result) {
         g_warning("Error while setting adb transport");
         closesocket(sock);
         return EXIT_CODE_GENERIC;
     }
 
-    regex = g_regex_new(regex_linktype, (GRegexCompileFlags)0, (GRegexMatchFlags)0, &err);
-    if (!regex) {
-        g_warning("Failed to compile regex for tcpdump data link type matching");
+    while (used_buffer_length < PCAP_GLOBAL_HEADER_LENGTH) {
+        errno = 0;
+        length = recv(sock, data + used_buffer_length, (int)(PCAP_GLOBAL_HEADER_LENGTH - used_buffer_length), 0);
+        if (errno == EAGAIN
+#if EWOULDBLOCK != EAGAIN
+            || errno == EWOULDBLOCK
+#endif
+            ) {
+            continue;
+        }
+        else if (errno != 0) {
+            g_warning("ERROR capture: %s", strerror(errno));
+            closesocket(sock);
+            return EXIT_CODE_GENERIC;
+        }
+
+        if (length <= 0) {
+            g_warning("Broken socket connection.");
+            closesocket(sock);
+            return EXIT_CODE_GENERIC;
+        }
+
+        used_buffer_length += length;
+    }
+
+    global_header = (pcap_hdr_t*) data;
+    switch (global_header->magic_number) {
+    case 0xa1b2c3d4:
+        swap_byte_order = FALSE;
+        nanosecond_timestamps = FALSE;
+        break;
+    case 0xd4c3b2a1:
+        swap_byte_order = TRUE;
+        nanosecond_timestamps = FALSE;
+        break;
+    case 0xa1b23c4d:
+        swap_byte_order = FALSE;
+        nanosecond_timestamps = TRUE;
+        break;
+    case 0x4d3cb2a1:
+        swap_byte_order = TRUE;
+        nanosecond_timestamps = TRUE;
+        break;
+    default:
+        g_warning("Received incorrect magic");
         closesocket(sock);
         return EXIT_CODE_GENERIC;
     }
 
+    extcap_dumper = extcap_dumper_open(fifo, (int) data[20]);
+
+    used_buffer_length = 0;
     while (endless_loop) {
-        char *i_position;
+        gssize offset = 0;
+
         errno = 0;
         length = recv(sock, data + used_buffer_length, (int)(PACKET_LENGTH - used_buffer_length), 0);
         if (errno == EAGAIN
@@ -2399,157 +2429,50 @@ static int capture_android_tcpdump(char *interface, char *fifo,
         else if (errno != 0) {
             g_warning("ERROR capture: %s", strerror(errno));
             closesocket(sock);
-            g_regex_unref(regex);
             return EXIT_CODE_GENERIC;
         }
 
         if (length <= 0) {
             g_warning("Broken socket connection.");
             closesocket(sock);
-            g_regex_unref(regex);
             return EXIT_CODE_GENERIC;
         }
 
         used_buffer_length += length;
 
-        /*
-         * Checking for the starting for the pcap global header using the magic number
-         */
-        if (used_buffer_length > 4) {
-            guint * magic_number;
-            magic_number= (guint *)data;
-            if (*magic_number == 0xd4c3b2a1 || *magic_number == 0xa1b2c3d4) {
-                if (data[0] == (char)0xd4){
-                    device_endiness = G_LITTLE_ENDIAN;
-                }
-                else {
-                    device_endiness = G_BIG_ENDIAN;
-                }
-                break;
+        while ((used_buffer_length - offset) > PCAP_RECORD_HEADER_LENGTH) {
+            p_header = *((pcaprec_hdr_t*) (data + offset));
+            if (swap_byte_order) {
+                p_header.ts_sec   = GUINT32_SWAP_LE_BE(p_header.ts_sec);
+                p_header.ts_usec  = GUINT32_SWAP_LE_BE(p_header.ts_usec);
+                p_header.incl_len = GUINT32_SWAP_LE_BE(p_header.incl_len);
+                p_header.orig_len = GUINT32_SWAP_LE_BE(p_header.orig_len);
             }
-        }
-
-        g_regex_match(regex, data, (GRegexMatchFlags)0, &match);
-        if (g_match_info_matches(match)) {
-            g_free(linktype);
-            linktype = g_match_info_fetch_named(match, "linktype");
-        }
-        g_match_info_free(match);
-        i_position = (char *) memchr(data, '\n', used_buffer_length);
-        if (i_position && i_position < data + used_buffer_length) {
-            memmove(data, i_position + 1 , used_buffer_length - (i_position + 1 - data));
-            used_buffer_length = used_buffer_length - (gssize) (i_position + 1 - data);
-        }
-    }
-    g_regex_unref(regex);
-    extcap_dumper = extcap_dumper_open(fifo, linktype_to_extcap_encap(linktype));
-    g_free(linktype);
-
-    /*
-     * The data we are getting from the tcpdump stdoutput stream as the stdout is the text stream it is
-     * convertinng the 0A=0D0A; So we need to remove these extra character.
-     */
-    filter_buffer_length=0;
-    while (endless_loop) {
-        gssize i = 0,read_offset,j=0;
-       /*Filter the received data to get rid of unwanted 0DOA*/
-        for (i = 0; i < (used_buffer_length - 1); i++) {
-#ifdef _WIN32
-            if (data[i] == 0x0d && data[i + 1] == 0x0a) {
-                i++;
-            }
-#endif
-            filter_buffer[filter_buffer_length++] = data[i];
-        }
-
-        /* Put the last characters in the start if it is still left in buffer.*/
-        for (j=0; i < used_buffer_length; i++,j++) {
-            data[j] = data[i];
-        }
-        used_buffer_length = j;
-        if (global_header_skipped==FALSE && filter_buffer_length >= PCAP_GLOBAL_HEADER_LENGTH) {
-            /*Skip the Global pcap header*/
-            filter_buffer_length -= PCAP_GLOBAL_HEADER_LENGTH;
-
-            /*Move the remaining content from start*/
-            memmove(filter_buffer , filter_buffer + PCAP_GLOBAL_HEADER_LENGTH , filter_buffer_length);
-            global_header_skipped = TRUE;
-        }
-        else if (global_header_skipped && filter_buffer_length > PCAP_RECORD_HEADER_LENGTH) {
-            read_offset=0;
-            while (filter_buffer_length > PCAP_RECORD_HEADER_LENGTH) {
-                gchar *packet;
-                packet = filter_buffer + read_offset;
-                 /*
-                 * This fills the pcap header info based upon the endianess of the machine and android device.
-                 * If the endianess are different, pcap header bytes received from the android device are swapped
-                 * to be read properly by the machine else pcap header bytes are taken as it is.
-                 */
-                if (device_endiness == G_BYTE_ORDER) {
-                    p_header = *((pcaprec_hdr_t*)packet);
-                }
-                else {
-                    p_header.ts_sec = GUINT32_SWAP_LE_BE(*((guint32*)packet));
-                    p_header.ts_usec = GUINT32_SWAP_LE_BE(*(guint32*)(packet +4));
-                    p_header.incl_len = GUINT32_SWAP_LE_BE(*(guint32*)(packet +8));
-                    p_header.orig_len = GUINT32_SWAP_LE_BE(*(guint32*)(packet +12));
-                }
-
-                if ((gssize)(p_header.incl_len + PCAP_RECORD_HEADER_LENGTH) <= filter_buffer_length) {
-
-                    /*
-                     * It was observed that some times tcpdump reports the length of packet as '0' and that leads to the
-                     * ( Warn Error "Less data was read than was expected" while reading )
-                     * So to avoid this error we are checking for length of packet before passing it to dumper.
-                     */
-                    if (p_header.incl_len > 0) {
-                        endless_loop = extcap_dumper_dump(extcap_dumper, fifo, filter_buffer + read_offset+ PCAP_RECORD_HEADER_LENGTH,
-                        p_header.incl_len , p_header.orig_len , p_header.ts_sec , p_header.ts_usec);
-                    }
-                    frame_length = p_header.incl_len + PCAP_RECORD_HEADER_LENGTH;
-
-                    /*update the offset value for the next packet*/
-                    filter_buffer_length -= frame_length;
-                    read_offset += frame_length;
-                }
-                else {
-                    /*The complete packet has not yet received*/
-                    break;
-                }
-            }
-            if (read_offset!=0) {
-                /*Move the rest of the filter  data to the beginning of the filter_buffer */
-                memmove(filter_buffer, filter_buffer + read_offset , filter_buffer_length);
-            }
-        }
-
-        /*Get the data from the tcpdump process running in the android device*/
-        while (endless_loop) {
-            errno = 0;
-            length = recv(sock, data + used_buffer_length, (int)(PACKET_LENGTH -(used_buffer_length + filter_buffer_length)), 0);
-            if (errno == EAGAIN
-#if EWOULDBLOCK != EAGAIN
-                || errno == EWOULDBLOCK
-#endif
-                ) {
-                continue;
-            }
-            else if (errno != 0) {
-                g_warning("ERROR capture: %s", strerror(errno));
-                closesocket(sock);
-                return EXIT_CODE_GENERIC;
+            if (!nanosecond_timestamps) {
+                p_header.ts_usec = p_header.ts_usec * 1000;
             }
 
-            if (length <= 0) {
-                g_warning("Broken socket connection.");
-                closesocket(sock);
-                return EXIT_CODE_GENERIC;
+            frame_length = p_header.incl_len + PCAP_RECORD_HEADER_LENGTH;
+            if ((used_buffer_length - offset) < frame_length) {
+                break; /* wait for complete packet */
             }
 
-            if ((used_buffer_length += length) > 1) {
-                break;
+            /* It was observed that some times tcpdump reports the length of packet as '0' and that leads to the
+             * ( Warn Error "Less data was read than was expected" while reading )
+             * So to avoid this error we are checking for length of packet before passing it to dumper.
+             */
+            if (p_header.incl_len > 0) {
+                endless_loop = extcap_dumper_dump(extcap_dumper, fifo, data + offset + PCAP_RECORD_HEADER_LENGTH,
+                    p_header.incl_len, p_header.orig_len, p_header.ts_sec, p_header.ts_usec);
             }
+
+            offset += frame_length;
         }
+
+        if (offset < used_buffer_length) {
+            memmove(data, data + offset, used_buffer_length - offset);
+        }
+        used_buffer_length -= offset;
     }
 
     closesocket(sock);

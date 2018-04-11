@@ -382,7 +382,7 @@ datasurfsrv	461/tcp/udp	# DataRampSrv
 datasurfsrvsec	462/tcp/udp	# DataRampSrvSec
 alpes		463/tcp/udp
 kpasswd		464/tcp/udp
-urd		465/tcp		# URL Rendesvous Directory for SSM
+urd		465/tcp		# URL Rendezvous Directory for SSM
 igmpv3lite	465/udp		# IGMP over UDP for SSM
 digital-vrc	466/tcp/udp
 mylex-mapd	467/tcp/udp
@@ -709,8 +709,8 @@ ftps-data	989/tcp/udp	# ftp protocol, data, over TLS/SSL
 ftps		990/tcp/udp	# ftp protocol, control, over TLS/SSL
 nas		991/tcp/udp	# Netnews Administration System
 telnets		992/tcp/udp	# telnet protocol over TLS/SSL
-imaps		993/tcp/udp	# imap4 protocol over TLS/SSL
-pop3s		995/tcp/udp	# pop3 protocol over TLS/SSL (was spop3)
+imaps		993/tcp/udp	# IMAP over TLS protocol
+pop3s		995/tcp/udp	# POP3 over TLS protocol
 vsinet		996/tcp/udp
 maitrd		997/tcp/udp
 busboy		998/tcp
@@ -1827,7 +1827,7 @@ umsp		2110/tcp/udp	# UMSP
 dsatp		2111/tcp/udp	# OPNET Dynamic Sampling Agent Transaction Protocol
 idonix-metanet	2112/tcp/udp	# Idonix MetaNet
 hsl-storm	2113/tcp/udp	# HSL StoRM
-newheights	2114/tcp/udp	# NEWHEIGHTS
+ariascribe	2114/tcp/udp	# Classical Music Meta-Data Access and Enhancement
 kdm		2115/tcp/udp	# Key Distribution Manager
 ccowcmr		2116/tcp/udp	# CCOWCMR
 mentaclient	2117/tcp/udp	# MENTACLIENT
@@ -3992,7 +3992,7 @@ pjj-player-disc	4416/udp	# PJJ Media Player discovery
 workflowdir	4417/tcp	# Workflow Director Communication
 axysbridge	4418/udp	# AXYS communication protocol
 cbp		4419/tcp	# Colnod Binary Protocol
-nvm-express	4420/tcp/udp	# NVM Express over Fabrics storage access
+nvme		4420/tcp/udp	# NVM Express over Fabrics storage access
 scaleft		4421/tcp	# Multi-Platform Remote Management for Cloud Infrastructure
 tsepisp		4422/tcp	# TSEP Installation Service Protocol
 thingkit	4423/tcp	# thingkit secure mesh
@@ -4165,8 +4165,8 @@ htcp		4827/tcp/udp	# HTCP
 varadero-0	4837/tcp/udp	# Varadero-0
 varadero-1	4838/tcp/udp	# Varadero-1
 varadero-2	4839/tcp/udp	# Varadero-2
-opcua-tcp	4840/tcp	# OPC UA TCP Protocol
-opcua-udp	4840/udp	# OPC UA TCP Protocol
+opcua-tcp	4840/tcp	# OPC UA Connection Protocol
+opcua-udp	4840/udp	# OPC UA Multicast Datagram Protocol
 quosa		4841/tcp/udp	# QUOSA Virtual Library Service
 gw-asv		4842/tcp/udp	# nCode ICE-flow Library AppServer
 opcua-tls	4843/tcp/udp	# OPC UA TCP Protocol over TLS/SSL
@@ -4570,8 +4570,8 @@ dccm		5679/tcp/udp	# Direct Cable Connect Manager
 auriga-router	5680/tcp/udp	# Auriga Router Service
 ncxcp		5681/tcp/udp	# Net-coneX Control Protocol
 brightcore	5682/udp	# BrightCore control & data transfer exchange
-coap		5683/udp	# Constrained Application Protocol
-coaps		5684/udp	# DTLS-secured CoAP
+coap		5683/tcp/udp	# Constrained Application Protocol (CoAP)
+coaps		5684/tcp/udp	# Constrained Application Protocol (CoAP)
 gog-multiplayer	5687/udp	# GOG multiplayer game protocol
 ggz		5688/tcp/udp	# GGZ Gaming Zone
 qmvideo		5689/tcp/udp	# QM video network management protocol
@@ -4937,11 +4937,14 @@ ctdp		7022/tcp/udp	# CT Discovery Protocol
 ct2nmcs		7023/tcp/udp	# Comtech T2 NMCS
 vmsvc		7024/tcp/udp	# Vormetric service
 vmsvc-2		7025/tcp/udp	# Vormetric Service II
+loreji-panel	7026/tcp	# Loreji Webhosting Panel
 op-probe	7030/tcp/udp	# ObjectPlanet probe
 iposplanet	7031/tcp	# IPOSPLANET retailing multi devices protocol
 quest-disc	7040/udp	# Quest application level network service discovery
 arcp		7070/tcp/udp	# ARCP
 iwg1		7071/tcp/udp	# IWGADTS Aircraft Housekeeping Message
+iba-cfg		7072/tcp	# iba Device Configuration Protocol
+iba-cfg-disc	7072/udp	# iba Device Configuration Protocol
 martalk		7073/tcp	# MarTalk protocol
 empowerid	7080/tcp/udp	# EmpowerID Communication
 zixi-transport	7088/udp	# Zixi live video transport protocol
@@ -5008,6 +5011,7 @@ rtps-dd-ut	7401/tcp/udp	# RTPS Data-Distribution User-Traffic
 rtps-dd-mt	7402/tcp/udp	# RTPS Data-Distribution Meta-Traffic
 ionixnetmon	7410/tcp/udp	# Ionix Network Monitor
 daqstream	7411/tcp/udp	# Streaming of measurement data
+ipluminary	7420/udp	# Multichannel real-time lighting control
 mtportmon	7421/tcp/udp	# Matisse Port Monitor
 pmdmgr		7426/tcp/udp	# OpenView DM Postmaster Manager
 oveadmgr	7427/tcp/udp	# OpenView DM Event Agent Manager
@@ -5056,6 +5060,7 @@ hawk		7630/tcp	# HA Web Konsole
 tesla-sys-msg	7631/tcp	# TESLA System Messaging
 pmdfmgt		7633/tcp/udp	# PMDF Management
 cuseeme		7648/tcp/udp	# bonjour-cuseeme
+rome		7663/tcp/udp	# Proprietary immutable distributed data storage
 imqstomp	7672/tcp	# iMQ STOMP Server
 imqstomps	7673/tcp	# iMQ STOMP Server over SSL
 imqtunnels	7674/tcp/udp	# iMQ SSL tunnel
@@ -5132,11 +5137,13 @@ irdmi		8000/tcp/udp	# iRDMI
 vcom-tunnel	8001/tcp/udp	# VCOM Tunnel
 teradataordbms	8002/tcp/udp	# Teradata ORDBMS
 mcreport	8003/tcp/udp	# Mulberry Connect Reporting Service
+p2pevolvenet	8004/tcp	# Opensource Evolv Enterprise Platform P2P Network Node Connection Protocol
 mxi		8005/tcp/udp	# MXI Generation II for z/OS
 wpl-analytics	8006/tcp	# World Programming analytics
 wpl-disc	8006/udp	# World Programming analytics discovery
 warppipe	8007/tcp/udp	# I/O oriented cluster computing software
 http-alt	8008/tcp/udp	# HTTP Alternate
+nvme-disc	8009/tcp	# NVMe over Fabrics Discovery Service
 qbdb		8019/tcp/udp	# QB DB Dynamic Port
 intu-ec-svcdisc	8020/tcp/udp	# Intuit Entitlement Service and Discovery
 intu-ec-client	8021/tcp/udp	# Intuit Entitlement Client
@@ -5347,6 +5354,7 @@ ogs-client	9007/udp	# Open Grid Services Client
 ogs-server	9008/tcp	# Open Grid Services Server
 pichat		9009/tcp/udp	# Pichat Server
 sdr		9010/tcp	# Secure Data Replicator Protocol
+d-star		9011/udp	# D-Star Routing digital voice+data for amateur radio
 tambora		9020/tcp/udp	# TAMBORA
 panagolin-ident	9021/tcp/udp	# Pangolin Identification
 paragent	9022/tcp/udp	# PrivateArk Remote Agent
@@ -5359,6 +5367,7 @@ fio-cmgmt	9051/tcp	# Fusion-io Central Manager Service
 CardWeb-IO	9060/tcp	# CardWeb request-response I/O exchange
 CardWeb-RT	9060/udp	# CardWeb realtime device data
 glrpc		9080/tcp/udp	# Groove GLRPC
+cisco-aqos	9081/udp	# Required for Adaptive Quality of Service
 lcs-ap		9082/sctp	# LCS Application Protocol
 emc-pp-mgmtsvc	9083/tcp	# EMC PowerPath Mgmt Service
 aurora		9084/tcp/udp/sctp	# IBM AURORA Performance Visualizer
@@ -5825,6 +5834,7 @@ track		20670/tcp/udp	# Track
 athand-mmp	20999/tcp/udp	# At Hand MMP
 irtrans		21000/tcp/udp	# IRTrans Control
 notezilla-lan	21010/tcp	# Notezilla.Lan Server
+trinket-agent	21212/tcp	# Distributed artificial intelligence
 aigairserver	21221/tcp	# Services for Air Server
 rdm-tfs		21553/tcp	# Raima RDM TFS
 dfserver	21554/tcp/udp	# MineScape Design File Server
@@ -5997,6 +6007,7 @@ dgi-serv	33333/tcp	# Digital Gaslight Service
 speedtrace	33334/tcp	# SpeedTrace TraceAgent
 speedtrace-disc	33334/udp	# SpeedTrace TraceAgent Discovery
 traceroute	33434/tcp/udp	# traceroute use
+mtrace		33435/udp	# IP Multicast Traceroute
 snip-slave	33656/tcp/udp	# SNIP Slave
 turbonote-2	34249/tcp/udp	# TurboNote Relay Server Default Port
 p-net-local	34378/tcp/udp	# P-Net on IP local
@@ -6075,6 +6086,7 @@ ip-provision	43190/tcp/udp	# IP-PROVISION
 noit-transport	43191/tcp	# Reconnoiter Agent Data Transport
 shaperai	43210/tcp	# Shaper Automation Server Management
 shaperai-disc	43210/udp	# Shaper Automation Server Management Discovery
+hmip-routing	43438/udp	# HmIP LAN Routing
 eq3-update	43439/tcp	# EQ3 firmware update
 eq3-config	43439/udp	# EQ3 discovery and configuration
 ew-mgmt		43440/tcp	# Cisco EnergyWise Management
@@ -6120,6 +6132,7 @@ nimhub		48002/tcp/udp	# Nimbus Hub
 nimgtw		48003/tcp/udp	# Nimbus Gateway
 nimbusdb	48004/tcp	# NimbusDB Connector
 nimbusdbctrl	48005/tcp	# NimbusDB Control
+juliar		48048/tcp	# Juliar Programming Language Protocol
 3gpp-cbsp	48049/tcp	# 3GPP Cell Broadcast Service Protocol
 weandsf		48050/tcp	# WeFi Access Network Discovery and Selection Function
 isnetserv	48128/tcp/udp	# Image Systems Network Services
@@ -6130,3 +6143,4 @@ robotraconteur	48653/tcp/udp	# Robot Raconteur transport
 matahari	49000/tcp	# Matahari Broker
 nusrp		49001/tcp	# Nuance Unity Service Request Protocol
 nusdp-disc	49001/udp	# Nuance Unity Service Discovery Protocol
+inspider	49150/tcp	# InSpider System

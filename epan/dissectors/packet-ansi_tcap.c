@@ -15,19 +15,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  * References: T1.114
  */
 
@@ -125,7 +113,7 @@ static int hf_ansi_tcap_paramSequence = -1;       /* T_paramSequence */
 static int hf_ansi_tcap_paramSet = -1;            /* T_paramSet */
 
 /*--- End of included file: packet-ansi_tcap-hf.c ---*/
-#line 65 "./asn1/ansi_tcap/packet-ansi_tcap-template.c"
+#line 53 "./asn1/ansi_tcap/packet-ansi_tcap-template.c"
 
 /* Initialize the subtree pointers */
 static gint ett_tcap = -1;
@@ -173,7 +161,7 @@ static gint ett_ansi_tcap_T_paramSequence = -1;
 static gint ett_ansi_tcap_T_paramSet = -1;
 
 /*--- End of included file: packet-ansi_tcap-ett.c ---*/
-#line 86 "./asn1/ansi_tcap/packet-ansi_tcap-template.c"
+#line 74 "./asn1/ansi_tcap/packet-ansi_tcap-template.c"
 
 #define MAX_SSN 254
 
@@ -1372,7 +1360,7 @@ dissect_ansi_tcap_PackageType(gboolean implicit_tag _U_, tvbuff_t *tvb _U_, int 
 
 
 /*--- End of included file: packet-ansi_tcap-fn.c ---*/
-#line 315 "./asn1/ansi_tcap/packet-ansi_tcap-template.c"
+#line 303 "./asn1/ansi_tcap/packet-ansi_tcap-template.c"
 
 
 
@@ -1714,7 +1702,7 @@ proto_register_ansi_tcap(void)
         NULL, HFILL }},
 
 /*--- End of included file: packet-ansi_tcap-hfarr.c ---*/
-#line 448 "./asn1/ansi_tcap/packet-ansi_tcap-template.c"
+#line 436 "./asn1/ansi_tcap/packet-ansi_tcap-template.c"
     };
 
 /* Setup protocol subtree array */
@@ -1752,7 +1740,7 @@ proto_register_ansi_tcap(void)
     &ett_ansi_tcap_T_paramSet,
 
 /*--- End of included file: packet-ansi_tcap-ettarr.c ---*/
-#line 459 "./asn1/ansi_tcap/packet-ansi_tcap-template.c"
+#line 447 "./asn1/ansi_tcap/packet-ansi_tcap-template.c"
     };
 
     static ei_register_info ei[] = {

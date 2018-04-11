@@ -6,19 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -167,7 +155,7 @@ tvb_new_subset_length_caplen(tvbuff_t *backing, const gint backing_offset, const
 }
 
 tvbuff_t *
-tvb_new_subset_length(tvbuff_t *backing, const gint backing_offset, const gint backing_length)
+tvb_new_subset_length(tvbuff_t *backing, const gint backing_offset, const gint reported_length)
 {
 	gint	  captured_length;
 	tvbuff_t *tvb;
@@ -176,21 +164,21 @@ tvb_new_subset_length(tvbuff_t *backing, const gint backing_offset, const gint b
 
 	DISSECTOR_ASSERT(backing && backing->initialized);
 
-	THROW_ON(backing_length < 0, ReportedBoundsError);
+	THROW_ON(reported_length < 0, ReportedBoundsError);
 
 	/*
 	 * Give the next dissector only captured_length bytes.
 	 */
 	captured_length = tvb_captured_length_remaining(backing, backing_offset);
 	THROW_ON(captured_length < 0, BoundsError);
-	if (captured_length > backing_length)
-		captured_length = backing_length;
+	if (captured_length > reported_length)
+		captured_length = reported_length;
 
 	tvb_check_offset_length(backing, backing_offset, captured_length,
 			        &subset_tvb_offset,
 			        &subset_tvb_length);
 
-	tvb = tvb_new_with_subset(backing, backing_length,
+	tvb = tvb_new_with_subset(backing, reported_length,
 	    subset_tvb_offset, subset_tvb_length);
 
 	tvb_add_to_chain(backing, tvb);

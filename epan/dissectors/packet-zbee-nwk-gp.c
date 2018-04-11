@@ -9,19 +9,7 @@
  * Used Owen Kirby's packet-zbee-aps module as a template. Based
  * on ZigBee Cluster Library Specification document 075123r02ZB
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 /* Include files. */
@@ -909,7 +897,8 @@ dissect_zbee_nwk_gp_cmd_attr_reporting(tvbuff_t *tvb, packet_info *pinfo _U_, pr
     /* Create subtree and parse ZCL Write Attribute Payload. */
     field_tree = proto_tree_add_subtree_format(tree, tvb, offset, 2, ett_zbee_nwk_cmd_options, NULL,
                                 "Attribute reporting command for cluster: 0x%02X", cluster_id);
-    dissect_zcl_write_attr(tvb, pinfo, field_tree, &offset, cluster_id);
+
+    dissect_zcl_report_attr(tvb, pinfo, field_tree, &offset, cluster_id, ZBEE_MFG_CODE_NONE, ZBEE_ZCL_FCF_TO_CLIENT);
 
     return offset;
 } /* dissect_zbee_nwk_gp_cmd_attr_reporting */

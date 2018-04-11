@@ -9,19 +9,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -53,6 +41,7 @@ static lua_State* L = NULL;
 packet_info* lua_pinfo;
 struct _wslua_treeitem* lua_tree;
 tvbuff_t* lua_tvb;
+wslua_logger_t wslua_logger;
 int lua_dissectors_table_ref = LUA_NOREF;
 int lua_heur_dissectors_table_ref = LUA_NOREF;
 
@@ -725,7 +714,7 @@ void wslua_plugins_get_descriptions(wslua_plugin_description_callback callback, 
 
     for (lua_plug = wslua_plugin_list; lua_plug != NULL; lua_plug = lua_plug->next)
     {
-        callback(lua_plug->name, lua_plug->version, "lua script",
+        callback(lua_plug->name, lua_plug->version, wslua_plugin_type_name(),
                  lua_plug->filename, user_data);
     }
 }
@@ -742,6 +731,10 @@ void
 wslua_plugins_dump_all(void)
 {
     wslua_plugins_get_descriptions(print_wslua_plugin_description, NULL);
+}
+
+const char *wslua_plugin_type_name(void) {
+    return "lua script";
 }
 
 static ei_register_info* ws_lua_ei = NULL;
@@ -879,16 +872,10 @@ void wslua_init(register_cb cb, gpointer client_data) {
     if (first_time) {
         ws_lua_ei = ei;
         ws_lua_ei_len = array_length(ei);
-
-        /* set up the logger */
-        g_log_set_handler(LOG_DOMAIN_LUA, (GLogLevelFlags)(G_LOG_LEVEL_CRITICAL|
-                      G_LOG_LEVEL_WARNING|
-                      G_LOG_LEVEL_MESSAGE|
-                      G_LOG_LEVEL_INFO|
-                      G_LOG_LEVEL_DEBUG),
-                      ops ? ops->logger : basic_logger,
-                      NULL);
     }
+
+    /* set up the logger */
+    wslua_logger = ops ? ops->logger : basic_logger;
 
     if (!L) {
         L = lua_newstate(wslua_allocf, NULL);

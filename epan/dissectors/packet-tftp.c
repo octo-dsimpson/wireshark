@@ -13,19 +13,7 @@
  *
  * Copied from packet-bootp.c
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 /* Documentation:
@@ -659,22 +647,21 @@ dissect_tftp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_
    */
   if (value_is_in_range(global_tftp_port_range, pinfo->destport) ||
       (pinfo->match_uint == pinfo->destport)) {
-    conversation = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, PT_UDP,
+    conversation = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, ENDPOINT_UDP,
                                      pinfo->srcport, 0, NO_PORT_B);
     if( (conversation == NULL) || (conversation_get_dissector(conversation, pinfo->num) != tftp_handle) ){
-      conversation = conversation_new(pinfo->num, &pinfo->src, &pinfo->dst, PT_UDP,
+      conversation = conversation_new(pinfo->num, &pinfo->src, &pinfo->dst, ENDPOINT_UDP,
                                       pinfo->srcport, 0, NO_PORT2);
       conversation_set_dissector(conversation, tftp_handle);
     }
   } else {
-    conversation = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst,
-                                     pinfo->ptype, pinfo->srcport, pinfo->destport, 0);
+    conversation = find_conversation_pinfo(pinfo, 0);
     if( (conversation == NULL) || (conversation_get_dissector(conversation, pinfo->num) != tftp_handle) ){
-      conversation = conversation_new(pinfo->num, &pinfo->src, &pinfo->dst, PT_UDP,
+      conversation = conversation_new(pinfo->num, &pinfo->src, &pinfo->dst, ENDPOINT_UDP,
                                       pinfo->destport, pinfo->srcport, 0);
       conversation_set_dissector(conversation, tftp_handle);
     } else if (conversation->options & NO_PORT_B) {
-      if (pinfo->destport == conversation->key_ptr->port1)
+      if (pinfo->destport == conversation_key_port1(conversation->key_ptr))
         conversation_set_port2(conversation, pinfo->srcport);
       else
         return 0;

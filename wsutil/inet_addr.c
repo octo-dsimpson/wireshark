@@ -4,24 +4,14 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
-
 #include "inet_addr.h"
+
+#include <errno.h>
+#include <string.h>
 
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
@@ -43,16 +33,29 @@
 #endif
 
 /*
- * We only employ and require AF_INET/AF_INET6, so we can
- * have some stronger checks for correctness and convenience. It is a
- * programming error to pass a too-small buffer to inet_ntop.
+ * We assume and require an inet_pton/inet_ntop that supports AF_INET
+ * and AF_INET6.
  */
 
 static inline gboolean
 _inet_pton(int af, const gchar *src, gpointer dst)
 {
     gint ret = inet_pton(af, src, dst);
-    g_assert(ret >= 0);
+    if (G_UNLIKELY(ret < 0)) {
+        /* EAFNOSUPPORT */
+        if (af == AF_INET) {
+            memset(dst, 0, sizeof(struct in_addr));
+            g_critical("ws_inet_pton4: EAFNOSUPPORT");
+        }
+        else if (af == AF_INET6) {
+            memset(dst, 0, sizeof(struct in6_addr));
+            g_critical("ws_inet_pton6: EAFNOSUPPORT");
+        }
+        else {
+            g_assert(0);
+        }
+        errno = EAFNOSUPPORT;
+    }
     return ret == 1;
 }
 
@@ -60,8 +63,26 @@ static inline const gchar *
 _inet_ntop(int af, gconstpointer src, gchar *dst, guint dst_size)
 {
     const gchar *ret = inet_ntop(af, _NTOP_SRC_CAST_ src, dst, dst_size);
-    g_assert(ret != NULL);
-    return ret;
+    if (G_UNLIKELY(ret == NULL)) {
+        int saved_errno = errno;
+        gchar *errmsg = "<<ERROR>>";
+        switch (errno) {
+            case EAFNOSUPPORT:
+                errmsg = "<<EAFNOSUPPORT>>";
+                g_critical("ws_inet_ntop: EAFNOSUPPORT");
+                break;
+            case ENOSPC:
+                errmsg = "<<ENOSPC>>";
+                break;
+            default:
+                break;
+        }
+        /* set result to something that can't be confused with a valid conversion */
+        g_strlcpy(dst, errmsg, dst_size);
+        /* set errno for caller */
+        errno = saved_errno;
+    }
+    return dst;
 }
 
 const gchar *

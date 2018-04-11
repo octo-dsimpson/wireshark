@@ -5,19 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include <config.h>
@@ -39,6 +27,7 @@
 #include <wsutil/clopts_common.h>
 #include <wsutil/cmdarg_err.h>
 #include <wsutil/file_util.h>
+#include <wsutil/ws_pipe.h>
 
 #include "caputils/capture_ifinfo.h"
 #include "caputils/capture-pcap-util.h"
@@ -62,12 +51,11 @@ capture_opts_init(capture_options *capture_opts)
     capture_opts->default_options.linktype        = -1; /* use interface default */
     capture_opts->default_options.promisc_mode    = TRUE;
     capture_opts->default_options.if_type         = IF_WIRED;
-#ifdef HAVE_EXTCAP
     capture_opts->default_options.extcap          = NULL;
     capture_opts->default_options.extcap_fifo     = NULL;
     capture_opts->default_options.extcap_args     = NULL;
-    capture_opts->default_options.extcap_userdata = NULL;
-    capture_opts->default_options.extcap_pid      = INVALID_EXTCAP_PID;
+    capture_opts->default_options.extcap_pipedata = NULL;
+    capture_opts->default_options.extcap_pid      = WS_INVALID_PID;
 #ifdef _WIN32
     capture_opts->default_options.extcap_pipe_h   = INVALID_HANDLE_VALUE;
     capture_opts->default_options.extcap_control_in_h  = INVALID_HANDLE_VALUE;
@@ -75,7 +63,6 @@ capture_opts_init(capture_options *capture_opts)
 #endif
     capture_opts->default_options.extcap_control_in  = NULL;
     capture_opts->default_options.extcap_control_out = NULL;
-#endif
 #ifdef CAN_SET_CAPTURE_BUFFER_SIZE
     capture_opts->default_options.buffer_size     = DEFAULT_CAPTURE_BUFFER_SIZE;
 #endif
@@ -100,7 +87,7 @@ capture_opts_init(capture_options *capture_opts)
     capture_opts->save_file                       = NULL;
     capture_opts->group_read_access               = FALSE;
 #ifdef PCAP_NG_DEFAULT
-    capture_opts->use_pcapng                      = TRUE;             /* Save as pcap-ng by default */
+    capture_opts->use_pcapng                      = TRUE;             /* Save as pcapng by default */
 #else
     capture_opts->use_pcapng                      = FALSE;            /* Save as pcap by default */
 #endif
@@ -173,11 +160,9 @@ capture_opts_log(const char *log_domain, GLogLevelFlags log_level, capture_optio
         g_log(log_domain, log_level, "Snap length[%02d] (%u) : %d", i, interface_opts->has_snaplen, interface_opts->snaplen);
         g_log(log_domain, log_level, "Link Type[%02d]       : %d", i, interface_opts->linktype);
         g_log(log_domain, log_level, "Promiscuous Mode[%02d]: %s", i, interface_opts->promisc_mode?"TRUE":"FALSE");
-#ifdef HAVE_EXTCAP
         g_log(log_domain, log_level, "Extcap[%02d]          : %s", i, interface_opts->extcap ? interface_opts->extcap : "(unspecified)");
         g_log(log_domain, log_level, "Extcap FIFO[%02d]     : %s", i, interface_opts->extcap_fifo ? interface_opts->extcap_fifo : "(unspecified)");
         g_log(log_domain, log_level, "Extcap PID[%02d]      : %d", i, interface_opts->extcap_pid);
-#endif
 #ifdef CAN_SET_CAPTURE_BUFFER_SIZE
         g_log(log_domain, log_level, "Buffer size[%02d]     : %d (MB)", i, interface_opts->buffer_size);
 #endif
@@ -215,10 +200,8 @@ capture_opts_log(const char *log_domain, GLogLevelFlags log_level, capture_optio
     g_log(log_domain, log_level, "Snap length[df] (%u) : %d", capture_opts->default_options.has_snaplen, capture_opts->default_options.snaplen);
     g_log(log_domain, log_level, "Link Type[df]       : %d", capture_opts->default_options.linktype);
     g_log(log_domain, log_level, "Promiscuous Mode[df]: %s", capture_opts->default_options.promisc_mode?"TRUE":"FALSE");
-#ifdef HAVE_EXTCAP
     g_log(log_domain, log_level, "Extcap[df]          : %s", capture_opts->default_options.extcap ? capture_opts->default_options.extcap : "(unspecified)");
     g_log(log_domain, log_level, "Extcap FIFO[df]     : %s", capture_opts->default_options.extcap_fifo ? capture_opts->default_options.extcap_fifo : "(unspecified)");
-#endif
 #ifdef CAN_SET_CAPTURE_BUFFER_SIZE
     g_log(log_domain, log_level, "Buffer size[df]     : %d (MB)", capture_opts->default_options.buffer_size);
 #endif
@@ -580,9 +563,7 @@ capture_opts_add_iface_opt(capture_options *capture_opts, const char *optarg_str
             interface_opts.console_display_name = g_strdup(if_info->name);
         }
         interface_opts.if_type = if_info->type;
-#ifdef HAVE_EXTCAP
         interface_opts.extcap = g_strdup(if_info->extcap);
-#endif
         free_interface_list(if_list);
     } else if (capture_opts->capture_child) {
         /* In Wireshark capture child mode, thus proper device name is supplied. */
@@ -590,9 +571,7 @@ capture_opts_add_iface_opt(capture_options *capture_opts, const char *optarg_str
         interface_opts.name = g_strdup(optarg_str_p);
         interface_opts.console_display_name = g_strdup(optarg_str_p);
         interface_opts.if_type = capture_opts->default_options.if_type;
-#ifdef HAVE_EXTCAP
         interface_opts.extcap = g_strdup(capture_opts->default_options.extcap);
-#endif
     } else {
         /*
          * Retrieve the interface list so that we can search for the
@@ -631,9 +610,7 @@ capture_opts_add_iface_opt(capture_options *capture_opts, const char *optarg_str
                         interface_opts.console_display_name = g_strdup(if_info->name);
                     }
                     interface_opts.if_type = if_info->type;
-#ifdef HAVE_EXTCAP
                     interface_opts.extcap = g_strdup(if_info->extcap);
-#endif
                     matched = TRUE;
                     break;
                 }
@@ -645,9 +622,7 @@ capture_opts_add_iface_opt(capture_options *capture_opts, const char *optarg_str
                     interface_opts.name = g_strdup(if_info->name);
                     interface_opts.console_display_name = g_strdup(if_info->friendly_name);
                     interface_opts.if_type = if_info->type;
-#ifdef HAVE_EXTCAP
                     interface_opts.extcap = g_strdup(if_info->extcap);
-#endif
                     matched = TRUE;
                     break;
                 }
@@ -669,9 +644,7 @@ capture_opts_add_iface_opt(capture_options *capture_opts, const char *optarg_str
                         interface_opts.name = g_strdup(if_info->name);
                         interface_opts.console_display_name = g_strdup(if_info->friendly_name);
                         interface_opts.if_type = if_info->type;
-#ifdef HAVE_EXTCAP
                         interface_opts.extcap = g_strdup(if_info->extcap);
-#endif
                         matched = TRUE;
                         break;
                     }
@@ -688,18 +661,14 @@ capture_opts_add_iface_opt(capture_options *capture_opts, const char *optarg_str
                 interface_opts.name = g_strdup(optarg_str_p);
                 interface_opts.console_display_name = g_strdup(optarg_str_p);
                 interface_opts.if_type = capture_opts->default_options.if_type;
-#ifdef HAVE_EXTCAP
                 interface_opts.extcap = g_strdup(capture_opts->default_options.extcap);
-#endif
             }
             free_interface_list(if_list);
         } else {
             interface_opts.name = g_strdup(optarg_str_p);
             interface_opts.console_display_name = g_strdup(optarg_str_p);
             interface_opts.if_type = capture_opts->default_options.if_type;
-#ifdef HAVE_EXTCAP
             interface_opts.extcap = g_strdup(capture_opts->default_options.extcap);
-#endif
         }
     }
 
@@ -713,11 +682,10 @@ capture_opts_add_iface_opt(capture_options *capture_opts, const char *optarg_str
     interface_opts.has_snaplen = capture_opts->default_options.has_snaplen;
     interface_opts.linktype = capture_opts->default_options.linktype;
     interface_opts.promisc_mode = capture_opts->default_options.promisc_mode;
-#ifdef HAVE_EXTCAP
     interface_opts.extcap_fifo = g_strdup(capture_opts->default_options.extcap_fifo);
     interface_opts.extcap_args = NULL;
-    interface_opts.extcap_pid = INVALID_EXTCAP_PID;
-    interface_opts.extcap_userdata = NULL;
+    interface_opts.extcap_pid = WS_INVALID_PID;
+    interface_opts.extcap_pipedata = NULL;
 #ifdef _WIN32
     interface_opts.extcap_pipe_h = INVALID_HANDLE_VALUE;
     interface_opts.extcap_control_in_h = INVALID_HANDLE_VALUE;
@@ -725,7 +693,6 @@ capture_opts_add_iface_opt(capture_options *capture_opts, const char *optarg_str
 #endif
     interface_opts.extcap_control_in = g_strdup(capture_opts->default_options.extcap_control_in);
     interface_opts.extcap_control_out = g_strdup(capture_opts->default_options.extcap_control_out);
-#endif
 #ifdef CAN_SET_CAPTURE_BUFFER_SIZE
     interface_opts.buffer_size = capture_opts->default_options.buffer_size;
 #endif
@@ -1155,17 +1122,15 @@ capture_opts_del_iface(capture_options *capture_opts, guint if_index)
     g_free(interface_opts->console_display_name);
     g_free(interface_opts->cfilter);
     g_free(interface_opts->timestamp_type);
-#ifdef HAVE_EXTCAP
     g_free(interface_opts->extcap);
     g_free(interface_opts->extcap_fifo);
     if (interface_opts->extcap_args)
         g_hash_table_unref(interface_opts->extcap_args);
-    if (interface_opts->extcap_pid != INVALID_EXTCAP_PID)
+    if (interface_opts->extcap_pid != WS_INVALID_PID)
         g_spawn_close_pid(interface_opts->extcap_pid);
-    g_free(interface_opts->extcap_userdata);
+    g_free(interface_opts->extcap_pipedata);
     g_free(interface_opts->extcap_control_in);
     g_free(interface_opts->extcap_control_out);
-#endif
 #ifdef HAVE_PCAP_REMOTE
     if (interface_opts->src_type == CAPTURE_IFREMOTE) {
         g_free(interface_opts->remote_host);
@@ -1208,15 +1173,14 @@ collect_ifaces(capture_options *capture_opts)
             interface_opts.has_snaplen = device->has_snaplen;
             interface_opts.promisc_mode = device->pmode;
             interface_opts.if_type = device->if_info.type;
-#ifdef HAVE_EXTCAP
             interface_opts.extcap = g_strdup(device->if_info.extcap);
             interface_opts.extcap_fifo = NULL;
-            interface_opts.extcap_userdata = NULL;
+            interface_opts.extcap_pipedata = NULL;
             interface_opts.extcap_args = device->external_cap_args_settings;
-            interface_opts.extcap_pid = INVALID_EXTCAP_PID;
+            interface_opts.extcap_pid = WS_INVALID_PID;
             if (interface_opts.extcap_args)
                 g_hash_table_ref(interface_opts.extcap_args);
-            interface_opts.extcap_userdata = NULL;
+            interface_opts.extcap_pipedata = NULL;
 #ifdef _WIN32
             interface_opts.extcap_pipe_h = INVALID_HANDLE_VALUE;
             interface_opts.extcap_control_in_h = INVALID_HANDLE_VALUE;
@@ -1224,7 +1188,6 @@ collect_ifaces(capture_options *capture_opts)
 #endif
             interface_opts.extcap_control_in = NULL;
             interface_opts.extcap_control_out = NULL;
-#endif
 #ifdef CAN_SET_CAPTURE_BUFFER_SIZE
             interface_opts.buffer_size =  device->buffer;
 #endif
@@ -1293,9 +1256,7 @@ capture_opts_free_interface_t(interface_t *device)
         g_slist_foreach(device->if_info.addrs,
                         capture_opts_free_interface_t_addrs, NULL);
         g_slist_free(device->if_info.addrs);
-#ifdef HAVE_EXTCAP
         g_free(device->if_info.extcap);
-#endif
     }
 }
 

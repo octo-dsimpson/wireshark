@@ -6,23 +6,11 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  * Based on the RANAP dissector
  *
- * References: 3GPP TS 36.413 V14.4.0 (2017-09)
+ * References: 3GPP TS 36.413 V15.1.0 (2018-03)
  */
 
 #include "config.h"
@@ -49,6 +37,7 @@
 #include "packet-gsm_map.h"
 #include "packet-cell_broadcast.h"
 #include "packet-gsm_a_common.h"
+#include "packet-ntp.h"
 
 #define PNAME  "S1 Application Protocol"
 #define PSNAME "S1AP"
@@ -63,6 +52,10 @@ void proto_reg_handoff_s1ap(void);
 static dissector_handle_t nas_eps_handle;
 static dissector_handle_t lppa_handle;
 static dissector_handle_t bssgp_handle;
+static dissector_handle_t lte_rrc_ue_radio_access_cap_info_handle;
+static dissector_handle_t lte_rrc_ue_radio_access_cap_info_nb_handle;
+static dissector_handle_t lte_rrc_ue_radio_paging_info_handle;
+static dissector_handle_t lte_rrc_ue_radio_paging_info_nb_handle;
 
 #include "packet-s1ap-val.h"
 
@@ -104,6 +97,16 @@ static int hf_s1ap_measurementsToActivate_M7 = -1;
 static int hf_s1ap_MDT_Location_Info_GNSS = -1;
 static int hf_s1ap_MDT_Location_Info_E_CID = -1;
 static int hf_s1ap_MDT_Location_Info_Reserved = -1;
+static int hf_s1ap_NRencryptionAlgorithms_NEA1 = -1;
+static int hf_s1ap_NRencryptionAlgorithms_NEA2 = -1;
+static int hf_s1ap_NRencryptionAlgorithms_NEA3 = -1;
+static int hf_s1ap_NRencryptionAlgorithms_Reserved = -1;
+static int hf_s1ap_NRintegrityProtectionAlgorithms_NIA1 = -1;
+static int hf_s1ap_NRintegrityProtectionAlgorithms_NIA2 = -1;
+static int hf_s1ap_NRintegrityProtectionAlgorithms_NIA3 = -1;
+static int hf_s1ap_NRintegrityProtectionAlgorithms_Reserved = -1;
+static int hf_s1ap_UE_Application_Layer_Measurement_Capability_QoE_Measurement = -1;
+static int hf_s1ap_UE_Application_Layer_Measurement_Capability_Reserved = -1;
 #include "packet-s1ap-hf.c"
 
 /* Initialize the subtree pointers */
@@ -136,6 +139,9 @@ static int ett_s1ap_MeasurementsToActivate = -1;
 static int ett_s1ap_MDT_Location_Info = -1;
 static int ett_s1ap_IMSI = -1;
 static int ett_s1ap_NASSecurityParameters = -1;
+static int ett_s1ap_NRencryptionAlgorithms = -1;
+static int ett_s1ap_NRintegrityProtectionAlgorithms = -1;
+static int ett_s1ap_UE_Application_Layer_Measurement_Capability = -1;
 #include "packet-s1ap-ett.c"
 
 static expert_field ei_s1ap_number_pages_le15 = EI_INIT;
@@ -453,6 +459,10 @@ proto_reg_handoff_s1ap(void)
     nas_eps_handle = find_dissector_add_dependency("nas-eps", proto_s1ap);
     lppa_handle = find_dissector_add_dependency("lppa", proto_s1ap);
     bssgp_handle = find_dissector_add_dependency("bssgp", proto_s1ap);
+    lte_rrc_ue_radio_access_cap_info_handle = find_dissector_add_dependency("lte-rrc.ue_radio_access_cap_info", proto_s1ap);
+    lte_rrc_ue_radio_access_cap_info_nb_handle = find_dissector_add_dependency("lte-rrc.ue_radio_access_cap_info.nb", proto_s1ap);
+    lte_rrc_ue_radio_paging_info_handle = find_dissector_add_dependency("lte-rrc.ue_radio_paging_info", proto_s1ap);
+    lte_rrc_ue_radio_paging_info_nb_handle = find_dissector_add_dependency("lte-rrc.ue_radio_paging_info.nb", proto_s1ap);
     dissector_add_for_decode_as("sctp.port", s1ap_handle);
     dissector_add_uint("sctp.ppi", S1AP_PAYLOAD_PROTOCOL_ID,   s1ap_handle);
     Initialized=TRUE;
@@ -615,6 +625,46 @@ void proto_register_s1ap(void) {
       { "Reserved", "s1ap.MDT_Location_Info.Reserved",
         FT_UINT8, BASE_HEX, NULL, 0x3f,
         NULL, HFILL }},
+    { &hf_s1ap_NRencryptionAlgorithms_NEA1,
+      { "128-NEA1", "s1ap.NRencryptionAlgorithms.NEA1",
+        FT_BOOLEAN, 16, TFS(&tfs_supported_not_supported), 0x8000,
+        NULL, HFILL }},
+    { &hf_s1ap_NRencryptionAlgorithms_NEA2,
+      { "128-NEA2", "s1ap.NRencryptionAlgorithms.NEA2",
+        FT_BOOLEAN, 16, TFS(&tfs_supported_not_supported), 0x4000,
+        NULL, HFILL }},
+    { &hf_s1ap_NRencryptionAlgorithms_NEA3,
+      { "128-NEA3", "s1ap.NRencryptionAlgorithms.NEA3",
+        FT_BOOLEAN, 16, TFS(&tfs_supported_not_supported), 0x2000,
+        NULL, HFILL }},
+    { &hf_s1ap_NRencryptionAlgorithms_Reserved,
+      { "Reserved", "s1ap.NRencryptionAlgorithms.Reserved",
+        FT_UINT16, BASE_HEX, NULL, 0x1fff,
+        NULL, HFILL }},
+    { &hf_s1ap_NRintegrityProtectionAlgorithms_NIA1,
+      { "128-NIA1", "s1ap.NRintegrityProtectionAlgorithms.NIA1",
+        FT_BOOLEAN, 16, TFS(&tfs_supported_not_supported), 0x8000,
+        NULL, HFILL }},
+    { &hf_s1ap_NRintegrityProtectionAlgorithms_NIA2,
+      { "128-NIA2", "s1ap.NRintegrityProtectionAlgorithms.NIA2",
+        FT_BOOLEAN, 16, TFS(&tfs_supported_not_supported), 0x4000,
+        NULL, HFILL }},
+    { &hf_s1ap_NRintegrityProtectionAlgorithms_NIA3,
+      { "128-NIA3", "s1ap.NRintegrityProtectionAlgorithms.NIA3",
+        FT_BOOLEAN, 16, TFS(&tfs_supported_not_supported), 0x2000,
+        NULL, HFILL }},
+    { &hf_s1ap_NRintegrityProtectionAlgorithms_Reserved,
+      { "Reserved", "s1ap.NRintegrityProtectionAlgorithms.Reserved",
+        FT_UINT16, BASE_HEX, NULL, 0x1fff,
+        NULL, HFILL }},
+    { &hf_s1ap_UE_Application_Layer_Measurement_Capability_QoE_Measurement,
+      { "QoE Measurement", "s1ap.UE_Application_Layer_Measurement_Capability.QoE_Measurement",
+        FT_BOOLEAN, 8, TFS(&tfs_supported_not_supported), 0x80,
+        NULL, HFILL }},
+    { &hf_s1ap_UE_Application_Layer_Measurement_Capability_Reserved,
+      { "Reserved", "s1ap.UE_Application_Layer_Measurement_Capability.Reserved",
+        FT_UINT8, BASE_HEX, NULL, 0x7f,
+        NULL, HFILL }},
 #include "packet-s1ap-hfarr.c"
   };
 
@@ -649,6 +699,9 @@ void proto_register_s1ap(void) {
     &ett_s1ap_MDT_Location_Info,
     &ett_s1ap_IMSI,
     &ett_s1ap_NASSecurityParameters,
+    &ett_s1ap_NRencryptionAlgorithms,
+    &ett_s1ap_NRintegrityProtectionAlgorithms,
+    &ett_s1ap_UE_Application_Layer_Measurement_Capability,
 #include "packet-s1ap-ettarr.c"
   };
 

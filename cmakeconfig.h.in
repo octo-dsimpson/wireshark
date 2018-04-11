@@ -1,5 +1,8 @@
 /* cmakeconfig.h.in */
 
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
+
 /* Note: You cannot use earlier #defines in later #cmakedefines (cmake 2.6.2). */
 
 /* Name of package */
@@ -26,26 +29,23 @@
 /* Directory where extcap hooks reside */
 #define EXTCAP_DIR "${EXTCAP_DIR}"
 
-/* Define to 1 if we want to enable extcap */
-#cmakedefine HAVE_EXTCAP 1
-
 /* Define to 1 if we want to enable plugins */
 #cmakedefine HAVE_PLUGINS 1
 
 /*  Define to 1 if we check hf conflict */
 #cmakedefine ENABLE_CHECK_FILTER 1
 
-/* Link plugins statically into Wireshark */
+/* Link Wireshark libraries statically */
 #cmakedefine ENABLE_STATIC 1
 
 /* Enable AirPcap */
 #cmakedefine HAVE_AIRPCAP 1
 
+/* Define to 1 if you have the <alloca.h> header file. */
+#cmakedefine HAVE_ALLOCA_H 1
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #cmakedefine HAVE_ARPA_INET_H 1
-
-/* Define to 1 if you have the <arpa/nameser.h> header file. */
-#cmakedefine HAVE_ARPA_NAMESER_H 1
 
 /* Define to 1 if you have the `bpf_image' function. */
 #cmakedefine HAVE_BPF_IMAGE 1
@@ -56,20 +56,11 @@
 /* Define to 1 if you have the `dladdr' function. */
 #cmakedefine HAVE_DLADDR 1
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#cmakedefine HAVE_DLFCN_H 1
-
 /* Define to 1 if you have the <fcntl.h> header file. */
 #cmakedefine HAVE_FCNTL_H 1
 
-/* Define to use GeoIP library */
-#cmakedefine HAVE_GEOIP 1
-
-/* Define if GeoIP supports IPv6 (GeoIP 1.4.5 and later) */
-#cmakedefine HAVE_GEOIP_V6 1
-
-/* Define if GeoIP has GeoIP_free (not available upstream with 1.6.10 or earlier) */
-#cmakedefine HAVE_GEOIP_FREE 1
+/* Define to use the MaxMind DB library */
+#cmakedefine HAVE_MAXMINDDB 1
 
 /* Define to 1 if you have the <ifaddrs.h> header file. */
 #cmakedefine HAVE_IFADDRS_H 1
@@ -94,9 +85,6 @@
 
 /* Define to 1 if you have the <getopt.h> header file. */
 #cmakedefine HAVE_GETOPT_H 1
-
-/* Define to 1 if you have the `getprotobynumber' function. */
-#cmakedefine HAVE_GETPROTOBYNUMBER 1
 
 /* Define to 1 if you have the <grp.h> header file. */
 #cmakedefine HAVE_GRP_H 1
@@ -137,9 +125,6 @@
 /* Define to use libpcap library */
 #cmakedefine HAVE_LIBPCAP 1
 
-/* Define to use libportaudio library */
-#cmakedefine HAVE_LIBPORTAUDIO 1
-
 /* Define to 1 if you have the `smi' library (-lsmi). */
 #cmakedefine HAVE_LIBSMI 1
 
@@ -170,9 +155,6 @@
 /* Define to use MIT kerberos */
 #cmakedefine HAVE_MIT_KERBEROS 1
 
-/* Define to 1 if you have the `mkdtemp' function. */
-#cmakedefine HAVE_MKDTEMP 1
-
 /* Define to 1 if you have the `mkstemps' function. */
 #cmakedefine HAVE_MKSTEMPS 1
 
@@ -199,9 +181,6 @@
 
 /* VHT_CAPABILITY is supported */
 #cmakedefine HAVE_NL80211_VHT_CAPABILITY 1
-
-/* Define to 1 if you have the <Ntddndis.h> header file. */
-#cmakedefine HAVE_NTDDNDIS_H 1
 
 /* Define to 1 if you have macOS frameworks */
 #cmakedefine HAVE_MACOS_FRAMEWORKS 1
@@ -267,12 +246,6 @@
 /* Define to 1 if you have the `pcap_set_tstamp_type' function. */
 #cmakedefine HAVE_PCAP_SET_TSTAMP_TYPE 1
 
-/* Define to 1 if you have the popcount function. */
-#cmakedefine HAVE_POPCOUNT 1
-
-/* Define to 1 if you have the <portaudio.h> header file. */
-#cmakedefine HAVE_PORTAUDIO_H 1
-
 /* Define to 1 if you have the <pwd.h> header file. */
 #cmakedefine HAVE_PWD_H 1
 
@@ -317,9 +290,6 @@
 
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
 #cmakedefine HAVE_SYS_IOCTL_H 1
-
-/* Define to 1 if you have the <sys/param.h> header file. */
-#cmakedefine HAVE_SYS_PARAM_H 1
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #cmakedefine HAVE_SYS_SOCKET_H 1
@@ -369,7 +339,7 @@
 /* Define to the version of this package. */
 #cmakedefine PACKAGE_VERSION
 
-/* Support for pcap-ng */
+/* Support for pcapng */
 #cmakedefine PCAP_NG_DEFAULT 1
 
 /* Define if we are using version of of the Portaudio library API */
@@ -383,13 +353,6 @@
 
 /* Define if we have QtWinExtras */
 /* #cmakedefine QT_WINEXTRAS_LIB 1 */
-
-/* Support for packet editor */
-#cmakedefine WANT_PACKET_EDITOR 1
-
-/* Define to 1 if your processor stores words with the most significant byte
-   first (like Motorola and SPARC, unlike Intel and VAX). */
-#cmakedefine WORDS_BIGENDIAN 1
 
 /* Build androiddump with libpcap instead of wireshark stuff */
 #cmakedefine ANDROIDDUMP_USE_LIBPCAP 1
@@ -414,8 +377,14 @@
     * - The GetWindowsVersion parts of packaging\nsis\wireshark.nsi
     * - The VersionNT parts of packaging\wix\Prerequisites.wxi
     */
-#  define NTDDI_VERSION NTDDI_VISTA
-#  define _WIN32_WINNT _WIN32_WINNT_VISTA
+#  if defined(NTDDI_VERSION)
+#    error NTDDI_VERSION already defined.
+#  endif
+#  define NTDDI_VERSION NTDDI_WIN7
+#  if defined(_WIN32_WINNT)
+#    error _WIN32_WINNT already defined.
+#  endif
+#  define _WIN32_WINNT _WIN32_WINNT_WIN7
 
    /* WpdPack/INclude/pcap/pcap.h checks for "#if defined(WIN32)" */
 #  ifndef WIN32
@@ -425,9 +394,6 @@
 #  if !defined(QT_VERSION) || !defined(_SSIZE_T_DEFINED)
    typedef int ssize_t;
 #  endif
-
-   /* FIXME: Detection doesn't work */
-#  define HAVE_NTDDNDIS_H 1
 
    /*
     * Flex (v 2.5.35) uses this symbol to "exclude" unistd.h
@@ -449,3 +415,5 @@
 #endif
 
 #include <ws_diag_control.h>
+
+#endif /* __CONFIG_H__ */

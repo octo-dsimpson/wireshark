@@ -13,19 +13,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  * References:
  * RFC 3775, Mobility Support in IPv6
@@ -2799,7 +2787,6 @@ dissect_pmip6_opt_ipv4ha(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, vo
     field_tree = mip6_fixed_option_header(tree, pinfo, tvb, proto_mip6_option_ipv4ha, ett_mip6_opt_ipv4ha, &ti, option_len, MIP6_IPV4HA_LEN);
 
     proto_tree_add_item(field_tree, hf_mip6_ipv4ha_preflen, tvb, offset, 1, ENC_BIG_ENDIAN);
-    offset++;
     proto_tree_add_item(field_tree, hf_mip6_ipv4ha_p_flag, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset += 2;
 

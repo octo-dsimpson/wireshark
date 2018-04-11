@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "io_graph_dialog.h"
 #include <ui_io_graph_dialog.h>
@@ -61,12 +48,13 @@
 //   http://www.qcustomplot.com/index.php/support/forum/62
 // - We retap and redraw more than we should.
 // - Smoothing doesn't seem to match GTK+
+// - Closing the color picker on macOS sends the dialog to the background.
+// - The color picker triggers https://bugreports.qt.io/browse/QTBUG-58699.
 
 // To do:
 // - Use scroll bars?
 // - Scroll during live captures
 // - Set ticks per pixel (e.g. pressing "2" sets 2 tpp).
-
 
 const qreal graph_line_width_ = 1.0;
 
@@ -432,11 +420,11 @@ void IOGraphDialog::addGraph(bool checked, QString name, QString dfilter, int co
     uat_model_->setData(uat_model_->index(currentRow, colEnabled), checked ? Qt::Checked : Qt::Unchecked, Qt::CheckStateRole);
     uat_model_->setData(uat_model_->index(currentRow, colName), name);
     uat_model_->setData(uat_model_->index(currentRow, colDFilter), dfilter);
-    uat_model_->setData(uat_model_->index(currentRow, colColor), QColor(color_idx));
+    uat_model_->setData(uat_model_->index(currentRow, colColor), QColor(color_idx), Qt::DecorationRole);
     uat_model_->setData(uat_model_->index(currentRow, colStyle), val_to_str_const(style, graph_style_vs, "None"));
-    uat_model_->setData(uat_model_->index(currentRow, colYAxis), value_units);
+    uat_model_->setData(uat_model_->index(currentRow, colYAxis), val_to_str_const(value_units, y_axis_vs, "Packets"));
     uat_model_->setData(uat_model_->index(currentRow, colYField), yfield);
-    uat_model_->setData(uat_model_->index(currentRow, colSMAPeriod), moving_average);
+    uat_model_->setData(uat_model_->index(currentRow, colSMAPeriod), val_to_str_const(moving_average, moving_avg_vs, "None"));
 
     // due to an EditTrigger, this will also start editing.
     ui->graphUat->setCurrentIndex(new_index);
@@ -477,7 +465,8 @@ void IOGraphDialog::createIOGraph(int currentRow)
 
     connect(this, SIGNAL(recalcGraphData(capture_file *, bool)), iog, SLOT(recalcGraphData(capture_file *, bool)));
     connect(this, SIGNAL(reloadValueUnitFields()), iog, SLOT(reloadValueUnitField()));
-    connect(&cap_file_, SIGNAL(captureFileClosing()), iog, SLOT(captureFileClosing()));
+    connect(&cap_file_, SIGNAL(captureEvent(CaptureEvent *)),
+            iog, SLOT(captureEvent(CaptureEvent *)));
     connect(iog, SIGNAL(requestRetap()), this, SLOT(scheduleRetap()));
     connect(iog, SIGNAL(requestRecalc()), this, SLOT(scheduleRecalc()));
     connect(iog, SIGNAL(requestReplot()), this, SLOT(scheduleReplot()));
@@ -515,25 +504,29 @@ void IOGraphDialog::addDefaultGraph(bool enabled, int idx)
 
 void IOGraphDialog::syncGraphSettings(int row)
 {
-    if (!uat_model_->index(row, colEnabled).isValid() || (ioGraphs_.size() <= row))
+    IOGraph *iog = ioGraphs_.value(row, Q_NULLPTR);
+
+    if (!uat_model_->index(row, colEnabled).isValid() || !iog)
         return;
 
-    IOGraph *iog = ioGraphs_[row];
-
-    bool visible = uat_model_->data(uat_model_->index(row, colEnabled), Qt::DisplayRole).toBool();
+    bool visible = graphIsEnabled(row);
     bool retap = !iog->visible() && visible;
+    QString data_str;
 
-    iog->setName(uat_model_->data(uat_model_->index(row, colName), Qt::DisplayRole).toString());
-    iog->setFilter(uat_model_->data(uat_model_->index(row, colDFilter), Qt::DisplayRole).toString());
+    iog->setName(uat_model_->data(uat_model_->index(row, colName)).toString());
+    iog->setFilter(uat_model_->data(uat_model_->index(row, colDFilter)).toString());
 
     /* plot style depend on the value unit, so set it first. */
-    iog->setValueUnits(uat_model_->data(uat_model_->index(row, colYAxis), Qt::DisplayRole).toUInt());
-    iog->setValueUnitField(uat_model_->data(uat_model_->index(row, colYField), Qt::DisplayRole).toString());
+    data_str = uat_model_->data(uat_model_->index(row, colYAxis)).toString();
+    iog->setValueUnits((int) str_to_val(qUtf8Printable(data_str), y_axis_vs, IOG_ITEM_UNIT_PACKETS));
+    iog->setValueUnitField(uat_model_->data(uat_model_->index(row, colYField)).toString());
 
-    iog->setColor(QRgb(uat_model_->data(uat_model_->index(row, colColor), Qt::DisplayRole).toUInt()));
-    iog->setPlotStyle(uat_model_->data(uat_model_->index(row, colStyle), Qt::DisplayRole).toUInt());
+    iog->setColor(uat_model_->data(uat_model_->index(row, colColor), Qt::DecorationRole).value<QColor>().rgb());
+    data_str = uat_model_->data(uat_model_->index(row, colStyle)).toString();
+    iog->setPlotStyle((int) str_to_val(qUtf8Printable(data_str), graph_style_vs, 0));
 
-    iog->moving_avg_period_ = uat_model_->data(uat_model_->index(row, colSMAPeriod), Qt::DisplayRole).toUInt();
+    data_str = uat_model_->data(uat_model_->index(row, colSMAPeriod)).toString();
+    iog->moving_avg_period_ = str_to_val(qUtf8Printable(data_str), moving_avg_vs, 0);
 
     iog->setInterval(ui->intervalComboBox->itemData(ui->intervalComboBox->currentIndex()).toInt());
 
@@ -783,17 +776,24 @@ IOGraph *IOGraphDialog::currentActiveGraph() const
 {
     QModelIndex index = ui->graphUat->currentIndex();
     if (index.isValid()) {
-        return ioGraphs_[index.row()];
+        return ioGraphs_.value(index.row(), NULL);
     }
 
     //if no currently selected item, go with first item enabled
     for (int row = 0; row < uat_model_->rowCount(); row++)
     {
-        if (uat_model_->data(uat_model_->index(row, colEnabled), Qt::DisplayRole).toBool())
-            return ioGraphs_[row];
+        if (graphIsEnabled(row)) {
+            return ioGraphs_.value(row, NULL);
+        }
     }
 
     return NULL;
+}
+
+bool IOGraphDialog::graphIsEnabled(int row) const
+{
+    Qt::CheckState state = static_cast<Qt::CheckState>(uat_model_->data(uat_model_->index(row, colEnabled), Qt::CheckStateRole).toInt());
+    return state == Qt::Checked;
 }
 
 // Scan through our graphs and gather information.
@@ -810,15 +810,15 @@ void IOGraphDialog::getGraphInfo()
 
     if (uat_model_ != NULL) {
         //all graphs may not be created yet, so bounds check the graph array
-        for (int row = 0; ((row < uat_model_->rowCount()) && (row < ioGraphs_.size())); row++) {
-            if (uat_model_->data(uat_model_->index(row, colEnabled), Qt::DisplayRole).toBool()) {
-                IOGraph* iog = ioGraphs_[row];
+        for (int row = 0; row < uat_model_->rowCount(); row++) {
+            IOGraph* iog = ioGraphs_.value(row, Q_NULLPTR);
+            if (iog && graphIsEnabled(row)) {
                 QCPGraph *graph = iog->graph();
                 QCPBars *bars = iog->bars();
                 if (graph && (!base_graph_ || iog == selectedGraph)) {
                     base_graph_ = graph;
                 } else if (bars &&
-                           (uat_model_->data(uat_model_->index(row, colStyle), Qt::DisplayRole).toString().compare(val_to_str_const(IOGraph::psStackedBar, graph_style_vs, "None")) == 0) &&
+                           (uat_model_->data(uat_model_->index(row, colStyle), Qt::DisplayRole).toString().compare(graph_style_vs[IOGraph::psStackedBar].strptr) == 0) &&
                            iog->visible()) {
                     bars->moveBelow(NULL); // Remove from existing stack
                     bars->moveBelow(prev_bars);
@@ -852,9 +852,8 @@ void IOGraphDialog::updateLegend()
     // Find unique labels
     if (uat_model_ != NULL) {
         for (int row = 0; row < uat_model_->rowCount(); row++) {
-            if (uat_model_->data(uat_model_->index(row, colEnabled), Qt::DisplayRole).toBool() &&
-                ioGraphs_[row]) {
-                IOGraph *iog = ioGraphs_[row];
+            IOGraph *iog = ioGraphs_.value(row, Q_NULLPTR);
+            if (graphIsEnabled(row) && iog) {
                 QString label(iog->valueUnitLabel());
                 if (!iog->scaledValueUnit().isEmpty()) {
                     label += " (" + iog->scaledValueUnit() + ")";
@@ -887,9 +886,9 @@ void IOGraphDialog::updateLegend()
 
     if (uat_model_ != NULL) {
         for (int row = 0; row < uat_model_->rowCount(); row++) {
-            IOGraph *iog = ioGraphs_[row];
+            IOGraph *iog = ioGraphs_.value(row, Q_NULLPTR);
             if (iog) {
-                if (uat_model_->data(uat_model_->index(row, colEnabled), Qt::DisplayRole).toBool()) {
+                if (graphIsEnabled(row)) {
                     iog->addToLegend();
                 } else {
                     iog->removeFromLegend();
@@ -1087,7 +1086,7 @@ void IOGraphDialog::updateStatistics()
 
             if (uat_model_ != NULL) {
                 for (int row = 0; row < uat_model_->rowCount(); row++) {
-                    if (uat_model_->data(uat_model_->index(row, colEnabled), Qt::DisplayRole).toBool()) {
+                    if (graphIsEnabled(row)) {
                         ++enabled_graphs;
                     }
                 }
@@ -1135,8 +1134,9 @@ void IOGraphDialog::loadProfileGraphs()
 
         char* err = NULL;
         if (!uat_load(iog_uat_, &err)) {
-            /* XXX - report the error */
+            report_failure("Error while loading %s: %s.  Default graph values will be used", iog_uat_->name, err);
             g_free(err);
+            uat_clear(iog_uat_);
         }
     }
 
@@ -1147,9 +1147,6 @@ void IOGraphDialog::loadProfileGraphs()
 
     connect(uat_model_, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
             this, SLOT(modelDataChanged(QModelIndex)));
-    connect(uat_model_, SIGNAL(rowsRemoved(QModelIndex, int, int)),
-            this, SLOT(modelRowsRemoved()));
-
 }
 
 // Slots
@@ -1161,7 +1158,7 @@ void IOGraphDialog::on_intervalComboBox_currentIndexChanged(int)
 
     if (uat_model_ != NULL) {
         for (int row = 0; row < uat_model_->rowCount(); row++) {
-            IOGraph *iog = ioGraphs_[row];
+            IOGraph *iog = ioGraphs_.value(row, NULL);
             if (iog) {
                 iog->setInterval(interval);
                 if (iog->visible()) {
@@ -1440,8 +1437,7 @@ void IOGraphDialog::makeCsv(QTextStream &stream) const
     stream << "\"Interval start\"";
     if (uat_model_ != NULL) {
         for (int row = 0; row < uat_model_->rowCount(); row++) {
-            if (uat_model_->data(uat_model_->index(row, colEnabled), Qt::DisplayRole).toBool() &&
-                (ioGraphs_[row] != NULL)) {
+            if (graphIsEnabled(row) && ioGraphs_[row] != NULL) {
                 activeGraphs.append(ioGraphs_[row]);
                 if (max_interval < ioGraphs_[row]->maxInterval()) {
                     max_interval = ioGraphs_[row]->maxInterval();
@@ -1964,9 +1960,13 @@ void IOGraph::scaleGraphData(DataMap &map, int scalar)
     }
 }
 
-void IOGraph::captureFileClosing()
+void IOGraph::captureEvent(CaptureEvent *e)
 {
-    remove_tap_listener(this);
+    if ((e->captureContext() == CaptureEvent::File) &&
+            (e->eventType() == CaptureEvent::Closing))
+    {
+         remove_tap_listener(this);
+    }
 }
 
 void IOGraph::reloadValueUnitField()

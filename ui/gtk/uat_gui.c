@@ -68,6 +68,8 @@
 #include "ui/gtk/old-gtk-compat.h"
 #include "ui/gtk/packet_win.h"
 
+#include "globals.h"
+
 # define BUTTON_SIZE_X -1
 # define BUTTON_SIZE_Y -1
 
@@ -262,6 +264,7 @@ static guint8 *unhexbytes(const char *si, guint len, guint *len_p, char** err) {
 
 on_error:
 	*err = g_strdup("Error parsing hex string");
+	g_free(buf);
 	return NULL;
 }
 

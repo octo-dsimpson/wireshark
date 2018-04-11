@@ -32,19 +32,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -496,6 +484,7 @@ static int hf_gsm_a_rr_3g_ba_used = -1;
 static int hf_gsm_a_rr_meas_valid = -1;
 static int hf_gsm_a_rr_rxlev_full_serv_cell = -1;
 static int hf_gsm_a_rr_rxlev_sub_serv_cell = -1;
+static int hf_gsm_a_rr_si23_ba_used = -1;
 static int hf_gsm_a_rr_rxqual_full_serv_cell = -1;
 static int hf_gsm_a_rr_rxqual_sub_serv_cell = -1;
 static int hf_gsm_a_rr_no_ncell_m = -1;
@@ -4209,7 +4198,8 @@ de_rr_l2_pseudo_len(tvbuff_t *tvb, proto_tree *subtree, packet_info *pinfo _U_, 
 }
 
 /*
- * [3] 10.5.2.20 Measurement Results
+ *
+ * 44.018 10.5.2.20 Measurement Results
  */
 static const true_false_string gsm_a_rr_dtx_vals  = {
     "DTX was used",
@@ -4220,18 +4210,6 @@ static const true_false_string gsm_a_rr_dtx_vals  = {
 static const true_false_string gsm_a_rr_mv_vals  = {
     "The measurement results are not valid",
     "The measurement results are valid"
-};
-
-static const value_string gsm_a_rr_rxqual_vals [] = {
-    {0, "BER < 0.2%, Mean value 0.14%"},
-    {1, "0.2% <= BER < 0.4%, Mean value 0.28%"},
-    {2, "0.4% <= BER < 0.8%, Mean value 0.57%"},
-    {3, "0.8% <= BER < 1.6%, Mean value 1.13%"},
-    {4, "1.6% <= BER < 3.2%, Mean value 2.26%"},
-    {5, "3.2% <= BER < 6.4%, Mean value 4.53%"},
-    {6, "6.4% <= BER < 12.8%, Mean value 9.05%"},
-    {7, "BER > 12.8%, Mean value 18.10%"},
-    {0, NULL}
 };
 
 static const value_string gsm_a_rr_ncell_vals [] = {
@@ -4245,7 +4223,36 @@ static const value_string gsm_a_rr_ncell_vals [] = {
     {7, "Neighbour cell information not available for serving cell"},
     {0, NULL}
 };
+/*
+< Measurement Results Contents > ::=
+    { < BA_USED : bit (1) >
+        < DTX_USED : bit (1) >
+        < RXLEV_FULL_SERVING_CELL : bit (6) >
+        < 3G_BA_USED : bit (1) >
+        < MEAS_VALID : bit (1) >
+        < RXLEV_SUB_SERVING_CELL : bit (6) >
+        < SI23_BA_USED : bit (1) >
+        < RXQUAL_FULL_SERVING_CELL : bit (3) >
+        < RXQUAL_SUB_SERVING_CELL : bit (3) >
+        {
+            < NO_NCELL_M : { bit (3) := 111 } >
+            0**			-- Padding with zeroes
+        } |
+        {
+            < NO_NCELL_M : { bit (3) exclude 111 } >
+            { < NCELL Report : < NCELL Report struct >> } * val (NO_NCELL_M)
+            { null | 0**			-- Padding with zeroes
+                | 1 < UTRAN_CSG_Measurement_Report : < UTRAN_CSG_Measurement_Report IE > >
+                { null | 0** }	-- Padding with zeroes
+            }
+        }
+    } & octet (16) ;
+< NCELL Report struct > ::=
+    < RXLEV-NCELL: bit (6) >
+    < BCCH-FREQ-NCELL : bit (5) >
+    < BSIC-NCELL : bit (6) > ;
 
+*/
 guint16
 de_rr_meas_res(tvbuff_t *tvb, proto_tree *subtree, packet_info *pinfo _U_, guint32 offset, guint len _U_, gchar *add_string _U_, int string_len _U_)
 {
@@ -4255,33 +4262,44 @@ de_rr_meas_res(tvbuff_t *tvb, proto_tree *subtree, packet_info *pinfo _U_, guint
 
     curr_offset = offset;
 
+    bit_offset = curr_offset << 3;
     /* 2nd octet */
     /* BA-USED */
-    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_ba_used, tvb, curr_offset<<3, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_ba_used, tvb, bit_offset, 1, ENC_BIG_ENDIAN);
+    bit_offset++;
     /* DTX USED */
-    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_dtx_used, tvb, (curr_offset<<3)+1, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_dtx_used, tvb, bit_offset, 1, ENC_BIG_ENDIAN);
+    bit_offset++;
     /* RXLEV-FULL-SERVING-CELL */
-    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_rxlev_full_serv_cell, tvb, (curr_offset<<3)+2, 6, ENC_BIG_ENDIAN);
+    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_rxlev_full_serv_cell, tvb, bit_offset, 6, ENC_BIG_ENDIAN);
+    bit_offset += 6;
     curr_offset++;
 
     /* 3rd octet */
     /* 3G-BA-USED */
-    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_3g_ba_used, tvb, curr_offset<<3, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_3g_ba_used, tvb, bit_offset, 1, ENC_BIG_ENDIAN);
+    bit_offset++;
     /* MEAS-VALID */
-    proto_tree_add_item(subtree, hf_gsm_a_rr_meas_valid, tvb, curr_offset, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_meas_valid, tvb, bit_offset, 1, ENC_BIG_ENDIAN);
+    bit_offset++;
     /* RXLEV-SUB-SERVING-CELL */
-    proto_tree_add_item(subtree, hf_gsm_a_rr_rxlev_sub_serv_cell, tvb, curr_offset, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_rxlev_sub_serv_cell, tvb, bit_offset, 6, ENC_BIG_ENDIAN);
+    bit_offset += 6;
 
     curr_offset++;
 
     /* 4th octet */
+    /* SI23_BA_USED */
+    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_si23_ba_used, tvb, bit_offset, 1, ENC_BIG_ENDIAN);
+    bit_offset++;
     /* RXQUAL-FULL-SERVING-CELL */
-    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_rxqual_full_serv_cell, tvb, (curr_offset<<3)+1, 3, ENC_BIG_ENDIAN);
+    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_rxqual_full_serv_cell, tvb, bit_offset, 3, ENC_BIG_ENDIAN);
+    bit_offset += 3;
 
     /* RXQUAL-SUB-SERVING-CELL */
-    proto_tree_add_item(subtree, hf_gsm_a_rr_rxqual_sub_serv_cell, tvb, curr_offset, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_bits_item(subtree, hf_gsm_a_rr_rxqual_sub_serv_cell, tvb, bit_offset, 3, ENC_BIG_ENDIAN);
+    bit_offset += 3;
     /* NO-NCELL-M */
-    bit_offset = (curr_offset << 3) + 7;
     proto_tree_add_bits_ret_val(subtree, hf_gsm_a_rr_no_ncell_m, tvb, bit_offset, 3, &no_ncell_m, ENC_BIG_ENDIAN);
     bit_offset += 3;
     if (no_ncell_m == 7) /* No neighbour cell information available) */
@@ -12249,7 +12267,7 @@ proto_register_gsm_a_rr(void)
             },
             { &hf_gsm_a_rr_meas_valid,
               { "MEAS-VALID","gsm_a.rr.meas_valid",
-                FT_BOOLEAN,8,  TFS(&gsm_a_rr_mv_vals), 0x40,
+                FT_BOOLEAN,8,  TFS(&gsm_a_rr_mv_vals), 0x0,
                 NULL, HFILL }
             },
             { &hf_gsm_a_rr_rxlev_full_serv_cell,
@@ -12262,6 +12280,11 @@ proto_register_gsm_a_rr(void)
                 FT_UINT8,BASE_DEC|BASE_EXT_STRING,  &gsm_a_rr_rxlev_vals_ext, 0x00,
                 NULL, HFILL }
             },
+            { &hf_gsm_a_rr_si23_ba_used,
+              { "SI23_BA_USED","gsm_a.rr.si23_ba_used",
+                FT_UINT8,BASE_DEC,  NULL, 0x00,
+                NULL, HFILL }
+            },
             { &hf_gsm_a_rr_rxqual_full_serv_cell,
               { "RXQUAL-FULL-SERVING-CELL","gsm_a.rr.rxqual_full_serv_cell",
                 FT_UINT8, BASE_DEC, VALS(gsm_a_rr_rxqual_vals), 0x00,
@@ -12269,7 +12292,7 @@ proto_register_gsm_a_rr(void)
             },
             { &hf_gsm_a_rr_rxqual_sub_serv_cell,
               { "RXQUAL-SUB-SERVING-CELL","gsm_a.rr.rxqual_sub_serv_cell",
-                FT_UINT8,BASE_DEC,  VALS(gsm_a_rr_rxqual_vals), 0x0e,
+                FT_UINT8,BASE_DEC,  VALS(gsm_a_rr_rxqual_vals), 0x0,
                 NULL, HFILL }
             },
             { &hf_gsm_a_rr_no_ncell_m,

@@ -15,19 +15,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -1626,10 +1614,112 @@ static const value_string bthci_cmd_appearance_vals[] = {
     { 1155,  "Cycling: Cadence Sensor" },
     { 1156,  "Cycling: Power Sensor" },
     { 1157,  "Cycling: Speed and Cadence Sensor" },
-    { 3136,  "Generic" },
+    { 1216,  "Generic Control Device" },
+    { 1217,  "Switch" },
+    { 1218,  "Multi-switch" },
+    { 1219,  "Button" },
+    { 1220,  "Slider" },
+    { 1221,  "Rotary" },
+    { 1222,  "Touch-panel" },
+    { 1280,  "Generic Network Device" },
+    { 1281,  "Access Point" },
+    { 1344,  "Generic Sensor" },
+    { 1345,  "Motion Sensor" },
+    { 1346,  "Air Quality Sensor" },
+    { 1347,  "Temperature Sensor" },
+    { 1348,  "Humidity Sensor" },
+    { 1349,  "Leak Sensor" },
+    { 1350,  "Smoke Sensor" },
+    { 1351,  "Occupancy Sensor" },
+    { 1352,  "Contact Sensor" },
+    { 1353,  "Carbon Monoxide Sensor" },
+    { 1354,  "Carbon Dioxide Sensor" },
+    { 1355,  "Ambient Light Sensor" },
+    { 1356,  "Energy Sensor" },
+    { 1357,  "Color Light Sensor" },
+    { 1358,  "Rain Sensor" },
+    { 1359,  "Fire Sensor" },
+    { 1360,  "Wind Sensor" },
+    { 1361,  "Proximity Sensor" },
+    { 1362,  "Multi-Sensor" },
+    { 1408,  "Generic Light Fixtures" },
+    { 1409,  "Wall Light" },
+    { 1410,  "Ceiling Light" },
+    { 1411,  "Floor Light" },
+    { 1412,  "Cabinet Light" },
+    { 1413,  "Desk Light" },
+    { 1414,  "Troffer Light" },
+    { 1415,  "Pendant Light" },
+    { 1416,  "In-ground Light" },
+    { 1417,  "Flood Light" },
+    { 1418,  "Underwater Light" },
+    { 1419,  "Bollard with Light" },
+    { 1420,  "Pathway Light" },
+    { 1421,  "Garden Light" },
+    { 1422,  "Pole-top Light" },
+    { 1423,  "Spotlight" },
+    { 1424,  "Linear Light" },
+    { 1425,  "Street Light" },
+    { 1426,  "Shelves Light" },
+    { 1427,  "High-bay / Low-bay Light" },
+    { 1428,  "Emergency Exit Light" },
+    { 1472,  "Generic Fan" },
+    { 1473,  "Ceiling Fan" },
+    { 1474,  "Axial Fan" },
+    { 1475,  "Exhaust Fan" },
+    { 1476,  "Pedestal Fan" },
+    { 1477,  "Desk Fan" },
+    { 1478,  "Wall Fan" },
+    { 1536,  "Generic HVAC" },
+    { 1537,  "Thermostat" },
+    { 1600,  "Generic Air Conditioning" },
+    { 1664,  "Generic Humidifier" },
+    { 1728,  "Generic Heating" },
+    { 1729,  "Radiator" },
+    { 1730,  "Boiler" },
+    { 1731,  "Heat Pump" },
+    { 1732,  "Infrared Heater" },
+    { 1733,  "Radiant Panel Heater" },
+    { 1734,  "Fan Heater" },
+    { 1735,  "Air Curtain" },
+    { 1792,  "Generic Access Control" },
+    { 1793,  "Access Door" },
+    { 1794,  "Garage Door" },
+    { 1795,  "Emergency Exit Door" },
+    { 1796,  "Access Lock" },
+    { 1797,  "Elevator" },
+    { 1798,  "Window" },
+    { 1799,  "Entrance Gate" },
+    { 1856,  "Generic Motorized Device" },
+    { 1857,  "Motorized Gate" },
+    { 1858,  "Awning" },
+    { 1859,  "Blinds or Shades" },
+    { 1860,  "Curtains" },
+    { 1861,  "Screen" },
+    { 1920,  "Generic Power Device" },
+    { 1921,  "Power Outlet" },
+    { 1922,  "Power Strip" },
+    { 1923,  "Plug" },
+    { 1924,  "Power Supply" },
+    { 1925,  "LED Driver" },
+    { 1926,  "Fluorescent Lamp Gear" },
+    { 1927,  "HID Lamp Gear" },
+    { 1984,  "Generic Light Source" },
+    { 1985,  "Incandescent Light Bulb" },
+    { 1986,  "LED Bulb" },
+    { 1987,  "HID Lamp" },
+    { 1988,  "Fluorescent Lamp" },
+    { 1989,  "LED Array" },
+    { 1990,  "Multi-Color LED Array" },
+    { 3136,  "Generic: Pulse Oximeter" },
     { 3137,  "Fingertip" },
     { 3138,  "Wrist Worn" },
-    { 5184,  "Generic" },
+    { 3200,  "Generic: Weight Scale" },
+    { 3264,  "Generic Personal Mobility Device" },
+    { 3265,  "Powered Wheelchair" },
+    { 3266,  "Mobility Scooter" },
+    { 3328,  "Generic Continuous Glucose Monitor" },
+    { 5184,  "Generic: Outdoor Sports Activity" },
     { 5185,  "Location Display Device" },
     { 5186,  "Location and Navigation Display Device" },
     { 5187,  "Location Pod" },
@@ -7128,13 +7218,13 @@ proto_register_bthci_cmd(void)
 
     bthci_cmds = wmem_tree_new_autoreset(wmem_epan_scope(), wmem_file_scope());
 
-    module = prefs_register_protocol(proto_bthci_cmd, NULL);
+    module = prefs_register_protocol_subtree("Bluetooth", proto_bthci_cmd, NULL);
     prefs_register_static_text_preference(module, "hci_cmd.version",
             "Bluetooth HCI version: 4.0 (Core)",
             "Version of protocol supported by this dissector.");
 
     vendor_dissector_table = register_decode_as_next_proto(proto_bthci_cmd, "Vendor", "bthci_cmd.vendor",
-                                                           "BT HCI Vendor", (build_label_func*)&bthci_cmd_vendor_prompt);
+                                                           "BT HCI Vendor", bthci_cmd_vendor_prompt);
 }
 
 
@@ -7719,6 +7809,20 @@ dissect_eir_ad_data(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, bluetoo
     if (tvb_reported_length_remaining(tvb, offset) > 0) {
         proto_tree_add_item(tree, hf_btcommon_eir_ad_unused, tvb, offset, tvb_reported_length_remaining(tvb, offset), ENC_NA);
         offset = tvb_reported_length(tvb);
+    }
+
+    if  (bluetooth_eir_ad_data && bluetooth_eir_ad_data->bd_addr && name && have_tap_listener(bluetooth_device_tap)) {
+        bluetooth_device_tap_t  *tap_device;
+
+        tap_device = wmem_new(wmem_packet_scope(), bluetooth_device_tap_t);
+        tap_device->interface_id  = bluetooth_eir_ad_data->interface_id;
+        tap_device->adapter_id    = bluetooth_eir_ad_data->adapter_id;
+        memcpy(tap_device->bd_addr, bluetooth_eir_ad_data->bd_addr, 6);
+        tap_device->has_bd_addr = TRUE;
+        tap_device->is_local = FALSE;
+        tap_device->type = BLUETOOTH_DEVICE_NAME;
+        tap_device->data.name = name;
+        tap_queue_packet(bluetooth_device_tap, pinfo, tap_device);
     }
 
     if (has_bd_addr && name && have_tap_listener(bluetooth_device_tap)) {

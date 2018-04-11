@@ -4,27 +4,13 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #ifndef DRAG_DROP_TOOLBAR_H
 #define DRAG_DROP_TOOLBAR_H
 
 #include <QToolBar>
 #include <QPoint>
-#include <ui/qt/utils/qt_ui_utils.h>
 
 class DragDropToolBar : public QToolBar
 {
@@ -34,8 +20,12 @@ public:
     explicit DragDropToolBar(QWidget *parent = Q_NULLPTR);
     ~DragDropToolBar();
 
+    virtual void clear();
+
 Q_SIGNALS:
     void actionMoved(QAction * action, int oldPos, int newPos);
+
+    void newFilterDropped(QString description, QString filter);
 
 protected:
 
@@ -51,6 +41,7 @@ private:
     QPoint dragStartPosition;
     int childCounter;
 
+    void setupToolbar();
     void moveToolbarItems(int fromPos, int toPos);
 
 };

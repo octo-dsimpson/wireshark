@@ -5,19 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include <config.h>
@@ -650,12 +638,6 @@ DIAG_ON(pedantic)
                  * That's not it.  If there are more
                  * path components to test, try them.
                  */
-                if (*path_end == '\0') {
-                    /*
-                     * There's nothing more to try.
-                     */
-                    break;
-                }
                 if (*path_end == ':')
                     path_end++;
                 path_start = path_end;
@@ -1089,7 +1071,6 @@ get_plugins_pers_dir_with_version(void)
     return plugin_pers_dir_with_version;
 }
 
-#if defined(HAVE_EXTCAP)
 /*
  * Find the directory where the extcap hooks are stored.
  *
@@ -1168,22 +1149,17 @@ static void init_extcap_dir(void) {
     }
 #endif
 }
-#endif /* HAVE_EXTCAP */
 
 /*
  * Get the directory in which the extcap hooks are stored.
  *
- * XXX - A fix instead of HAVE_EXTCAP must be found
  */
 const char *
-get_extcap_dir(void) {
-#if defined(HAVE_EXTCAP)
+get_extcap_dir(void)
+{
     if (!extcap_dir)
         init_extcap_dir();
     return extcap_dir;
-#else
-    return NULL;
-#endif
 }
 
 /*
@@ -1488,7 +1464,14 @@ gboolean
 profile_exists(const gchar *profilename, gboolean global)
 {
     gchar *path = NULL, *global_path;
+
     if (global) {
+        /*
+         * If we're looking up a global profile, we must have a
+         * profile name.
+         */
+        if (!profilename)
+            return FALSE;
         global_path = get_global_profiles_dir();
         path = g_strdup_printf ("%s%s%s", global_path,
                            G_DIR_SEPARATOR_S, profilename);
@@ -1498,6 +1481,10 @@ profile_exists(const gchar *profilename, gboolean global)
             return TRUE;
         }
     } else {
+        /*
+         * If we didn't supply a profile name, i.e. if profilename is
+         * null, get_persconffile_dir() returns the default profile.
+         */
         path = get_persconffile_dir (profilename);
         if (test_for_directory (path) == EISDIR) {
             g_free (path);
@@ -2267,10 +2254,8 @@ free_progdirs(void)
     g_free(plugin_pers_dir_with_version);
     plugin_pers_dir_with_version = NULL;
 #endif
-#ifdef HAVE_EXTCAP
     g_free(extcap_dir);
     extcap_dir = NULL;
-#endif
 }
 
 /*

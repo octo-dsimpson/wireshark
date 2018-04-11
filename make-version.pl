@@ -6,19 +6,7 @@
 # By Gerald Combs <gerald@wireshark.org>
 # Copyright 1998 Gerald Combs
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 # See below for usage
 #
@@ -47,6 +35,7 @@
 # enable: 1
 # git_client: 0
 # svn_client: 0
+# git_svn: 0
 # tortoise_svn: 0
 # format: git %Y%m%d%H%M%S
 # pkg_enable: 1
@@ -84,13 +73,14 @@ my $set_version = 0;
 my $set_release = 0;
 my %version_pref = (
 	"version_major" => 2,
-	"version_minor" => 5,
+	"version_minor" => 9,
 	"version_micro" => 0,
 	"version_build" => 0,
 
 	"enable"        => 1,
 	"git_client"    => 0,	# set if .git found and .git/svn not found
 	"svn_client"    => 0,	# set if .svn found
+	"git_svn"       => 0,	# set if both .git and .git/svn are found
 	"tortoise_svn"  => 0,
 	"format"        => "git %Y%m%d%H%M%S",
 
@@ -151,6 +141,7 @@ sub read_repo_info {
 		$info_source = "Command line (git-svn)";
 		$info_cmd = "(cd $srcdir; $git_executable svn info)";
 		$is_git_repo = 1;
+		$version_pref{"git_svn"} = 1;
 	}
 
 	# Make sure git is available.
@@ -228,7 +219,7 @@ sub read_repo_info {
 		if ($last_change && $num_commits && $repo_branch) {
 			$do_hack = 0;
 		}
-	} elsif ($version_pref{"svn_client"}) {
+	} elsif ($version_pref{"svn_client"} || $version_pref{"git_svn"}) {
 		my $repo_root = undef;
 		my $repo_url = undef;
 		eval {
@@ -510,7 +501,7 @@ sub update_docinfo_asciidoc
 		my $contents = "";
 		open(DOCINFO_XML, "< $filepath") || die "Can't read $filepath!";
 		while ($line = <DOCINFO_XML>) {
-			if ($line =~ /^<subtitle>For Wireshark \d.\d<\/subtitle>([\r\n]+)$/) {
+			if ($line =~ /^<subtitle>For Wireshark \d.\d+<\/subtitle>([\r\n]+)$/) {
 				$line = sprintf("<subtitle>For Wireshark %d.%d</subtitle>$1",
 						$version_pref{"version_major"},
 						$version_pref{"version_minor"},

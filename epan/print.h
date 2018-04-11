@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #ifndef __PRINT_H__
@@ -94,7 +82,7 @@ WS_DLL_PUBLIC gboolean proto_tree_print(print_dissections_e print_dissections,
 WS_DLL_PUBLIC gboolean print_hex_data(print_stream_t *stream, epan_dissect_t *edt);
 
 WS_DLL_PUBLIC void write_pdml_preamble(FILE *fh, const gchar* filename);
-WS_DLL_PUBLIC void write_pdml_proto_tree(output_fields_t* fields, gchar **protocolfilter, pf_flags protocolfilter_flags, epan_dissect_t *edt, FILE *fh, gboolean use_color);
+WS_DLL_PUBLIC void write_pdml_proto_tree(output_fields_t* fields, gchar **protocolfilter, pf_flags protocolfilter_flags, epan_dissect_t *edt, column_info *cinfo, FILE *fh, gboolean use_color);
 WS_DLL_PUBLIC void write_pdml_finale(FILE *fh);
 
 // Implementations of proto_node_children_grouper_func
@@ -110,6 +98,7 @@ WS_DLL_PUBLIC void write_json_proto_tree(output_fields_t* fields,
                                          gchar **protocolfilter,
                                          pf_flags protocolfilter_flags,
                                          epan_dissect_t *edt,
+                                         column_info *cinfo,
                                          proto_node_children_grouper_func node_children_grouper,
                                          FILE *fh);
 WS_DLL_PUBLIC void write_json_finale(FILE *fh);
@@ -119,7 +108,8 @@ WS_DLL_PUBLIC void write_ek_proto_tree(output_fields_t* fields,
                                        gboolean print_hex_data,
                                        gchar **protocolfilter,
                                        pf_flags protocolfilter_flags,
-                                       epan_dissect_t *edt, FILE *fh);
+                                       epan_dissect_t *edt,
+                                       column_info *cinfo, FILE *fh);
 
 WS_DLL_PUBLIC void write_psml_preamble(column_info *cinfo, FILE *fh);
 WS_DLL_PUBLIC void write_psml_columns(epan_dissect_t *edt, FILE *fh, gboolean use_color);

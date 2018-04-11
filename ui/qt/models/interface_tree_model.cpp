@@ -5,20 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "config.h"
 
@@ -41,9 +28,7 @@
 /* Needed for the meta type declaration of QList<int>* */
 #include <ui/qt/models/sparkline_delegate.h>
 
-#ifdef HAVE_EXTCAP
 #include "extcap.h"
-#endif
 
 const QString InterfaceTreeModel::DefaultNumericValue = QObject::tr("default");
 
@@ -144,12 +129,10 @@ QVariant InterfaceTreeModel::data(const QModelIndex &index, int role) const
                 if ( device->cfilter && strlen(device->cfilter) > 0 )
                     return html_escape(QString(device->cfilter));
             }
-#ifdef HAVE_EXTCAP
             else if ( col == IFTREE_COL_EXTCAP_PATH )
             {
                 return QString(device->if_info.extcap);
             }
-#endif
             else if ( col == IFTREE_COL_SNAPLEN )
             {
                 return device->has_snaplen ? QString::number(device->snaplen) : DefaultNumericValue;
@@ -215,14 +198,13 @@ QVariant InterfaceTreeModel::data(const QModelIndex &index, int role) const
             if ( col == IFTREE_COL_STATS )
             {
                 if ( points.contains(device->name) )
-                    return qVariantFromValue(points[device->name]);
+                    return QVariant::fromValue(points[device->name]);
             }
             else if ( col == IFTREE_COL_HIDDEN )
             {
                 return QVariant::fromValue((bool)device->hidden);
             }
         }
-#ifdef HAVE_EXTCAP
         /* Displays the configuration icon for extcap interfaces */
         else if ( role == Qt::DecorationRole )
         {
@@ -239,7 +221,6 @@ QVariant InterfaceTreeModel::data(const QModelIndex &index, int role) const
                 return Qt::AlignRight;
             }
         }
-#endif
         /* Displays the tooltip for each row */
         else if ( role == Qt::ToolTipRole )
         {
@@ -362,12 +343,10 @@ QVariant InterfaceTreeModel::toolTipForInterface(int idx) const
                 .arg(html_escape(device->addresses))
                 .replace('\n', ", ");
     }
-#ifdef HAVE_EXTCAP
     else if ( device->if_info.type == IF_EXTCAP )
     {
         tt_str = QString(tr("Extcap interface: %1")).arg(get_basename(device->if_info.extcap));
     }
-#endif
     else
     {
         tt_str = tr("No addresses");

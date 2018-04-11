@@ -6,19 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #ifndef __SSL_UTILS_H_
@@ -32,6 +20,7 @@
 #include <epan/wmem/wmem.h>
 #include <epan/expert.h>
 #include <epan/conversation.h>
+#include <epan/unit_strings.h>
 #include <wsutil/wsgcrypt.h>
 
 #ifdef HAVE_LIBGNUTLS
@@ -167,7 +156,7 @@ typedef enum {
 /* 26-34  Unassigned*/
 #define SSL_HND_HELLO_EXT_SESSION_TICKET_TLS            35
 /* TLS 1.3 draft */
-#define SSL_HND_HELLO_EXT_KEY_SHARE                     40
+#define SSL_HND_HELLO_EXT_KEY_SHARE_OLD                 40
 #define SSL_HND_HELLO_EXT_PRE_SHARED_KEY                41
 #define SSL_HND_HELLO_EXT_EARLY_DATA                    42
 #define SSL_HND_HELLO_EXT_SUPPORTED_VERSIONS            43
@@ -177,6 +166,8 @@ typedef enum {
 #define SSL_HND_HELLO_EXT_CERTIFICATE_AUTHORITIES       47
 #define SSL_HND_HELLO_EXT_OID_FILTERS                   48
 #define SSL_HND_HELLO_EXT_POST_HANDSHAKE_AUTH           49
+#define SSL_HND_HELLO_EXT_SIGNATURE_ALGORITHMS_CERT     50
+#define SSL_HND_HELLO_EXT_KEY_SHARE                     51
 #define SSL_HND_HELLO_EXT_GREASE_0A0A                   2570
 #define SSL_HND_HELLO_EXT_GREASE_1A1A                   6682
 #define SSL_HND_HELLO_EXT_GREASE_2A2A                   10794
@@ -207,11 +198,14 @@ typedef enum {
 
 #define SSL_HND_QUIC_TP_INITIAL_MAX_STREAM_DATA         0
 #define SSL_HND_QUIC_TP_INITIAL_MAX_DATA                1
-#define SSL_HND_QUIC_TP_INITIAL_MAX_STREAM_ID           2
+#define SSL_HND_QUIC_TP_INITIAL_MAX_STREAM_ID_BIDI      2
 #define SSL_HND_QUIC_TP_IDLE_TIMEOUT                    3
 #define SSL_HND_QUIC_TP_OMIT_CONNECTION_ID              4
 #define SSL_HND_QUIC_TP_MAX_PACKET_SIZE                 5
 #define SSL_HND_QUIC_TP_STATELESS_RESET_TOKEN           6
+#define SSL_HND_QUIC_TP_ACK_DELAY_EXPONENT              7
+#define SSL_HND_QUIC_TP_INITIAL_MAX_STREAM_ID_UNI       8
+
 /*
  * Lookup tables
  */
@@ -297,6 +291,7 @@ static inline guint8 tls13_draft_version(guint32 version) {
 #define SSL_SERVER_EXTENDED_MASTER_SECRET (1<<8)
 #define SSL_NEW_SESSION_TICKET  (1<<10)
 #define SSL_ENCRYPT_THEN_MAC    (1<<11)
+#define SSL_SEEN_0RTT_APPDATA   (1<<12)
 
 #define SSL_EXTENDED_MASTER_SECRET_MASK (SSL_CLIENT_EXTENDED_MASTER_SECRET|SSL_SERVER_EXTENDED_MASTER_SECRET)
 
@@ -313,6 +308,7 @@ typedef enum {
 /* Explicit and implicit nonce length (RFC 5116 - Section 3.2.1) */
 #define IMPLICIT_NONCE_LEN  4
 #define EXPLICIT_NONCE_LEN  8
+#define TLS13_AEAD_NONCE_LENGTH     12
 
 /* TLS 1.3 Record type for selecting the appropriate secret. */
 typedef enum {
@@ -357,6 +353,15 @@ typedef struct _SslDecoder {
     SslFlow *flow;
     StringInfo app_traffic_secret;  /**< TLS 1.3 application traffic secret (if applicable), wmem file scope. */
 } SslDecoder;
+
+/*
+ * TLS 1.3 Cipher context. Simpler than SslDecoder since no compression is
+ * required and all keys are calculated internally.
+ */
+typedef struct {
+    gcry_cipher_hd_t    hd;
+    guint8              iv[TLS13_AEAD_NONCE_LENGTH];
+} tls13_cipher;
 
 #define KEX_DHE_DSS     0x10
 #define KEX_DHE_PSK     0x11
@@ -512,6 +517,8 @@ typedef struct {
     GHashTable *tls13_server_handshake;
     GHashTable *tls13_client_appdata;
     GHashTable *tls13_server_appdata;
+    GHashTable *tls13_early_exporter;
+    GHashTable *tls13_exporter;
 } ssl_master_key_map_t;
 
 gint ssl_get_keyex_alg(gint cipher);
@@ -569,6 +576,12 @@ ssl_find_appdata_dissector(const char *name);
 extern void
 ssl_data_set(StringInfo* buf, const guchar* src, guint len);
 
+/** alloc the data with the specified len for the stringInfo buffer.
+ @param str the data source
+ @param len the source data len */
+extern gint
+ssl_data_alloc(StringInfo* str, size_t len);
+
 extern gint
 ssl_cipher_setiv(SSL_CIPHER_CTX *cipher, guchar* iv, gint iv_len);
 
@@ -577,6 +590,11 @@ ssl_cipher_setiv(SSL_CIPHER_CTX *cipher, guchar* iv, gint iv_len);
  @return pointer to the cipher suite struct (or NULL if not found). */
 extern const SslCipherSuite *
 ssl_find_cipher(int num);
+
+
+/** Returns the Libgcrypt cipher identifier or 0 if unavailable. */
+int
+ssl_get_cipher_algo(const SslCipherSuite *cipher_suite);
 
 /** Obtains the block size for a CBC block cipher.
  * @param cipher_suite a cipher suite as returned by ssl_find_cipher().
@@ -606,6 +624,7 @@ ssl_change_cipher(SslDecryptSession *ssl_session, gboolean server);
  @param decoder the stream decoder to be used
  @param ct the content type of this ssl record
  @param record_version the version as contained in the record
+ @param ignore_mac_failed whether to ignore MAC or authenticity failures
  @param in a pointer to the ssl record to be decrypted
  @param inl the record length
  @param comp_str a pointer to the store the compression data
@@ -614,7 +633,16 @@ ssl_change_cipher(SslDecryptSession *ssl_session, gboolean server);
  @return 0 on success */
 extern gint
 ssl_decrypt_record(SslDecryptSession *ssl, SslDecoder *decoder, guint8 ct, guint16 record_version,
+        gboolean ignore_mac_failed,
         const guchar *in, guint16 inl, StringInfo *comp_str, StringInfo *out_str, guint *outl);
+
+/**
+ * Given a cipher algorithm and its mode, a hash algorithm and the secret (with
+ * the same length as the hash algorithm), try to build a cipher. The algorithms
+ * and mode are Libgcrypt identifiers.
+ */
+tls13_cipher *
+tls13_cipher_create(const char *label_prefix, int cipher_algo, int cipher_mode, int hash_algo, const StringInfo *secret, const gchar **error);
 
 
 /* Common part bitween SSL and DTLS dissectors */
@@ -674,6 +702,13 @@ ssl_save_session(SslDecryptSession* ssl, GHashTable *session_hash);
 extern void
 ssl_finalize_decryption(SslDecryptSession *ssl, ssl_master_key_map_t *mk_map);
 
+extern gboolean
+tls13_generate_keys(SslDecryptSession *ssl_session, const StringInfo *secret, gboolean is_from_server);
+
+extern StringInfo *
+tls13_load_secret(SslDecryptSession *ssl, ssl_master_key_map_t *mk_map,
+                  gboolean is_from_server, TLSRecordType type);
+
 extern void
 tls13_change_key(SslDecryptSession *ssl, ssl_master_key_map_t *mk_map,
                  gboolean is_from_server, TLSRecordType type);
@@ -686,6 +721,10 @@ ssl_is_valid_content_type(guint8 type);
 
 extern gboolean
 ssl_is_valid_handshake_type(guint8 hs_type, gboolean is_dtls);
+
+extern void
+tls_scan_server_hello(tvbuff_t *tvb, guint32 offset, guint32 offset_end,
+                      guint16 *server_version, gboolean *is_hrr);
 
 extern void
 ssl_try_set_version(SslSession *session, SslDecryptSession *ssl,
@@ -747,7 +786,7 @@ typedef struct ssl_common_dissect {
         gint hs_ext_psk_binders;
         gint hs_ext_psk_identity_selected;
         gint hs_ext_supported_versions_len;
-        gint hs_ext_supported_versions;
+        gint hs_ext_supported_version;
         gint hs_ext_cookie_len;
         gint hs_ext_cookie;
         gint hs_ext_server_name;
@@ -855,10 +894,12 @@ typedef struct ssl_common_dissect {
         gint hs_ext_quictp_parameter_value;
         gint hs_ext_quictp_parameter_initial_max_stream_data;
         gint hs_ext_quictp_parameter_initial_max_data;
-        gint hs_ext_quictp_parameter_initial_max_stream_id;
+        gint hs_ext_quictp_parameter_initial_max_stream_id_bidi;
         gint hs_ext_quictp_parameter_idle_timeout;
         gint hs_ext_quictp_parameter_max_packet_size;
         gint hs_ext_quictp_parameter_stateless_reset_token;
+        gint hs_ext_quictp_parameter_ack_delay_exponent;
+        gint hs_ext_quictp_parameter_initial_max_stream_id_uni;
 
         /* do not forget to update SSL_COMMON_LIST_T and SSL_COMMON_HF_LIST! */
     } hf;
@@ -983,7 +1024,7 @@ extern void
 ssl_dissect_hnd_srv_hello(ssl_common_dissect_t *hf, tvbuff_t *tvb, packet_info* pinfo,
                           proto_tree *tree, guint32 offset, guint32 offset_end,
                           SslSession *session, SslDecryptSession *ssl,
-                          gboolean is_dtls);
+                          gboolean is_dtls, gboolean is_hrr);
 
 extern void
 ssl_dissect_hnd_hello_retry_request(ssl_common_dissect_t *hf, tvbuff_t *tvb, packet_info* pinfo,
@@ -1049,8 +1090,14 @@ tls_dissect_sct_list(ssl_common_dissect_t *hf, tvbuff_t *tvb, packet_info *pinfo
                      guint32 offset, guint32 offset_end, guint16 version);
 
 extern gboolean
-tls13_hkdf_expand_label(guchar draft_version,
-                        int md, const StringInfo *secret, const char *label, const char *hash_value,
+tls13_hkdf_expand_label_context(int md, const StringInfo *secret,
+                        const char *label_prefix, const char *label,
+                        const guint8 *context, guint8 context_length,
+                        guint16 out_len, guchar **out);
+
+extern gboolean
+tls13_hkdf_expand_label(int md, const StringInfo *secret,
+                        const char *label_prefix, const char *label,
                         guint16 out_len, guchar **out);
 
 /* {{{ */
@@ -1066,7 +1113,7 @@ ssl_common_dissect_t name = {   \
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, \
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, \
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, \
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,             \
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,     \
     },                                                                  \
     /* ett */ {                                                         \
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, \
@@ -1240,8 +1287,8 @@ ssl_common_dissect_t name = {   \
         FT_UINT8, BASE_DEC, NULL, 0x0,                                  \
         NULL, HFILL }                                                   \
     },                                                                  \
-    { & name .hf.hs_ext_supported_versions,                             \
-      { "Supported Versions", prefix ".handshake.extensions.supported_versions",    \
+    { & name .hf.hs_ext_supported_version,                              \
+      { "Supported Version", prefix ".handshake.extensions.supported_version", \
         FT_UINT16, BASE_HEX, VALS(ssl_versions), 0x0,                   \
         NULL, HFILL }                                                   \
     },                                                                  \
@@ -1648,7 +1695,7 @@ ssl_common_dissect_t name = {   \
     { & name .hf.hs_session_ticket_lifetime_hint,                       \
       { "Session Ticket Lifetime Hint",                                 \
         prefix ".handshake.session_ticket_lifetime_hint",               \
-        FT_UINT32, BASE_DEC, NULL, 0x0,                                 \
+        FT_UINT32, BASE_DEC|BASE_UNIT_STRING, &units_second_seconds, 0x0, \
         "New Session Ticket Lifetime Hint", HFILL }                     \
     },                                                                  \
     { & name .hf.hs_session_ticket_age_add,                             \
@@ -1847,10 +1894,10 @@ ssl_common_dissect_t name = {   \
         FT_UINT32, BASE_DEC, NULL, 0x00,                                \
         "Contains the initial value for the maximum amount of data that can be sent on the connection", HFILL }                                                                 \
     },                                                                  \
-    { & name .hf.hs_ext_quictp_parameter_initial_max_stream_id,         \
-      { "initial_max_stream_id", prefix ".quic.parameter.initial_max_stream_id",    \
+    { & name .hf.hs_ext_quictp_parameter_initial_max_stream_id_bidi,    \
+      { "initial_max_stream_id_bidi", prefix ".quic.parameter.initial_max_stream_id_bidi",  \
         FT_UINT32, BASE_DEC, NULL, 0x00,                                \
-        "Contains the initial maximum stream number the peer may initiate", HFILL } \
+        "Contains the initial maximum stream number the peer may initiate for bidirectional streams", HFILL } \
     },                                                                  \
     { & name .hf.hs_ext_quictp_parameter_idle_timeout,                  \
       { "idle_timeout", prefix ".quic.parameter.idle_timeout",          \
@@ -1866,6 +1913,16 @@ ssl_common_dissect_t name = {   \
       { "stateless_reset_token", prefix ".quic.parameter.stateless_reset_token",    \
         FT_BYTES, BASE_NONE, NULL, 0x00,                                \
         "Used in verifying a stateless reset", HFILL }                  \
+    },                                                                  \
+    { & name .hf.hs_ext_quictp_parameter_ack_delay_exponent,         \
+      { "ack_delay_exponent", prefix ".quic.parameter.ack_delay_exponent",  \
+        FT_UINT8, BASE_DEC, NULL, 0x00,                                \
+        "Indicating an exponent used to decode the ACK Delay field in the ACK frame,", HFILL }  \
+    },                                                                  \
+    { & name .hf.hs_ext_quictp_parameter_initial_max_stream_id_uni,    \
+      { "initial_max_stream_id_uni", prefix ".quic.parameter.initial_max_stream_id_uni",  \
+        FT_UINT32, BASE_DEC, NULL, 0x00,                                \
+        "Contains the initial maximum stream number the peer may initiate for unidirectional streams", HFILL } \
     }
 /* }}} */
 

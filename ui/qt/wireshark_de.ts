@@ -36,16 +36,48 @@
         <translation>Ordner</translation>
     </message>
     <message>
+        <source>Filter by path</source>
+        <translation>Nach Pfad filtern</translation>
+    </message>
+    <message>
         <source>Plugins</source>
         <translation>Plugins</translation>
+    </message>
+    <message>
+        <source>No plugins found.</source>
+        <translation>Keine Plugins gefunden.</translation>
+    </message>
+    <message>
+        <source>Search Plugins</source>
+        <translation>Plugins suchen</translation>
+    </message>
+    <message>
+        <source>Filter by type:</source>
+        <translation>Nach Typ filtern:</translation>
     </message>
     <message>
         <source>Keyboard Shortcuts</source>
         <translation>Tastaturkürzel</translation>
     </message>
     <message>
+        <source>Search Shortcuts</source>
+        <translation>Tastaturkürzel suchen</translation>
+    </message>
+    <message>
+        <source>Acknowledgments</source>
+        <translation>Bestätigungen</translation>
+    </message>
+    <message>
         <source>License</source>
         <translation>Lizenzen</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>Kopieren</translation>
+    </message>
+    <message>
+        <source>Copy Row(s)</source>
+        <translation>Zeile(n) kopieren</translation>
     </message>
 </context>
 <context>
@@ -70,6 +102,43 @@
     <message>
         <source>Can&apos;t assign %1 to %2</source>
         <translation>Kann %1 nicht an %2 zuweisen</translation>
+    </message>
+</context>
+<context>
+    <name>AdvancedPrefsModel</name>
+    <message>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation>Status</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>Typ</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Wert</translation>
+    </message>
+</context>
+<context>
+    <name>ApplyLineEdit</name>
+    <message>
+        <source>Apply changes</source>
+        <translation>Änderungen anwenden</translation>
+    </message>
+</context>
+<context>
+    <name>AuthorListModel</name>
+    <message>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>Email</source>
+        <translation>E-Mail</translation>
     </message>
 </context>
 <context>
@@ -614,12 +683,8 @@
         <translation>Bytes in Hexadezimal anzeigen</translation>
     </message>
     <message>
-        <source>Byte %1</source>
-        <translation>Bytes %1</translation>
-    </message>
-    <message>
-        <source>Bytes %1-%2</source>
-        <translation>Bytes %1-%2</translation>
+        <source>Show text based on packet</source>
+        <translation>Text basierend auf den Paketen anzeigen</translation>
     </message>
 </context>
 <context>
@@ -682,7 +747,7 @@
     <message numerus="yes">
         <source>%1, error after %Ln packet(s)</source>
         <oldsource>%1, error after %2 packets</oldsource>
-        <translation>
+        <translation type="vanished">
             <numerusform>%1, Fehler nach %Ln Paket</numerusform>
             <numerusform>%1, Fehler nach %Ln Paketen</numerusform>
         </translation>
@@ -690,14 +755,14 @@
     <message numerus="yes">
         <source>%1, timed out at %Ln packet(s)</source>
         <oldsource>%1, timed out at %2 packets</oldsource>
-        <translation>
+        <translation type="vanished">
             <numerusform>%1, Zeitüberschreitung nach %Ln Paket</numerusform>
             <numerusform>%1, Zeitüberschreitung nach %Ln Paketen</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%1, %Ln packet(s)</source>
-        <translation>
+        <translation type="vanished">
             <numerusform>%1, %Ln Paket</numerusform>
             <numerusform>%1, %Ln Pakete</numerusform>
         </translation>
@@ -773,6 +838,27 @@
     <message>
         <source>error opening file</source>
         <translation>Fehler beim Öffnen der Datei</translation>
+    </message>
+    <message numerus="yes">
+        <source>%1, error after %Ln record(s)</source>
+        <translation>
+            <numerusform>%1, Fehler nach %Ln Paket</numerusform>
+            <numerusform>%1, Fehler nach %Ln Paketen</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%1, timed out at %Ln data record(s)</source>
+        <translation>
+            <numerusform>%1, Zeitüberschreitung nach %Ln Dateneintrag</numerusform>
+            <numerusform>%1, Zeitüberschreitung nach %Ln Dateneinträgen</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%1, %Ln data record(s)</source>
+        <translation>
+            <numerusform>%1, %Ln Dateneintrag</numerusform>
+            <numerusform>%1, %Ln Dateneinträge</numerusform>
+        </translation>
     </message>
     <message>
         <source>unknown</source>
@@ -971,6 +1057,53 @@
     </message>
 </context>
 <context>
+    <name>CaptureFilterCombo</name>
+    <message>
+        <source>Capture filter selector</source>
+        <translation>Mitschnittfilterauswahl</translation>
+    </message>
+</context>
+<context>
+    <name>CaptureFilterEdit</name>
+    <message>
+        <source>Capture filter entry</source>
+        <translation>Mitschnittfilter Eintrag</translation>
+    </message>
+    <message>
+        <source>Manage saved bookmarks.</source>
+        <translation>Gespeicherte Lesezeichen verwalten</translation>
+    </message>
+    <message>
+        <source>Apply this filter string to the display.</source>
+        <translation>Diesen Filter zur Anzeige anwenden.</translation>
+    </message>
+    <message>
+        <source>Multiple filters selected. Override them here or leave this blank to preserve them.</source>
+        <extracomment>This is a very long concept that needs to fit into a short space.</extracomment>
+        <translation>Mehrere Filter ausgewählt. Hier überschreiben oder leer lassen um die Filter beizubehalten.</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;The interfaces you have selected have different capture filters. Typing a filter here will override them. Doing nothing will preserve them.&lt;/p&gt;</source>
+        <translation>&lt;p&gt;Die ausgewählten Schnittstellen haben unterschiedliche Mitschnittfilter zugeordnet. Ein hier angegebener Filter überschreibt diese. Um die Filter beizubehalten ist keine Aktion notwendig.&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>Enter a capture filter %1</source>
+        <translation>Geben Sie einen Mitschnittfilter ein %1</translation>
+    </message>
+    <message>
+        <source>Save this filter</source>
+        <translation>Diesen Filter speichern</translation>
+    </message>
+    <message>
+        <source>Remove this filter</source>
+        <translation>Diesen Filter entfernen</translation>
+    </message>
+    <message>
+        <source>Manage Capture Filters</source>
+        <translation>Mitschnittfilter verwalten</translation>
+    </message>
+</context>
+<context>
     <name>CaptureInterfacesDialog</name>
     <message>
         <source>Input</source>
@@ -1001,8 +1134,8 @@
         <translation>Ausgabeformat:</translation>
     </message>
     <message>
-        <source>pcap-ng</source>
-        <translation>pcap-ng</translation>
+        <source>pcapng</source>
+        <translation>pcapng</translation>
     </message>
     <message>
         <source>pcap</source>
@@ -1296,7 +1429,7 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pakete im pcapng Dateiformat aufzeichnen.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <source>Capture packets in pcap-ng format</source>
+        <source>Capture packets in pcapng format</source>
         <translation>Pakte im pcap-ng Format mitschneiden</translation>
     </message>
     <message>
@@ -1315,20 +1448,23 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <source>Automatic scrolling in live capture</source>
         <translation>Automatisches Scrollen während des Mitschnitts</translation>
     </message>
+    <message>
+        <source>Disable external capture interfaces</source>
+        <translation>Externe Mitschnittschnittstellen deaktivieren</translation>
+    </message>
+</context>
+<context>
+    <name>ColoringRulesDelegate</name>
+    <message>
+        <source>the &quot;@&quot; symbol will be ignored.</source>
+        <translation>das &quot;@&quot; Symbol wird ignoriert.</translation>
+    </message>
 </context>
 <context>
     <name>ColoringRulesDialog</name>
     <message>
         <source>Dialog</source>
         <translation>Dialog</translation>
-    </message>
-    <message>
-        <source>Name</source>
-        <translation>Name</translation>
-    </message>
-    <message>
-        <source>Filter</source>
-        <translation>Filter</translation>
     </message>
     <message>
         <source>&lt;small&gt;&lt;i&gt;A hint.&lt;/i&gt;&lt;/small&gt;</source>
@@ -1363,8 +1499,12 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Hintergrund</translation>
     </message>
     <message>
-        <source>Coloring Rules</source>
-        <translation>Einfärbungsregeln</translation>
+        <source>Set the display filter using this rule.</source>
+        <translation>Anzeigefilter nach dieser Regel setzen.</translation>
+    </message>
+    <message>
+        <source>Apply as filter</source>
+        <translation>Als Filter anwenden</translation>
     </message>
     <message>
         <source>Import</source>
@@ -1383,8 +1523,8 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Filter in eine Datei sichern.</translation>
     </message>
     <message>
-        <source>the &quot;@&quot; symbol will be ignored.</source>
-        <translation>das &quot;@&quot; Symbol wird ignoriert.</translation>
+        <source>Coloring Rules %1</source>
+        <translation>Einfärbungsregeln %1</translation>
     </message>
     <message>
         <source>Double click to edit. Drag to move. Rules are processed in order until a match is found.</source>
@@ -1406,9 +1546,20 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <source>Wireshark doesn&apos;t recognize one or more of your coloring rules. They have been disabled.</source>
         <translation>Wireshark erkennt eine oder mehrere der Einfärbungsregeln nicht. Diese wurden deaktiviert.</translation>
     </message>
+</context>
+<context>
+    <name>ColoringRulesModel</name>
     <message>
-        <source>Unable to save coloring rules: %s</source>
-        <translation>Einfärbungsregeln können nicht gespeichert werden: %s</translation>
+        <source>Unable to save coloring rules: %1</source>
+        <translation>Einfärbungsregeln können nicht gespeichert werden: %1</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>Filter</source>
+        <translation>Filter</translation>
     </message>
 </context>
 <context>
@@ -1527,6 +1678,37 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     </message>
 </context>
 <context>
+    <name>DataPrinter</name>
+    <message>
+        <source>Copy Bytes as Hex + ASCII Dump</source>
+        <translation>Bytes als Hex + ASCII Dump kopieren</translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as a hex and ASCII dump.</source>
+        <translation>Paketbytes als Hex und ASCII Dump kopieren</translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as a hex dump.</source>
+        <translation>Paketbytes als Hex Dump kopieren</translation>
+    </message>
+    <message>
+        <source>Copy only the printable text in the packet.</source>
+        <translation>Nur den druckbaren Text im Paket kopieren.</translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as a stream of hex.</source>
+        <translation>Paketbytes als Hexstream kopieren.</translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as application/octet-stream MIME data.</source>
+        <translation>Paketbytes als application/octet-stream MIME Daten kopieren.</translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as an escaped string.</source>
+        <translation>Paketbytes als Zeichenkette mit Escape-Sequezen kopieren</translation>
+    </message>
+</context>
+<context>
     <name>DecodeAsDialog</name>
     <message>
         <source>Change the dissection behavior for a protocol.</source>
@@ -1543,6 +1725,123 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     <message>
         <source>Decode As</source>
         <translation>Dekodieren als</translation>
+    </message>
+</context>
+<context>
+    <name>DecodeAsModel</name>
+    <message>
+        <source>Match using this field</source>
+        <translation>Übereinstimmend mit diesem Feld</translation>
+    </message>
+    <message>
+        <source>Current&quot;Decode As&quot; behavior</source>
+        <translation>Aktuelles &quot;Dekodieren als&quot;-Verhalten</translation>
+    </message>
+    <message>
+        <source>Default &quot;Decode As&quot; behavior</source>
+        <translation>Standard &quot;Dekodieren als&quot; Verhalten</translation>
+    </message>
+    <message>
+        <source>Change behavior when the protocol field matches this value</source>
+        <translation>Wenn dieser Wert auf das Protokollfeld zutrifft, soll das Verhalten geändert werden</translation>
+    </message>
+    <message>
+        <source>String</source>
+        <translation>Zeichenkette</translation>
+    </message>
+    <message>
+        <source>Integer, base </source>
+        <translation>Integer, base</translation>
+    </message>
+    <message>
+        <source>unknown</source>
+        <translation>unbekannt</translation>
+    </message>
+    <message>
+        <source>&lt;none&gt;</source>
+        <translation>&lt;none&gt;</translation>
+    </message>
+    <message>
+        <source>GUID</source>
+        <translation>GUID</translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation>Feld</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Wert</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>Typ</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>Standard</translation>
+    </message>
+    <message>
+        <source>Current</source>
+        <translation>Aktuell</translation>
+    </message>
+</context>
+<context>
+    <name>DisplayFilterCombo</name>
+    <message>
+        <source>Display filter selector</source>
+        <translation>Auswahl Anzeigefilter</translation>
+    </message>
+    <message>
+        <source>Select from previously used filters.</source>
+        <translation>Aus zuletzt genutzte Filter auswählen.</translation>
+    </message>
+</context>
+<context>
+    <name>DisplayFilterEdit</name>
+    <message>
+        <source>Display filter entry</source>
+        <translation>Anzeigefiltereintrag</translation>
+    </message>
+    <message>
+        <source>Manage saved bookmarks.</source>
+        <translation>Gespeicherte Lesezeichen verwalten</translation>
+    </message>
+    <message>
+        <source>Apply this filter string to the display.</source>
+        <translation>Diesen Filter zur Anzeige anwenden.</translation>
+    </message>
+    <message>
+        <source>Apply a display filter %1 &lt;%2/&gt;</source>
+        <translation>Anzeigefilter anwenden %1 &lt;%2/&gt;</translation>
+    </message>
+    <message>
+        <source>Enter a display filter %1</source>
+        <translation>Geben Sie einen Anzeigefilter ein %1</translation>
+    </message>
+    <message>
+        <source>Apply a read filter %1</source>
+        <translation>Lesefilter anwenden %1</translation>
+    </message>
+    <message>
+        <source>Invalid filter: </source>
+        <translation>Ungültiger Filter: </translation>
+    </message>
+    <message>
+        <source>Save this filter</source>
+        <translation>Diesen Filter speichern</translation>
+    </message>
+    <message>
+        <source>Remove this filter</source>
+        <translation>Diesen Filter entfernen</translation>
+    </message>
+    <message>
+        <source>Manage Display Filters</source>
+        <translation>Anzeigefilter verwalten</translation>
+    </message>
+    <message>
+        <source>Manage Filter Expressions</source>
+        <translation>Filterausdrücke verwalten</translation>
     </message>
 </context>
 <context>
@@ -1631,36 +1930,19 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Dialog</translation>
     </message>
     <message>
-        <source>Table Name</source>
-        <translation>Tabellenname</translation>
-    </message>
-    <message>
-        <source>Short Name</source>
-        <translation>Kurzname</translation>
+        <source>Search:</source>
+        <translation>Suchen:</translation>
     </message>
     <message>
         <source>Dissector Tables</source>
         <translation>Dissector Tabelle</translation>
     </message>
+</context>
+<context>
+    <name>DissectorTablesProxyModel</name>
     <message>
-        <source>String Tables</source>
-        <translation>Zeichenkette Tabelle</translation>
-    </message>
-    <message>
-        <source>Integer Tables</source>
-        <translation>Integer Tabelle</translation>
-    </message>
-    <message>
-        <source>Custom Tables</source>
-        <translation>Custom Tables</translation>
-    </message>
-    <message>
-        <source>Heuristic Tables</source>
-        <translation>Heuristik Tabelle</translation>
-    </message>
-    <message>
-        <source>Selector Name</source>
-        <translation>Selektorname</translation>
+        <source>Table Type</source>
+        <translation>Tabellentyp</translation>
     </message>
     <message>
         <source>String</source>
@@ -1671,16 +1953,24 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Dissector</translation>
     </message>
     <message>
-        <source>Port</source>
-        <translation>Port</translation>
+        <source>Integer</source>
+        <translation>Integer</translation>
     </message>
     <message>
         <source>Protocol</source>
         <translation>Protokoll</translation>
     </message>
     <message>
-        <source>Table Type</source>
-        <translation>Tabellentyp</translation>
+        <source>Short Name</source>
+        <translation>Kurzname</translation>
+    </message>
+    <message>
+        <source>Table Name</source>
+        <translation>Tabellenname</translation>
+    </message>
+    <message>
+        <source>Selector Name</source>
+        <translation>Selektorname</translation>
     </message>
 </context>
 <context>
@@ -1688,14 +1978,6 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     <message>
         <source>Dialog</source>
         <translation>Dialog</translation>
-    </message>
-    <message>
-        <source>Protocol</source>
-        <translation>Protokoll</translation>
-    </message>
-    <message>
-        <source>Description</source>
-        <translation>Beschreibung</translation>
     </message>
     <message>
         <source>&lt;small&gt;&lt;i&gt;Disabling a protocol prevents higher layer protocols from being displayed&lt;/i&gt;&lt;/small&gt;</source>
@@ -1723,18 +2005,14 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     </message>
 </context>
 <context>
-    <name>EndpointDialog</name>
+    <name>EnabledProtocolsModel</name>
     <message>
-        <source>Map</source>
-        <translation>Karte</translation>
+        <source>Protocol</source>
+        <translation>Protokoll</translation>
     </message>
     <message>
-        <source>Draw IPv4 or IPv6 endpoints on a map.</source>
-        <translation>IPv4 und IPv6 Endpunkte auf einer Karte anzeigen.</translation>
-    </message>
-    <message>
-        <source>Map file error</source>
-        <translation>Fehler bei der Kartendatei</translation>
+        <source>Description</source>
+        <translation>Beschreibung</translation>
     </message>
 </context>
 <context>
@@ -1742,26 +2020,6 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     <message>
         <source>Dialog</source>
         <translation>Dialog</translation>
-    </message>
-    <message>
-        <source>Severity</source>
-        <translation>Schweregrad</translation>
-    </message>
-    <message>
-        <source>Summary</source>
-        <translation>Zusammenfassung</translation>
-    </message>
-    <message>
-        <source>Group</source>
-        <translation>Gruppe</translation>
-    </message>
-    <message>
-        <source>Protocol</source>
-        <translation>Protokoll</translation>
-    </message>
-    <message>
-        <source>Count</source>
-        <translation>Anzahl</translation>
     </message>
     <message>
         <source>&lt;small&gt;&lt;i&gt;A hint.&lt;/i&gt;&lt;/small&gt;</source>
@@ -1833,8 +2091,12 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Experteninformationen</translation>
     </message>
     <message>
-        <source>Endpoint expert failed to set filter</source>
-        <translation>Endpunkteexperte konnte einen Filter nicht setzen</translation>
+        <source>Collapse All</source>
+        <translation>Alles einklappen</translation>
+    </message>
+    <message>
+        <source>Expand All</source>
+        <translation>Alles aufklappen</translation>
     </message>
     <message>
         <source>Capture file closed.</source>
@@ -1856,9 +2118,32 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <source>Display filter: &quot;%1&quot;</source>
         <translation>Anzeigefilter: &quot;%1&quot;</translation>
     </message>
+</context>
+<context>
+    <name>ExpertInfoProxyModel</name>
     <message>
         <source>Packet</source>
         <translation>Paket</translation>
+    </message>
+    <message>
+        <source>Severity</source>
+        <translation>Schweregrad</translation>
+    </message>
+    <message>
+        <source>Summary</source>
+        <translation>Zusammenfassung</translation>
+    </message>
+    <message>
+        <source>Group</source>
+        <translation>Gruppe</translation>
+    </message>
+    <message>
+        <source>Protocol</source>
+        <translation>Protokoll</translation>
+    </message>
+    <message>
+        <source>Count</source>
+        <translation>Anzahl</translation>
     </message>
 </context>
 <context>
@@ -1905,26 +2190,6 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Dialog</translation>
     </message>
     <message>
-        <source>Packet</source>
-        <translation>Paket</translation>
-    </message>
-    <message>
-        <source>Hostname</source>
-        <translation>Hostname</translation>
-    </message>
-    <message>
-        <source>Content Type</source>
-        <translation>Content-Type</translation>
-    </message>
-    <message>
-        <source>Size</source>
-        <translation>Größe</translation>
-    </message>
-    <message>
-        <source>Filename</source>
-        <translation>Dateiname</translation>
-    </message>
-    <message>
         <source>Searching for objects</source>
         <translation>Nach Objekt suchen</translation>
     </message>
@@ -1954,6 +2219,29 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     </message>
 </context>
 <context>
+    <name>ExportObjectModel</name>
+    <message>
+        <source>Packet</source>
+        <translation>Paket</translation>
+    </message>
+    <message>
+        <source>Hostname</source>
+        <translation>Hostname</translation>
+    </message>
+    <message>
+        <source>Content Type</source>
+        <translation>Content-Type</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>Größe</translation>
+    </message>
+    <message>
+        <source>Filename</source>
+        <translation>Dateiname</translation>
+    </message>
+</context>
+<context>
     <name>ExportPDUDialog</name>
     <message>
         <source>Dialog</source>
@@ -1962,6 +2250,13 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     <message>
         <source>Display filter:</source>
         <translation>Anzeigefilter:</translation>
+    </message>
+</context>
+<context>
+    <name>ExtArgSelector</name>
+    <message>
+        <source>Reload data</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2000,6 +2295,21 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     </message>
 </context>
 <context>
+    <name>FieldFilterEdit</name>
+    <message>
+        <source>Display filter entry</source>
+        <translation>Anzeigefiltereintrag</translation>
+    </message>
+    <message>
+        <source>Enter a field %1</source>
+        <translation>Feld %1 eingeben</translation>
+    </message>
+    <message>
+        <source>Invalid filter: </source>
+        <translation>Ungültiger Filter: </translation>
+    </message>
+</context>
+<context>
     <name>FileSetDialog</name>
     <message>
         <source>Dialog</source>
@@ -2008,6 +2318,29 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     <message>
         <source>Directory:</source>
         <translation>Verzeichnis:</translation>
+    </message>
+    <message>
+        <source>No files in Set</source>
+        <translation>Keine Dateien im Dateisatz</translation>
+    </message>
+    <message>
+        <source>No capture loaded</source>
+        <translation>Kein Mitschnitt geladen</translation>
+    </message>
+    <message numerus="yes">
+        <source>%Ln File(s) in Set</source>
+        <oldsource>%1 File%2 in Set</oldsource>
+        <translation>
+            <numerusform>%Ln Datei im Dateisatz</numerusform>
+            <numerusform>%Ln Dateien im Dateisatz</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>FilesetEntryModel</name>
+    <message>
+        <source>Open this capture file</source>
+        <translation>Diese Mitschnittdatei laden</translation>
     </message>
     <message>
         <source>Filename</source>
@@ -2024,26 +2357,6 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     <message>
         <source>Size</source>
         <translation>Größe</translation>
-    </message>
-    <message>
-        <source>No files in Set</source>
-        <translation>Keine Dateien im Dateisatz</translation>
-    </message>
-    <message>
-        <source>No capture loaded</source>
-        <translation>Kein Mitschnitt geladen</translation>
-    </message>
-    <message>
-        <source>Open this capture file</source>
-        <translation>Diese Mitschnittdatei laden</translation>
-    </message>
-    <message numerus="yes">
-        <source>%Ln File(s) in Set</source>
-        <oldsource>%1 File%2 in Set</oldsource>
-        <translation>
-            <numerusform>%Ln Datei im Dateisatz</numerusform>
-            <numerusform>%Ln Dateien im Dateisatz</numerusform>
-        </translation>
     </message>
 </context>
 <context>
@@ -2145,6 +2458,17 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     </message>
 </context>
 <context>
+    <name>FindLineEdit</name>
+    <message>
+        <source>Textual Find</source>
+        <translation>Text Treffer</translation>
+    </message>
+    <message>
+        <source>Regular Expression Find</source>
+        <translation>Regulärer Ausdruck Treffer</translation>
+    </message>
+</context>
+<context>
     <name>FirewallRulesDialog</name>
     <message>
         <source>Create rules for</source>
@@ -2209,6 +2533,117 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     <message>
         <source>Unable to save %1</source>
         <translation>Kann %1 nicht sichern</translation>
+    </message>
+</context>
+<context>
+    <name>FolderListModel</name>
+    <message>
+        <source>&quot;File&quot; dialogs</source>
+        <translation>&quot;Datei&quot; Dialoge</translation>
+    </message>
+    <message>
+        <source>capture files</source>
+        <translation>Mitschnittdateien</translation>
+    </message>
+    <message>
+        <source>Temp</source>
+        <translation>Temp</translation>
+    </message>
+    <message>
+        <source>untitled capture files</source>
+        <translation>Unbenannte Mitschnittdateien</translation>
+    </message>
+    <message>
+        <source>Personal configuration</source>
+        <translation>Benutzerspezifische Konfiguration</translation>
+    </message>
+    <message>
+        <source>dfilters, preferences, ethers, </source>
+        <translation>dfilters, preferences, ethers, </translation>
+    </message>
+    <message>
+        <source>Global configuration</source>
+        <translation>Globale Konfiguration</translation>
+    </message>
+    <message>
+        <source>dfilters, preferences, manuf, </source>
+        <translation>dfilters, preferences, manuf, </translation>
+    </message>
+    <message>
+        <source>System</source>
+        <translation>System</translation>
+    </message>
+    <message>
+        <source>ethers, ipxnets</source>
+        <translation>ethers, ipxnets</translation>
+    </message>
+    <message>
+        <source>Program</source>
+        <translation>Programm</translation>
+    </message>
+    <message>
+        <source>program files</source>
+        <translation>program files</translation>
+    </message>
+    <message>
+        <source>Personal Plugins</source>
+        <translation>Benutzerspezifische Plugins</translation>
+    </message>
+    <message>
+        <source>binary plugins</source>
+        <translation>binary plugins</translation>
+    </message>
+    <message>
+        <source>Global Plugins</source>
+        <translation>Globale Plugins</translation>
+    </message>
+    <message>
+        <source>Personal Lua Plugins</source>
+        <translation>Benutzerspezifische Lua Plugins</translation>
+    </message>
+    <message>
+        <source>lua scripts</source>
+        <translation>lua scripts</translation>
+    </message>
+    <message>
+        <source>Global Lua Plugins</source>
+        <translation>Globale Lua Plugins</translation>
+    </message>
+    <message>
+        <source>Extcap path</source>
+        <translation>Extcap Pfad</translation>
+    </message>
+    <message>
+        <source>Extcap Plugins search path</source>
+        <translation>Suchpfad für Extcap Plugins</translation>
+    </message>
+    <message>
+        <source>MaxMind DB path</source>
+        <translation>MaxMind DB Pfad</translation>
+    </message>
+    <message>
+        <source>MaxMind DB database search path</source>
+        <translation>Suchpfad für MaxMind Datenbank</translation>
+    </message>
+    <message>
+        <source>MIB/PIB path</source>
+        <translation>MIB/PIB Pfad</translation>
+    </message>
+    <message>
+        <source>SMI MIB/PIB search path</source>
+        <translation>Suchpfad für SMI MIB/PIB</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>Location</source>
+        <translation>Lokation</translation>
+    </message>
+    <message>
+        <source>Typical Files</source>
+        <translation>Typische Dateien</translation>
     </message>
 </context>
 <context>
@@ -2307,14 +2742,12 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation> Zur Auswahl anklicken.</translation>
     </message>
     <message>
-        <source>Save Stream Content As</source>
-        <translation>Stream Inhalt speichern als</translation>
+        <source>Regex Find:</source>
+        <translation>Regex Suchen:</translation>
     </message>
     <message>
-        <source>
-[Stream output truncated]</source>
-        <translation>
-[Streamausgabe gekürzt]</translation>
+        <source>Save Stream Content As</source>
+        <translation>Stream Inhalt speichern als</translation>
     </message>
     <message>
         <source>No capture file.</source>
@@ -2337,12 +2770,20 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Bitte ein %1 Paket auswählen.</translation>
     </message>
     <message>
+        <source>Entire conversation (%1)</source>
+        <translation>Gesamte Verbindung (%1)</translation>
+    </message>
+    <message>
         <source>Follow %1 Stream (%2)</source>
         <translation>Folge %1 Stream (%2)</translation>
     </message>
     <message>
         <source>Error creating filter for this stream.</source>
         <translation>Fehler beim Erstellen eines Filters für diesen Stream.</translation>
+    </message>
+    <message>
+        <source>[Stream output truncated]</source>
+        <translation>[Streamausgabe gekürzt]</translation>
     </message>
     <message>
         <source>A transport or network layer header is needed.</source>
@@ -3549,6 +3990,17 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <source>Show hidden interfaces</source>
         <translation>Versteckte Schnittstellen anzeigen</translation>
     </message>
+    <message>
+        <source>External capture interfaces disabled.</source>
+        <translation>Externe Mitschnittschnittstellen deaktiviert.</translation>
+    </message>
+</context>
+<context>
+    <name>InterfaceSortFilterModel</name>
+    <message>
+        <source>No interfaces to be displayed. %1 interfaces hidden.</source>
+        <translation>Keine Schnittstelle zum Anzeigen. %1 Schnittstellen versteckt.</translation>
+    </message>
 </context>
 <context>
     <name>InterfaceToolbar</name>
@@ -3566,10 +4018,92 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     </message>
 </context>
 <context>
+    <name>InterfaceToolbarLineEdit</name>
+    <message>
+        <source>Apply changes</source>
+        <translation>Änderungen anwenden</translation>
+    </message>
+</context>
+<context>
+    <name>InterfaceTreeModel</name>
+    <message>
+        <source>No Interfaces found.</source>
+        <translation>Keine Schnittstellen gefunden.</translation>
+    </message>
+    <message>
+        <source>Show</source>
+        <translation>Zeige</translation>
+    </message>
+    <message>
+        <source>Friendly Name</source>
+        <translation>Kurzname</translation>
+    </message>
+    <message>
+        <source>Interface Name</source>
+        <translation>Schnittstellenname</translation>
+    </message>
+    <message>
+        <source>Local Pipe Path</source>
+        <translation>Pfad lokale Pipe</translation>
+    </message>
+    <message>
+        <source>Comment</source>
+        <translation>Kommentar</translation>
+    </message>
+    <message>
+        <source>Link-Layer Header</source>
+        <translation>Link-Layer Header</translation>
+    </message>
+    <message>
+        <source>Promiscuous</source>
+        <translation>Promiskuitiv</translation>
+    </message>
+    <message>
+        <source>Snaplen (B)</source>
+        <translation>Mitschnittlänge (B)</translation>
+    </message>
+    <message>
+        <source>Buffer (MB)</source>
+        <translation>Puffer (MB)</translation>
+    </message>
+    <message>
+        <source>Monitor Mode</source>
+        <translation>Überwachungsmodus</translation>
+    </message>
+    <message>
+        <source>Capture Filter</source>
+        <translation>Mitschnittfilter</translation>
+    </message>
+    <message>
+        <source>Addresses</source>
+        <translation>Adressen</translation>
+    </message>
+    <message>
+        <source>Address</source>
+        <translation>Adresse</translation>
+    </message>
+    <message>
+        <source>Extcap interface: %1</source>
+        <translation>Extcap Schnittstelle: %1</translation>
+    </message>
+    <message>
+        <source>No addresses</source>
+        <translation>Keine Adressen</translation>
+    </message>
+    <message>
+        <source>No capture filter</source>
+        <translation>Kein Mitschnittfilter</translation>
+    </message>
+    <message>
+        <source>Capture filter</source>
+        <translation>Mitschnittfilter</translation>
+    </message>
+</context>
+<context>
     <name>LBMLBTRMTransportDialog</name>
     <message>
-        <source>LBTRM Transport Statistics</source>
-        <translation>LBTRM Transport Statistik</translation>
+        <source>LBT-RM Transport Statistics</source>
+        <translation>LBT-RM Transport Statistik</translation>
     </message>
     <message>
         <source>Sources</source>
@@ -3673,10 +4207,12 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     </message>
     <message>
         <source>NCF</source>
+        <extracomment>Nak ConFirmation</extracomment>
         <translation>NCF</translation>
     </message>
     <message>
         <source>SM</source>
+        <extracomment>Session Message</extracomment>
         <translation>SM</translation>
     </message>
     <message>
@@ -3851,8 +4387,8 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
 <context>
     <name>LBMLBTRUTransportDialog</name>
     <message>
-        <source>LBTRU Transport Statistics</source>
-        <translation>LBTRU Transportstatistik</translation>
+        <source>LBT-RU Transport Statistics</source>
+        <translation>LBT-RU Transportstatistik</translation>
     </message>
     <message>
         <source>Sources</source>
@@ -4414,8 +4950,12 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Bereich 3:</translation>
     </message>
     <message>
-        <source>Show packet separator on Packet List</source>
-        <translation>Pakettrenner in Paketliste anzeigen</translation>
+        <source>Packet List settings:</source>
+        <translation>Einstellungen Paketliste:</translation>
+    </message>
+    <message>
+        <source>Show packet separator</source>
+        <translation>Zeige Pakettrenner</translation>
     </message>
     <message>
         <source>Status Bar settings:</source>
@@ -4532,6 +5072,14 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     <message>
         <source>Reset</source>
         <translation>Zurücksetzen</translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Switch the direction of the connection (view the opposite flow).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Richtung der Verbindung wechseln (den entgegengesetzten Flow anzeigen).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <source>Switch Direction</source>
+        <translation>Richtung wechseln</translation>
     </message>
     <message>
         <source>Reset Graph</source>
@@ -4710,6 +5258,14 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Shift+X</translation>
     </message>
     <message>
+        <source>Switch direction (swap between UL and DL)</source>
+        <translation>Richtung tauschen (UL und DL vertauschen)</translation>
+    </message>
+    <message>
+        <source>D</source>
+        <translation>D</translation>
+    </message>
+    <message>
         <source>Time</source>
         <translation>Zeit</translation>
     </message>
@@ -4724,6 +5280,10 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     <message>
         <source>LTE RLC Graph - no channel selected</source>
         <translation>LTE RLC Graph - Kein Kanal ausgewählt</translation>
+    </message>
+    <message>
+        <source>Save As</source>
+        <translation>Speichern als</translation>
     </message>
     <message>
         <source>%1 %2 (%3s seq %4 len %5)</source>
@@ -4748,6 +5308,26 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
     <message>
         <source>Click to select a portion of the graph.</source>
         <translation>Klicken um einen Teil des Graphen auszuwählen.</translation>
+    </message>
+    <message>
+        <source>Portable Document Format (*.pdf)</source>
+        <translation>Portable Document Format (*.pdf)</translation>
+    </message>
+    <message>
+        <source>Portable Network Graphics (*.png)</source>
+        <translation>Portable Network Graphics (*.png)</translation>
+    </message>
+    <message>
+        <source>Windows Bitmap (*.bmp)</source>
+        <translation>Windows Bitmap (*.bmp)</translation>
+    </message>
+    <message>
+        <source>JPEG File Interchange Format (*.jpeg *.jpg)</source>
+        <translation>JPEG File Interchange Format (*.jpeg *.jpg)</translation>
+    </message>
+    <message>
+        <source>Save Graph As</source>
+        <translation>Graph speichern als</translation>
     </message>
 </context>
 <context>
@@ -4832,6 +5412,10 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Eigenschaften der Mitschnittdatei öffnen</translation>
     </message>
     <message>
+        <source>Profile: %1</source>
+        <translation>Profil: %1</translation>
+    </message>
+    <message>
         <source>Manage Profiles</source>
         <oldsource>Manage Profiles...</oldsource>
         <translation>Profile verwalten</translation>
@@ -4881,8 +5465,20 @@ Achtung: Eine Option MUSS ausgewählt sein.</translation>
         <translation>Keine Experten-Informationen</translation>
     </message>
     <message>
-        <source>Profile: </source>
-        <translation>Profil:</translation>
+        <source>, 1 byte</source>
+        <translation>, 1 Byte</translation>
+    </message>
+    <message>
+        <source>, %1 bytes</source>
+        <translation>, %1 Bytes</translation>
+    </message>
+    <message>
+        <source>Byte %1</source>
+        <translation>Byte %1</translation>
+    </message>
+    <message>
+        <source>Bytes %1-%2</source>
+        <translation>Bytes %1-%2</translation>
     </message>
     <message>
         <source>Selected Packet: %1 %2 </source>
@@ -5080,9 +5676,13 @@ text-decoration: underline;
         <source>%n interface(s) shown, %1 hidden</source>
         <oldsource>%Ln interface(s) shown</oldsource>
         <translation>
-            <numerusform>%n Schnittstelle anzeigt, %1 versteckt</numerusform>
-            <numerusform>%n Schnittstellen anzeigt, %1 versteckt</numerusform>
+            <numerusform>%n Schnittstelle angezeigt, %1 versteckt</numerusform>
+            <numerusform>%n Schnittstellen angezeigt, %1 versteckt</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>You are sniffing the glue that holds the Internet together using Wireshark </source>
+        <translation>Mit Wireshark den Kleber schnüffeln, der das Internet zusammenhält.</translation>
     </message>
     <message>
         <source>You are running Wireshark </source>
@@ -5613,6 +6213,14 @@ text-decoration: underline;
         <translation>Gehe zum vorherigen Paket in der ausgewählten Historie</translation>
     </message>
     <message>
+        <source>Collapse Subtrees</source>
+        <translation>Teilbauch einklappen</translation>
+    </message>
+    <message>
+        <source>Collapse the current packet detail</source>
+        <translation>Details für das aktuelle Paket einklappen</translation>
+    </message>
+    <message>
         <source>Go to Packet…</source>
         <translation>Gehe zu Paket...</translation>
     </message>
@@ -5799,6 +6407,14 @@ text-decoration: underline;
     <message>
         <source>Add or change a packet comment</source>
         <translation>Paketkommentar hinzufügen oder ändern</translation>
+    </message>
+    <message>
+        <source>Delete All Packet Comments</source>
+        <translation>Alle Paketkommentare löschen</translation>
+    </message>
+    <message>
+        <source>Remove all packet comments in the capture file</source>
+        <translation>Alle Paketkommentare in der Mitschnittdatei löschen</translation>
     </message>
     <message>
         <source>Configuration profiles</source>
@@ -6249,14 +6865,6 @@ text-decoration: underline;
         <translation>Firewall ACL Regeln erstellen</translation>
     </message>
     <message>
-        <source>…as Escaped String</source>
-        <translation>...als Zeichenkette mit Escape-Sequenzen</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a Escaped string</source>
-        <translation>Paketbytes als Zeichenkette mit Escape-Sequezen kopieren</translation>
-    </message>
-    <message>
         <source>&amp;Full Screen</source>
         <translation>&amp;Vollbild</translation>
     </message>
@@ -6379,6 +6987,14 @@ text-decoration: underline;
     <message>
         <source>SSL Stream</source>
         <translation>SSL Stream</translation>
+    </message>
+    <message>
+        <source>Request Sequences</source>
+        <translation>Anfrage Sequenzen</translation>
+    </message>
+    <message>
+        <source>HTTP Request Sequences</source>
+        <translation>HTTP Anfrage Sequenzen</translation>
     </message>
     <message>
         <source>Decode &amp;As…</source>
@@ -6635,46 +7251,6 @@ text-decoration: underline;
     <message>
         <source>Show or hide the packet bytes</source>
         <translation>Paketbytes anzeigen oder verstecken</translation>
-    </message>
-    <message>
-        <source>Bytes as Hex + ASCII Dump</source>
-        <translation>Bytes als Hex + ASCII Dump</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a hex and ASCII dump.</source>
-        <translation>Paketbytes als Hex und ASCII Dump kopieren</translation>
-    </message>
-    <message>
-        <source>…as Hex Dump</source>
-        <translation>...als Hex Dump</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a hex dump.</source>
-        <translation>Paketbytes als Hex Dump kopieren</translation>
-    </message>
-    <message>
-        <source>…as Printable Text</source>
-        <translation>...als druckbaren Text</translation>
-    </message>
-    <message>
-        <source>Copy only the printable text in the packet.</source>
-        <translation>Nur den druckbaren Text im Paket kopieren.</translation>
-    </message>
-    <message>
-        <source>…as a Hex Stream</source>
-        <translation>... als Hex Stream</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a stream of hex.</source>
-        <translation>Paketbytes als Hexstream kopieren.</translation>
-    </message>
-    <message>
-        <source>…as Raw Binary</source>
-        <translation>...als Rohdaten</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as application/octet-stream MIME data.</source>
-        <translation>Paketbytes als application/octet-stream MIME Daten kopieren.</translation>
     </message>
     <message>
         <source>MAP Summary</source>
@@ -7086,6 +7662,10 @@ text-decoration: underline;
         <translation>Text konnte nicht kopiert werden. Probieren sie einen anderen Eintrag.</translation>
     </message>
     <message>
+        <source>Are you sure you want to remove all packet comments?</source>
+        <translation>Wollen Sie alle Paketkommentare löschen?</translation>
+    </message>
+    <message>
         <source>Unable to build conversation filter.</source>
         <translation>Verbindungsfilter kann nicht erstellt werden.</translation>
     </message>
@@ -7200,22 +7780,6 @@ text-decoration: underline;
     <message>
         <source>Confirm unsaved capture files</source>
         <translation>Bei ungesicherten Mitschnittdateien nachfragen</translation>
-    </message>
-    <message>
-        <source>If checked the packet detail items will be automatically scrolled when they are expanded.</source>
-        <translation>Wenn aktiviert scrollen ausgeklappte Paketdetails automatisch.</translation>
-    </message>
-    <message>
-        <source>Automatically scroll packet details</source>
-        <translation>Automatisches Scrollen der Paketdetails</translation>
-    </message>
-    <message>
-        <source>Percentage distance from the top to scroll packet details.</source>
-        <translation>Prozentualer Abstand von oben bis zu den scrollenden Paketdetails.</translation>
-    </message>
-    <message>
-        <source>Packet detail scroll percentage:</source>
-        <translation>Prozentualer Scrollfortschritt Paketdetails:</translation>
     </message>
     <message>
         <source>Main toolbar style:</source>
@@ -7535,8 +8099,8 @@ text-decoration: underline;
 <context>
     <name>PacketCommentDialog</name>
     <message>
-        <source>Packet Comment</source>
-        <translation>Paketkommentar</translation>
+        <source>Packet %1 Comment</source>
+        <translation>Paket %1 Kommentar</translation>
     </message>
 </context>
 <context>
@@ -7556,6 +8120,14 @@ text-decoration: underline;
     <message>
         <source>[%1 closed] </source>
         <translation>[%1 geschlossen] </translation>
+    </message>
+    <message>
+        <source>Byte %1</source>
+        <translation>Byte %1</translation>
+    </message>
+    <message>
+        <source>Bytes %1-%2</source>
+        <translation>Bytes %1-%2</translation>
     </message>
 </context>
 <context>
@@ -7669,6 +8241,17 @@ text-decoration: underline;
     </message>
 </context>
 <context>
+    <name>PacketListModel</name>
+    <message>
+        <source>Dissecting</source>
+        <translation>Analysiere</translation>
+    </message>
+    <message>
+        <source>Sorting &quot;%1&quot;</source>
+        <translation>&quot;%1&quot; wird sortiert</translation>
+    </message>
+</context>
+<context>
     <name>PacketRangeGroupBox</name>
     <message>
         <source>Form</source>
@@ -7716,6 +8299,40 @@ text-decoration: underline;
     </message>
 </context>
 <context>
+    <name>PathChooserDelegate</name>
+    <message>
+        <source>Browse</source>
+        <translation>Öffnen</translation>
+    </message>
+    <message>
+        <source>Open Pipe</source>
+        <translation>Öffne Pipe</translation>
+    </message>
+</context>
+<context>
+    <name>PluginListModel</name>
+    <message>
+        <source>extcap</source>
+        <translation>extcap</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>Version</source>
+        <translation>Version</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>Typ</translation>
+    </message>
+    <message>
+        <source>Path</source>
+        <translation>Pfad</translation>
+    </message>
+</context>
+<context>
     <name>PreferenceEditorFrame</name>
     <message>
         <source>Frame</source>
@@ -7740,6 +8357,22 @@ text-decoration: underline;
 </context>
 <context>
     <name>PreferencesDialog</name>
+    <message>
+        <source>Search:</source>
+        <translation>Suchen:</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation>Einstellungen</translation>
+    </message>
+</context>
+<context>
+    <name>PrefsModel</name>
+    <message>
+        <source>Advanced</source>
+        <extracomment>Names of special preferences handled by the GUI</extracomment>
+        <translation>Erweitert</translation>
+    </message>
     <message>
         <source>Appearance</source>
         <translation>Darstellung</translation>
@@ -7766,36 +8399,7 @@ text-decoration: underline;
     </message>
     <message>
         <source>Filter Buttons</source>
-        <oldsource>Filter Expressions</oldsource>
         <translation>Filterknopf</translation>
-    </message>
-    <message>
-        <source>Advanced</source>
-        <translation>Erweitert</translation>
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation>Suchen:</translation>
-    </message>
-    <message>
-        <source>Name</source>
-        <translation>Name</translation>
-    </message>
-    <message>
-        <source>Status</source>
-        <translation>Status</translation>
-    </message>
-    <message>
-        <source>Type</source>
-        <translation>Typ</translation>
-    </message>
-    <message>
-        <source>Value</source>
-        <translation>Wert</translation>
-    </message>
-    <message>
-        <source>Preferences</source>
-        <translation>Einstellungen</translation>
     </message>
 </context>
 <context>
@@ -7930,14 +8534,6 @@ text-decoration: underline;
         <source>Colorize with Filter</source>
         <translation>Mit Filter einfärben</translation>
     </message>
-    <message>
-        <source>, 1 byte</source>
-        <translation>, 1 Byte</translation>
-    </message>
-    <message>
-        <source>, %1 bytes</source>
-        <translation>, %1 Bytes</translation>
-    </message>
 </context>
 <context>
     <name>ProtocolHierarchyDialog</name>
@@ -8051,22 +8647,6 @@ text-decoration: underline;
 </context>
 <context>
     <name>QObject</name>
-    <message>
-        <source>Default</source>
-        <translation>Standard</translation>
-    </message>
-    <message>
-        <source>Changed</source>
-        <translation>Geändert</translation>
-    </message>
-    <message>
-        <source>Has this preference been changed?</source>
-        <translation>Wurde diese Einstellung geändert?</translation>
-    </message>
-    <message>
-        <source>Default value is empty</source>
-        <translation>Standardwert ist leer</translation>
-    </message>
     <message>
         <source>Average Throughput (bits/s)</source>
         <translation>Durchschnittlicher Durchsatz (Bits/s)</translation>
@@ -8418,6 +8998,38 @@ text-decoration: underline;
     <message>
         <source>The filter expression %1 isn&apos;t a valid display filter. (%2).</source>
         <translation>Der Filterausdruck %1 ist kein gültiger Anzeigefilter. (%2).</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation>Fehler</translation>
+    </message>
+    <message>
+        <source>No remote interfaces found.</source>
+        <translation>Keine entfernte Schnittstelle gefunden.</translation>
+    </message>
+    <message>
+        <source>PCAP not found</source>
+        <translation>Kein PCAP gefunden</translation>
+    </message>
+    <message>
+        <source>Unknown error</source>
+        <translation>Unbekannter Fehler</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>Standard</translation>
+    </message>
+    <message>
+        <source>Changed</source>
+        <translation>Geändert</translation>
+    </message>
+    <message>
+        <source>Has this preference been changed?</source>
+        <translation>Wurde diese Einstellung geändert?</translation>
+    </message>
+    <message>
+        <source>Default value is empty</source>
+        <translation>Standardwert ist leer</translation>
     </message>
 </context>
 <context>
@@ -10308,6 +10920,21 @@ text-decoration: underline;
     </message>
 </context>
 <context>
+    <name>ScsiServiceResponseTimeDialog</name>
+    <message>
+        <source>&lt;small&gt;&lt;i&gt;Select a command and enter a filter if desired, then press Apply.&lt;/i&gt;&lt;/small&gt;</source>
+        <translation>&lt;small&gt;&lt;i&gt;Ein Kommando auswählen und bei Bedarf einen Filter eingeben. Danach Anwenden.&lt;/i&gt;&lt;/small&gt;</translation>
+    </message>
+    <message>
+        <source>Command:</source>
+        <translation>Kommando:</translation>
+    </message>
+    <message>
+        <source>SCSI Service Response Times</source>
+        <translation>SCSI Service Antwortzeit</translation>
+    </message>
+</context>
+<context>
     <name>SearchFrame</name>
     <message>
         <source>Frame</source>
@@ -10747,6 +11374,21 @@ text-decoration: underline;
     </message>
 </context>
 <context>
+    <name>ShortcutListModel</name>
+    <message>
+        <source>Shortcut</source>
+        <translation>Tastaturkürzel</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>Description</source>
+        <translation>Beschreibung</translation>
+    </message>
+</context>
+<context>
     <name>ShowPacketBytesDialog</name>
     <message>
         <source>Show Packet Bytes</source>
@@ -10871,6 +11513,10 @@ text-decoration: underline;
         </translation>
     </message>
     <message>
+        <source>Regex Find:</source>
+        <translation>Regex Suchen:</translation>
+    </message>
+    <message>
         <source>Save Selected Packet Bytes As</source>
         <translation>Ausgewählte Paketbytes speichern als</translation>
     </message>
@@ -10889,10 +11535,6 @@ text-decoration: underline;
 <context>
     <name>SplashOverlay</name>
     <message>
-        <source>Form</source>
-        <translation>Anordnung</translation>
-    </message>
-    <message>
         <source>Initializing dissectors</source>
         <translation>Dissektoren initialisieren</translation>
     </message>
@@ -10901,8 +11543,8 @@ text-decoration: underline;
         <translation>Tap Listener initialisieren</translation>
     </message>
     <message>
-        <source>Initializing extcap</source>
-        <translation>Extcap initialisieren</translation>
+        <source>Initializing external capture plugins</source>
+        <translation>Initialisieren von externen Mitschnitt Plugins</translation>
     </message>
     <message>
         <source>Registering dissectors</source>
@@ -10960,22 +11602,6 @@ text-decoration: underline;
         <translation>Dialog</translation>
     </message>
     <message>
-        <source>Name</source>
-        <translation>Name</translation>
-    </message>
-    <message>
-        <source>Filter</source>
-        <translation>Filter</translation>
-    </message>
-    <message>
-        <source>Type</source>
-        <translation>Typ</translation>
-    </message>
-    <message>
-        <source>Description</source>
-        <translation>Beschreibung</translation>
-    </message>
-    <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Search the list of field names.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Die Liste von Feldnamen durchsuchen.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
@@ -10994,6 +11620,32 @@ text-decoration: underline;
     <message>
         <source>%1 protocols, %2 fields.</source>
         <translation>%1 Protokolle, %2 Felder.</translation>
+    </message>
+</context>
+<context>
+    <name>SupportedProtocolsModel</name>
+    <message>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>Filter</source>
+        <translation>Filter</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>Typ</translation>
+    </message>
+    <message>
+        <source>Description</source>
+        <translation>Beschreibung</translation>
+    </message>
+</context>
+<context>
+    <name>SyntaxLineEdit</name>
+    <message>
+        <source>&quot;%1&quot; may have unexpected results (see the User&apos;s Guide)</source>
+        <translation>&quot;%1&quot; kann zu einem unerwarteten Ergebnis führen (s. Benutzerhandbuch)</translation>
     </message>
 </context>
 <context>
@@ -11775,8 +12427,16 @@ text-decoration: underline;
         <translation>Diesen Eintrag kopieren.</translation>
     </message>
     <message>
+        <source>Move entry up.</source>
+        <translation>Eintrag nach oben verschieben.</translation>
+    </message>
+    <message>
+        <source>Move entry down.</source>
+        <translation>Eintrag nach unten verschieben.</translation>
+    </message>
+    <message>
         <source>Clear all entries.</source>
-        <translation type="unfinished"></translation>
+        <translation>Alle Einträge löschen.</translation>
     </message>
     <message>
         <source>Unknown User Accessible Table</source>
@@ -11806,8 +12466,16 @@ text-decoration: underline;
         <translation>Diesen Eintrag kopieren.</translation>
     </message>
     <message>
+        <source>Move entry up.</source>
+        <translation>Eintrag nach oben verschieben.</translation>
+    </message>
+    <message>
+        <source>Move entry down.</source>
+        <translation>Eintrag nach unten verschieben.</translation>
+    </message>
+    <message>
         <source>Clear all entries.</source>
-        <translation type="unfinished"></translation>
+        <translation>Alle Einträge löschen.</translation>
     </message>
     <message>
         <source>Unknown User Accessible Table</source>
@@ -11883,6 +12551,61 @@ text-decoration: underline;
     <message>
         <source>No Audio</source>
         <translation>Kein Ton</translation>
+    </message>
+</context>
+<context>
+    <name>VoipCallsInfoModel</name>
+    <message>
+        <source>On</source>
+        <translation>An</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Aus</translation>
+    </message>
+    <message>
+        <source>Tunneling: %1  Fast Start: %2</source>
+        <translation>Tunneling: %1  Fast Start: %2</translation>
+    </message>
+    <message>
+        <source>Start Time</source>
+        <translation>Startzeitpunkt</translation>
+    </message>
+    <message>
+        <source>Stop Time</source>
+        <translation>Endzeitpunkt</translation>
+    </message>
+    <message>
+        <source>Initial Speaker</source>
+        <translation>Initiierender Sprecher</translation>
+    </message>
+    <message>
+        <source>From</source>
+        <translation>Von</translation>
+    </message>
+    <message>
+        <source>To</source>
+        <translation>Nach</translation>
+    </message>
+    <message>
+        <source>Protocol</source>
+        <translation>Protokoll</translation>
+    </message>
+    <message>
+        <source>Duration</source>
+        <translation>Dauer</translation>
+    </message>
+    <message>
+        <source>Packets</source>
+        <translation>Pakete</translation>
+    </message>
+    <message>
+        <source>State</source>
+        <translation>Zustand</translation>
+    </message>
+    <message>
+        <source>Comments</source>
+        <translation>Kommentare</translation>
     </message>
 </context>
 <context>

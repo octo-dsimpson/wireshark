@@ -5,19 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -101,8 +89,8 @@ static void dissect_payload(tvbuff_t *next_tvb, packet_info *pinfo, proto_tree *
     p_add_proto_data(wmem_file_scope(), pinfo, proto_umts_rlc, 0, fp_mux_info->rlcinfos[payload_index]);
 
     /* Trying a dissector assigned to the conversation (Usually from NBAP) */
-    conv_dissected = try_conversation_dissector(&pinfo->dst, &pinfo->src, PT_UDP,
-                                 pinfo->destport, pinfo->srcport, next_tvb, pinfo, tree, NULL);
+    conv_dissected = try_conversation_dissector(&pinfo->dst, &pinfo->src, ENDPOINT_UDP,
+                                 pinfo->destport, pinfo->srcport, next_tvb, pinfo, tree, NULL, 0);
     if (!conv_dissected) {
         /* No conversation dissector / TVB was rejected, try other options */
         if(call_fp_heur) {
@@ -244,7 +232,7 @@ static int dissect_fp_mux(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, v
 }
 
 
-static int heur_dissect_fp_mux(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_)
+static int heur_dissect_fp_mux(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data)
 {
     gboolean ext_flag;
     guint8 length_field_size;
@@ -308,7 +296,7 @@ static int heur_dissect_fp_mux(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tr
         chunks++;
     }
 
-    if(total_length > offset) {
+    if(offset > total_length) {
         return FALSE;
     }
 
@@ -319,12 +307,7 @@ static int heur_dissect_fp_mux(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tr
 
     /* This is FP Mux! */
     /* Set conversation dissector and dissect */
-    conversation = find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-                                     pinfo->ptype, pinfo->destport, pinfo->srcport, 0);
-    if (!conversation) {
-        conversation = conversation_new(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-                                        pinfo->ptype, pinfo->destport, pinfo->srcport, 0);
-    }
+    conversation = find_or_create_conversation(pinfo);
     conversation_set_dissector(conversation, fp_mux_handle);
     dissect_fp_mux(tvb, pinfo, tree, data);
 

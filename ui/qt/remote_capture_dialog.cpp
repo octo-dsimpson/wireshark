@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 // XXX This shouldn't exist. These controls should be in ManageInterfacesDialog instead.
 
@@ -127,10 +114,15 @@ void RemoteCaptureDialog::apply_remote()
                                               global_remote_opts.remote_host_opts.auth_username,
                                               global_remote_opts.remote_host_opts.auth_password,
                                               &err, &err_str);
-    if (rlist == NULL &&
-        (err == CANT_GET_INTERFACE_LIST || err == DONT_HAVE_PCAP)) {
-        QMessageBox::warning(this, tr("Error"),
-                             (err == CANT_GET_INTERFACE_LIST?tr("No remote interfaces found."):tr("PCAP not found")));
+    if (rlist == NULL) {
+        if (err == 0)
+            QMessageBox::warning(this, tr("Error"), tr("No remote interfaces found."));
+        else if (err == CANT_GET_INTERFACE_LIST)
+            QMessageBox::critical(this, tr("Error"), err_str);
+        else if (err == DONT_HAVE_PCAP)
+            QMessageBox::critical(this, tr("Error"), tr("PCAP not found"));
+        else
+            QMessageBox::critical(this, tr("Error"), "Unknown error");
         return;
     }
     if (ui->hostCombo->count() == 0) {

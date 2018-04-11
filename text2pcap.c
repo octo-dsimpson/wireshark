@@ -10,19 +10,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  *******************************************************************************/
 
@@ -303,7 +291,7 @@ typedef struct {
 } hdr_ip_t;
 
 static hdr_ip_t HDR_IP = {0x45, 0, 0, 0x3412, 0, 0, 0xff, 0, 0,
-#ifdef WORDS_BIGENDIAN
+#if G_BYTE_ORDER == G_BIG_ENDIAN
 0x0a010101, 0x0a020202
 #else
 0x0101010a, 0x0202020a
@@ -311,7 +299,7 @@ static hdr_ip_t HDR_IP = {0x45, 0, 0, 0x3412, 0, 0, 0xff, 0, 0,
 };
 
 /* Fixed IP address values */
-#ifdef WORDS_BIGENDIAN
+#if G_BYTE_ORDER == G_BIG_ENDIAN
 #define IP_SRC 0x0a010101
 #define IP_DST 0x0a020202
 #else
@@ -1395,7 +1383,7 @@ print_usage (FILE *output)
             "                         used as the default for unspecified fields.\n"
             "  -D                     the text before the packet starts with an I or an O,\n"
             "                         indicating that the packet is inbound or outbound.\n"
-            "                         This is only stored if the output format is PCAP-NG.\n"
+            "                         This is only stored if the output format is pcapng.\n"
             "  -a                     enable ASCII text dump identification.\n"
             "                         The start of the ASCII text dump can be identified\n"
             "                         and excluded from the packet data, even if it looks\n"
@@ -1449,7 +1437,7 @@ print_usage (FILE *output)
             "  -h                     display this help and exit.\n"
             "  -d                     show detailed debug of parser states.\n"
             "  -q                     generate no output at all (automatically disables -d).\n"
-            "  -n                     use PCAP-NG instead of PCAP as output format.\n"
+            "  -n                     use pcapng instead of pcap as output format.\n"
             "",
             WTAP_MAX_PACKET_SIZE_STANDARD);
 }
@@ -1857,7 +1845,7 @@ parse_options (int argc, char *argv[])
     if (!quiet) {
         fprintf(stderr, "Input from: %s\n", input_filename);
         fprintf(stderr, "Output to: %s\n",  output_filename);
-        fprintf(stderr, "Output format: %s\n", use_pcapng ? "PCAP-NG" : "PCAP");
+        fprintf(stderr, "Output format: %s\n", use_pcapng ? "pcapng" : "pcap");
 
         if (hdr_ethernet) fprintf(stderr, "Generate dummy Ethernet header: Protocol: 0x%0X\n",
                                   hdr_ethernet_proto);
@@ -1920,7 +1908,7 @@ main(int argc, char *argv[])
     curr_offset = header_length;
 
     text2pcap_in = input_file;
-    if (text2pcap_lex() == EXIT_SUCCESS) {
+    if (text2pcap_scan() == EXIT_SUCCESS) {
         if (write_current_packet(FALSE) != EXIT_SUCCESS)
             ret = EXIT_FAILURE;
     } else {
@@ -1935,7 +1923,6 @@ main(int argc, char *argv[])
                 bytes_written, (bytes_written == 1) ? "" : "s");
     }
 clean_exit:
-    text2pcap_lex_destroy();
     if (input_file) {
         fclose(input_file);
     }

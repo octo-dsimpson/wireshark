@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include <ui/qt/models/related_packet_delegate.h>
 #include "packet_list_record.h"
@@ -49,21 +36,13 @@ RelatedPacketDelegate::RelatedPacketDelegate(QWidget *parent) :
 void RelatedPacketDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
                               const QModelIndex &index) const
 {
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-    QStyleOptionViewItemV4 option_vi = option;
-#else
     QStyleOptionViewItem option_vi = option;
-#endif
     QStyledItemDelegate::initStyleOption(&option_vi, index);
     int em_w = option_vi.fontMetrics.height();
     int en_w = (em_w + 1) / 2;
     int line_w = (option_vi.fontMetrics.lineWidth());
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-    option_vi.features |= QStyleOptionViewItemV4::HasDecoration;
-#else
     option_vi.features |= QStyleOptionViewItem::HasDecoration;
-#endif
     option_vi.decorationSize.setHeight(1);
     option_vi.decorationSize.setWidth(em_w);
     QStyledItemDelegate::paint(painter, option_vi, index);
@@ -191,6 +170,22 @@ void RelatedPacketDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
             drawCheckMark(painter, bbox);
             break;
         }
+        case FT_FRAMENUM_RETRANS_PREV:
+        {
+            int hh = height / 2;
+            QPoint tail(2 - en_w, hh);
+            QPoint head(en_w, hh);
+            drawChevrons(painter, tail, head, hh / 2);
+            break;
+        }
+        case FT_FRAMENUM_RETRANS_NEXT:
+        {
+            int hh = height / 2;
+            QPoint tail(en_w - 1, hh);
+            QPoint head(1 - en_w, hh);
+            drawChevrons(painter, tail, head, hh / 2);
+            break;
+        }
         case FT_FRAMENUM_NONE:
         default:
             painter->drawEllipse(QPointF(0.0, option_vi.rect.height() / 2), 2, 2);
@@ -217,6 +212,25 @@ void RelatedPacketDelegate::drawArrow(QPainter *painter, const QPoint tail, cons
 
     painter->drawLine(tail.x(), tail.y(), head.x() + (head_size * x_mul), head.y());
     painter->drawPolygon(head_points, 3);
+}
+
+void RelatedPacketDelegate::drawChevrons(QPainter *painter, const QPoint tail, const QPoint head, int head_size) const
+{
+    int x_mul = head.x() > tail.x() ? -1 : 1;
+    QPoint head_points1[] = {
+        head,
+        QPoint(head.x() + (head_size * x_mul), head.y() + (head_size / 2)),
+        QPoint(head.x() + (head_size * x_mul), head.y() - (head_size / 2)),
+    };
+    QPoint head2(head.x() + (head_size * x_mul), head.y());
+    QPoint head_points2[] = {
+        head2,
+        QPoint(head2.x() + (head_size * x_mul), head2.y() + (head_size / 2)),
+        QPoint(head2.x() + (head_size * x_mul), head2.y() - (head_size / 2)),
+    };
+
+    painter->drawPolygon(head_points1, 3);
+    painter->drawPolygon(head_points2, 3);
 }
 
 void RelatedPacketDelegate::drawCheckMark(QPainter *painter, const QRect bbox) const

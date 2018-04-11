@@ -8,19 +8,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 /* GSMTAP is a generic header format for GSM protocol captures,
@@ -45,6 +33,7 @@
 #include "config.h"
 
 #include <epan/packet.h>
+#include <epan/conversation.h>
 
 #include "packet-gsmtap.h"
 #include "packet-lapdm.h"
@@ -106,6 +95,7 @@ enum {
 	GSMTAP_SUB_UMTS_RRC,
 	/* LTE*/
 	GSMTAP_SUB_LTE_RRC,
+	GSMTAP_SUB_LTE_NAS,
 
 	GSMTAP_SUB_MAX
 };
@@ -257,9 +247,19 @@ enum {
 	GSMTAP_LTE_RRC_SUB_MAX
 };
 
+/* LTE NAS message types */
+enum {
+	GSMTAP_LTE_NAS_PLAIN = 0,
+	GSMTAP_LTE_NAS_SEC_HEADER,
+
+	GSMTAP_LTE_NAS_SUB_MAX
+};
+
+
 static dissector_handle_t sub_handles[GSMTAP_SUB_MAX];
 static dissector_handle_t rrc_sub_handles[GSMTAP_RRC_SUB_MAX];
 static dissector_handle_t lte_rrc_sub_handles[GSMTAP_LTE_RRC_SUB_MAX];
+static dissector_handle_t lte_nas_sub_handles[GSMTAP_LTE_NAS_SUB_MAX];
 
 static dissector_table_t gsmtap_dissector_table;
 
@@ -380,6 +380,7 @@ static const value_string gsmtap_types[] = {
 	{ GSMTAP_TYPE_UMTS_RLC_MAC,	"UMTS RLC/MAC" },
 	{ GSMTAP_TYPE_UMTS_RRC,		"UMTS RRC" },
 	{ GSMTAP_TYPE_LTE_RRC,		"LTE RRC" },
+	{ GSMTAP_TYPE_LTE_NAS,		"LTE NAS" },
 	{ GSMTAP_TYPE_OSMOCORE_LOG,	"libosmocore logging" },
 	{ 0,			NULL },
 };
@@ -501,7 +502,7 @@ dissect_gsmtap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _
 
 	/* Try to build an identifier of different 'streams' */
 	/* (AFCN _cant_ be used because of hopping */
-	pinfo->circuit_id = (timeslot << 3) | subslot;
+	conversation_create_endpoint_by_id(pinfo, ENDPOINT_GSMTAP, (timeslot << 3) | subslot, 0);
 
 	if (tree) {
 		guint8 channel;
@@ -585,6 +586,14 @@ dissect_gsmtap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _
 		}
 		/*Directly call the respective lte rrc message dissector */
 		break;
+	case GSMTAP_TYPE_LTE_NAS:
+		sub_handle = GSMTAP_SUB_LTE_NAS;
+		sub_handle_idx = sub_type;
+		if (sub_handle_idx >= GSMTAP_LTE_NAS_SUB_MAX) {
+			sub_handle = GSMTAP_SUB_DATA;
+		}
+		break;
+
 	case GSMTAP_TYPE_UM:
 		if (l1h_tvb)
 			dissect_sacch_l1h(l1h_tvb, tree);
@@ -691,14 +700,24 @@ dissect_gsmtap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _
 		sub_handle = GSMTAP_SUB_DATA;
 		break;
 	}
-	if (sub_handle == GSMTAP_SUB_UMTS_RRC)
+	switch (sub_handle){
+	case GSMTAP_SUB_UMTS_RRC:
 		call_dissector(rrc_sub_handles[sub_handle_idx], payload_tvb,
 			       pinfo, tree);
-	else if (sub_handle == GSMTAP_SUB_LTE_RRC)
+		break;
+	case GSMTAP_SUB_LTE_RRC:
 		call_dissector(lte_rrc_sub_handles[sub_handle_idx], payload_tvb,
 			       pinfo, tree);
-	else if (sub_handles[sub_handle] != NULL)
-		call_dissector(sub_handles[sub_handle], payload_tvb, pinfo, tree);
+		break;
+	case GSMTAP_SUB_LTE_NAS:
+		call_dissector(lte_nas_sub_handles[sub_handle_idx], payload_tvb,
+			       pinfo, tree);
+		break;
+	default:
+		if (sub_handles[sub_handle] != NULL)
+			call_dissector(sub_handles[sub_handle], payload_tvb, pinfo, tree);
+		break;
+	}
 	/* TODO: warn user that the WiMAX plugin must be enabled for some types */
 	return tvb_captured_length(tvb);
 }
@@ -863,6 +882,9 @@ proto_reg_handoff_gsmtap(void)
 	lte_rrc_sub_handles[GSMTAP_LTE_RRC_SUB_BCCH_DL_SCH_Message] = find_dissector_add_dependency("lte_rrc.bcch_dl_sch", proto_gsmtap);
 	lte_rrc_sub_handles[GSMTAP_LTE_RRC_SUB_PCCH_Message] = find_dissector_add_dependency("lte_rrc.pcch", proto_gsmtap);
 	lte_rrc_sub_handles[GSMTAP_LTE_RRC_SUB_MCCH_Message] = find_dissector_add_dependency("lte_rrc.mcch", proto_gsmtap);
+
+	lte_nas_sub_handles[GSMTAP_LTE_NAS_PLAIN] = find_dissector_add_dependency("nas-eps_plain", proto_gsmtap);
+	lte_nas_sub_handles[GSMTAP_LTE_NAS_SEC_HEADER] = find_dissector_add_dependency("nas-eps", proto_gsmtap);
 
 	gsmtap_handle = create_dissector_handle(dissect_gsmtap, proto_gsmtap);
 	dissector_add_uint_with_preference("udp.port", GSMTAP_UDP_PORT, gsmtap_handle);

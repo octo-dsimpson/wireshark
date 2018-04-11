@@ -5,19 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 
@@ -52,6 +40,9 @@
 #include "register.h"
 #include "ws_symbol_export.h"
 #include "ws_attributes.h"
+#ifdef HAVE_PLUGINS
+#include "wsutil/plugins.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -113,22 +104,21 @@ struct _protocol;
 typedef struct _protocol protocol_t;
 
 /** Function used for reporting errors in dissectors; it throws a
- * DissectorError exception, with the string passed as an argument
- * as the message for the exception, so that it can show up in
- * the Info column and the protocol tree.
- *
- * If that string is dynamically allocated, it should be allocated with
- * wmem_alloc() with wmem_packet_scope(); using wmem_strdup_printf() would work.
+ * DissectorError exception, with a string generated from the format
+ * and arguments to the format, as the message for the exception, so
+ * that it can show up in the Info column and the protocol tree.
  *
  * If the WIRESHARK_ABORT_ON_DISSECTOR_BUG environment variable is set,
  * it will call abort(), instead, to make it easier to get a stack trace.
  *
- * @param message string to use as the message
+ * @param format format string to use for the message
  */
-WS_DLL_PUBLIC WS_NORETURN void proto_report_dissector_bug(const char *message);
+WS_DLL_PUBLIC WS_NORETURN
+void proto_report_dissector_bug(const char *format, ...)
+    G_GNUC_PRINTF(1, 2);
 
-#define REPORT_DISSECTOR_BUG(message)  \
-	proto_report_dissector_bug(message)
+#define REPORT_DISSECTOR_BUG(...)  \
+	proto_report_dissector_bug(__VA_ARGS__)
 
 /** Macro used to provide a hint to static analysis tools.
  * (Currently only Visual C++.)
@@ -155,16 +145,12 @@ WS_DLL_PUBLIC WS_NORETURN void proto_report_dissector_bug(const char *message);
 #define __DISSECTOR_ASSERT_STRINGIFY(s)	# s
 
 #define __DISSECTOR_ASSERT(expression, file, lineno)  \
-  (REPORT_DISSECTOR_BUG( \
-    wmem_strdup_printf(wmem_packet_scope(), \
-        "%s:%u: failed assertion \"%s\"", \
-        file, lineno, __DISSECTOR_ASSERT_STRINGIFY(expression))))
+  (REPORT_DISSECTOR_BUG("%s:%u: failed assertion \"%s\"", \
+        file, lineno, __DISSECTOR_ASSERT_STRINGIFY(expression)))
 
 #define __DISSECTOR_ASSERT_HINT(expression, file, lineno, hint)  \
-  (REPORT_DISSECTOR_BUG( \
-    wmem_strdup_printf(wmem_packet_scope(), \
-        "%s:%u: failed assertion \"%s\" (%s)", \
-        file, lineno, __DISSECTOR_ASSERT_STRINGIFY(expression), hint)))
+  (REPORT_DISSECTOR_BUG("%s:%u: failed assertion \"%s\" (%s)", \
+        file, lineno, __DISSECTOR_ASSERT_STRINGIFY(expression), hint))
 
 #define DISSECTOR_ASSERT(expression)  \
   ((void) ((expression) ? (void)0 : \
@@ -199,10 +185,8 @@ WS_DLL_PUBLIC WS_NORETURN void proto_report_dissector_bug(const char *message);
  *
  */
 #define DISSECTOR_ASSERT_NOT_REACHED()  \
-  (REPORT_DISSECTOR_BUG( \
-    wmem_strdup_printf(wmem_packet_scope(), \
-        "%s:%u: failed assertion \"DISSECTOR_ASSERT_NOT_REACHED\"", \
-        __FILE__, __LINE__)))
+  (REPORT_DISSECTOR_BUG("%s:%u: failed assertion \"DISSECTOR_ASSERT_NOT_REACHED\"", \
+        __FILE__, __LINE__))
 
 /** Compare two integers.
  *
@@ -224,10 +208,8 @@ WS_DLL_PUBLIC WS_NORETURN void proto_report_dissector_bug(const char *message);
  * @param fmt the fmt operator
  */
 #define __DISSECTOR_ASSERT_CMPINT(a, op, b, type, fmt) \
-  (REPORT_DISSECTOR_BUG( \
-    wmem_strdup_printf(wmem_packet_scope(), \
-        "%s:%u: failed assertion " #a " " #op " " #b " (" fmt " " #op " " fmt ")", \
-        __FILE__, __LINE__, (type)a, (type)b)))
+  (REPORT_DISSECTOR_BUG("%s:%u: failed assertion " #a " " #op " " #b " (" fmt " " #op " " fmt ")", \
+        __FILE__, __LINE__, (type)a, (type)b))
 
 #define DISSECTOR_ASSERT_CMPINT(a, op, b)  \
   ((void) ((a op b) ? (void)0 : \
@@ -261,10 +243,8 @@ WS_DLL_PUBLIC WS_NORETURN void proto_report_dissector_bug(const char *message);
  * @param type    The type it's expected to have
  */
 #define __DISSECTOR_ASSERT_FIELD_TYPE(hfinfo, t) \
-  (REPORT_DISSECTOR_BUG( \
-    wmem_strdup_printf(wmem_packet_scope(), \
-        "%s:%u: field %s is not of type "#t, \
-        __FILE__, __LINE__, (hfinfo)->abbrev)))
+  (REPORT_DISSECTOR_BUG("%s:%u: field %s is not of type "#t, \
+        __FILE__, __LINE__, (hfinfo)->abbrev))
 
 #define DISSECTOR_ASSERT_FIELD_TYPE(hfinfo, t)  \
   ((void) (((hfinfo)->type == t) ? (void)0 : \
@@ -274,18 +254,14 @@ WS_DLL_PUBLIC WS_NORETURN void proto_report_dissector_bug(const char *message);
 #define DISSECTOR_ASSERT_FIELD_TYPE_IS_INTEGRAL(hfinfo)  \
   ((void) ((IS_FT_INT((hfinfo)->type) || \
             IS_FT_UINT((hfinfo)->type)) ? (void)0 : \
-   REPORT_DISSECTOR_BUG( \
-     wmem_strdup_printf(wmem_packet_scope(), \
-         "%s:%u: field %s is not of type FT_CHAR or an FT_{U}INTn type", \
-         __FILE__, __LINE__, (hfinfo)->abbrev)))) \
+   REPORT_DISSECTOR_BUG("%s:%u: field %s is not of type FT_CHAR or an FT_{U}INTn type", \
+         __FILE__, __LINE__, (hfinfo)->abbrev))) \
    __DISSECTOR_ASSERT_STATIC_ANALYSIS_HINT(IS_FT_INT((hfinfo)->type) || \
                                            IS_FT_UINT((hfinfo)->type))
 
 #define __DISSECTOR_ASSERT_FIELD_TYPE_IS_STRING(hfinfo) \
-  (REPORT_DISSECTOR_BUG( \
-    wmem_strdup_printf(wmem_packet_scope(), \
-        "%s:%u: field %s is not of type FT_STRING, FT_STRINGZ, or FT_STRINGZPAD", \
-        __FILE__, __LINE__, (hfinfo)->abbrev)))
+  (REPORT_DISSECTOR_BUG("%s:%u: field %s is not of type FT_STRING, FT_STRINGZ, or FT_STRINGZPAD", \
+        __FILE__, __LINE__, (hfinfo)->abbrev))
 
 #define DISSECTOR_ASSERT_FIELD_TYPE_IS_STRING(hfinfo)  \
   ((void) (((hfinfo)->type == FT_STRING || (hfinfo)->type == FT_STRINGZ || \
@@ -296,10 +272,8 @@ WS_DLL_PUBLIC WS_NORETURN void proto_report_dissector_bug(const char *message);
                                            (hfinfo)->type == FT_STRINGZPAD)
 
 #define __DISSECTOR_ASSERT_FIELD_TYPE_IS_TIME(hfinfo) \
-  (REPORT_DISSECTOR_BUG( \
-    wmem_strdup_printf(wmem_packet_scope(), \
-        "%s:%u: field %s is not of type FT_ABSOLUTE_TIME or FT_RELATIVE_TIME", \
-        __FILE__, __LINE__, (hfinfo)->abbrev)))
+  (REPORT_DISSECTOR_BUG("%s:%u: field %s is not of type FT_ABSOLUTE_TIME or FT_RELATIVE_TIME", \
+        __FILE__, __LINE__, (hfinfo)->abbrev))
 
 #define DISSECTOR_ASSERT_FIELD_TYPE_IS_TIME(hfinfo)  \
   ((void) (((hfinfo)->type == FT_ABSOLUTE_TIME || \
@@ -484,6 +458,8 @@ WS_DLL_PUBLIC WS_NORETURN void proto_report_dissector_bug(const char *message);
 #define ENC_ASCII_7BITS			0x00000034
 #define ENC_T61				0x00000036
 #define ENC_EBCDIC_CP037		0x00000038
+#define ENC_ZIGBEE			0x0000003A
+
 
 /*
  * TODO:
@@ -525,7 +501,15 @@ WS_DLL_PUBLIC WS_NORETURN void proto_report_dissector_bug(const char *message);
 /* this can't collide with ENC_SEP_* because they can be used simultaneously */
 #define ENC_NUM_PREF    0x00200000
 
+/* Use varint format as described in Protobuf protocol
+ * https://developers.google.cn/protocol-buffers/docs/encoding
+ */
 #define ENC_VARINT_PROTOBUF      0x00000002
+/*
+ * Decodes a variable-length integer used in QUIC protocol
+ * See https://tools.ietf.org/html/draft-ietf-quic-transport-08#section-8.1
+ */
+#define ENC_VARINT_QUIC          0x00000004
 
 /* For cases where a string encoding contains hex, bit-or one or more
  * of these for the allowed separator(s), as well as with ENC_STR_HEX.
@@ -534,7 +518,7 @@ WS_DLL_PUBLIC WS_NORETURN void proto_report_dissector_bug(const char *message);
 #define ENC_SEP_NONE    0x00010000
 #define ENC_SEP_COLON   0x00020000
 #define ENC_SEP_DASH    0x00040000
-#define ENC_SEP_DOT   0x00080000
+#define ENC_SEP_DOT     0x00080000
 #define ENC_SEP_SPACE   0x00100000
 /* a convenience macro for the above */
 #define ENC_SEP_MASK    0x001F0000
@@ -903,14 +887,17 @@ WS_DLL_PUBLIC void proto_tree_children_foreach(proto_tree *tree,
 #define PNODE_POOL(proto_node)   ((proto_node)->tree_data->pinfo->pool)
 
 #ifdef HAVE_PLUGINS
-/** Register dissector plugin type with the plugin system.
-    Called by epan_register_plugin_types(); do not call it yourself. */
-extern void register_dissector_plugin_type(void);
+typedef struct {
+	void (*register_protoinfo)(void);	/* routine to call to register protocol information */
+	void (*register_handoff)(void);		/* routine to call to register dissector handoff */
+} proto_plugin;
+
+/** Register dissector plugin with the plugin system. */
+WS_DLL_PUBLIC void proto_register_plugin(const proto_plugin *plugin);
 #endif
 
 /** Sets up memory used by proto routines. Called at program startup */
-void proto_init(void (register_all_protocols_func)(register_cb cb, gpointer client_data),
-		       void (register_all_handoffs_func)(register_cb cb, gpointer client_data),
+void proto_init(GSList *register_all_protocols_list, GSList *register_all_handoffs_list,
 		       register_cb cb, void *client_data);
 
 

@@ -3,19 +3,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 2001 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -34,10 +22,10 @@ set_uinteger(fvalue_t *fv, guint32 value)
 	fv->value.ipv4.nmask = ip_get_subnet_mask(32);
 }
 
-static gpointer
+static guint32
 value_get(fvalue_t *fv)
 {
-	return &(fv->value.ipv4);
+	return g_htonl(fv->value.ipv4.addr);
 }
 
 static gboolean
@@ -116,12 +104,12 @@ val_repr_len(fvalue_t *fv _U_, ftrepr_t rtype _U_, int field_display _U_)
 	return 15;
 }
 
-/* We're assuming the buffer is at least MAX_IP_STR_LEN (16 bytes) */
+/* We're assuming the buffer is at least WS_INET_ADDRSTRLEN (16 bytes) */
 static void
 val_to_repr(fvalue_t *fv, ftrepr_t rtype _U_, int field_display _U_, char *buf, unsigned int size _U_)
 {
 	guint32	ipv4_net_order = g_htonl(fv->value.ipv4.addr);
-	ip_to_str_buf((guint8*)&ipv4_net_order, buf, MAX_IP_STR_LEN);
+	ip_to_str_buf((guint8*)&ipv4_net_order, buf, WS_INET_ADDRSTRLEN);
 }
 
 
@@ -212,7 +200,7 @@ static void
 slice(fvalue_t *fv, GByteArray *bytes, guint offset, guint length)
 {
 	guint8* data;
-	guint32 addr = ipv4_get_net_order_addr(&(fv->value.ipv4));
+	guint32 addr = g_htonl(fv->value.ipv4.addr);
 	data = ((guint8*)&addr)+offset;
 	g_byte_array_append(bytes, data, length);
 }
@@ -234,7 +222,7 @@ ftype_register_ipv4(void)
 		val_repr_len,			/* len_string_repr */
 
 		{ .set_value_uinteger = set_uinteger },	/* union set_value */
-		{ .get_value_ptr = value_get },		/* union get_value */
+		{ .get_value_uinteger = value_get },	/* union get_value */
 
 		cmp_eq,
 		cmp_ne,

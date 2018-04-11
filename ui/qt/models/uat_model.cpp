@@ -7,20 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "uat_model.h"
 #include <epan/to_str.h>
@@ -95,7 +82,6 @@ QVariant UatModel::data(const QModelIndex &index, int role) const
             return qstr;
             }
         case PT_TXTMOD_BOOL:
-            return "";
         case PT_TXTMOD_COLOR:
             return QVariant();
         default:
@@ -135,14 +121,12 @@ QVariant UatModel::data(const QModelIndex &index, int role) const
         return QVariant();
     }
 
-    if (role == Qt::DecorationRole) {
-        if (field->mode == PT_TXTMOD_COLOR) {
-            char *str = NULL;
-            guint length = 0;
-            field->cb.tostr(rec, &str, &length, field->cbdata.tostr, field->fld_data);
+    if ((role == Qt::DecorationRole) && (field->mode == PT_TXTMOD_COLOR)) {
+        char *str = NULL;
+        guint length = 0;
+        field->cb.tostr(rec, &str, &length, field->cbdata.tostr, field->fld_data);
 
-            return QColor(QString(str));
-        }
+        return QColor(QString(str));
     }
 
     // expose error message if any.
@@ -272,18 +256,10 @@ bool UatModel::setData(const QModelIndex &index, const QVariant &value, int role
         // The validation status for other columns were also affected by
         // changing this field, mark those as dirty!
         emit dataChanged(this->index(row, updated_cols.first()),
-                         this->index(row, updated_cols.last())
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-                         , roles
-#endif
-        );
+                         this->index(row, updated_cols.last()), roles);
     } else {
 
-        emit dataChanged(index, index
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-                         , roles
-#endif
-        );
+        emit dataChanged(index, index, roles);
     }
     return true;
 }
@@ -373,15 +349,27 @@ bool UatModel::copyRow(int dst_row, int src_row)
 
     QVector<int> roles;
     roles << Qt::EditRole << Qt::BackgroundRole;
-    emit dataChanged(index(dst_row, 0), index(dst_row, columnCount())
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-                     , roles
-#endif
-    );
+    emit dataChanged(index(dst_row, 0), index(dst_row, columnCount()), roles);
 
     return true;
 }
 
+bool UatModel::moveRow(int src_row, int dst_row)
+{
+    if (src_row < 0 || src_row >= rowCount() || dst_row < 0 || dst_row >= rowCount())
+        return false;
+
+    int dst = src_row < dst_row ? dst_row + 1 : dst_row;
+
+    beginMoveRows(QModelIndex(), src_row, src_row, QModelIndex(), dst);
+    uat_move_index(uat_, src_row, dst_row);
+    record_errors.move(src_row, dst_row);
+    dirty_records.move(src_row, dst_row);
+    uat_->changed = TRUE;
+    endMoveRows();
+
+    return true;
+}
 
 bool UatModel::hasErrors() const
 {

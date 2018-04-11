@@ -5,19 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include <config.h>
@@ -196,7 +184,18 @@ get_compiler_info(GString *str)
 	 * distinguish between them.
 	 */
 #if defined(__clang__)
+	/*
+	 * Microsoft have a version of their compiler that has Clang
+	 * as the front end and their code generator as the back end.
+	 *
+	 * My head asplode.
+	 */
+  #if defined(__MSC_VER)
+	g_string_append_printf(str, "\n\nBuilt using Microsoft Visual C++ %d.%d.%d clang/C2 %s and -fno-ms-compatibility.\n",
+	    (_MSC_VER / 100) - 6, _MSC_VER % 100, __VERSION__);
+  #else
 	g_string_append_printf(str, "\n\nBuilt using clang %s.\n", __VERSION__);
+  #endif /* defined(__MSC_VER) */
 #elif defined(__llvm__)
 	g_string_append_printf(str, "\n\nBuilt using llvm-gcc %s.\n", __VERSION__);
 #else /* boring old GCC */
@@ -260,6 +259,13 @@ get_compiler_info(GString *str)
 	g_string_append_printf(str, "\n");
 #elif defined(_MSC_VER)
 	/* _MSC_FULL_VER not defined, but _MSC_VER defined */
+  #if defined(__clang__)
+	/* More head asplosion; see above. */
+	g_string_append_printf(str, "\n\nBuilt using Microsoft Visual C++ %d.%d.%d clang/C2 %s.\n",
+	    (_MSC_VER / 100) - 6, _MSC_VER % 100, __VERSION__);
+  #else
+	g_string_append_printf(str, "\n\nBuilt using clang %s.\n", __VERSION__);
+  #endif /* defined(__MSC_VER) */
 	g_string_append_printf(str, "\n\nBuilt using Microsoft Visual C++ %d.%d\n",
 	    (_MSC_VER / 100) - 6, _MSC_VER % 100);
 #elif defined(__SUNPRO_C)

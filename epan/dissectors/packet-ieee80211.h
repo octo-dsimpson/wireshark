@@ -10,19 +10,7 @@
  *
  * Copied from README.developer
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "ws_symbol_export.h"
@@ -194,6 +182,7 @@ gboolean is_broadcast_bssid(const address *bssid);
  * COMPOSE_FRAME_TYPE() values for control frames.
  * 0x160 - 0x16A are for control frame extension where type = 1 and subtype =6.
  */
+#define CTRL_TRIGGER           0x12  /* HE Trigger                     */
 #define CTRL_BEAMFORM_RPT_POLL 0x14  /* Beamforming Report             */
 #define CTRL_VHT_NDP_ANNC      0x15  /* VHT NDP Announcement           */
 #define CTRL_POLL              0x162  /* Poll                          */
@@ -278,12 +267,15 @@ typedef struct anqp_info_dissector_data {
 } anqp_info_dissector_data_t;
 
 /* WFA vendor specific subtypes */
-#define WFA_SUBTYPE_P2P 9
-#define WFA_SUBTYPE_WIFI_DISPLAY 10
-#define WFA_SUBTYPE_HS20_INDICATION 16
-#define WFA_SUBTYPE_HS20_ANQP 17
-#define WFA_SUBTYPE_DPP 26
-
+#define WFA_SUBTYPE_SUBSCRIPTION_REMEDIATION   0
+#define WFA_SUBTYPE_DEAUTHENTICATION_IMMINENT  1
+#define WFA_SUBTYPE_P2P                        9
+#define WFA_SUBTYPE_WIFI_DISPLAY               10
+#define WFA_SUBTYPE_HS20_INDICATION            16
+#define WFA_SUBTYPE_HS20_ANQP                  17
+#define WFA_SUBTYPE_OSEN                       18
+#define WFA_SUBTYPE_DPP                        26
+#define WFA_SUBTYPE_IEEE1905_MULTI_AP          27 /* ox1B */
 
 /*
  * Editor modelines

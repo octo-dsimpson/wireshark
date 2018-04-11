@@ -62,11 +62,10 @@ EXTRA_DIST = \
 	list_protos_in_cap.sh				\
 	macos-setup.sh					\
 	macos-setup-brew.sh				\
-	make-dissector-reg.py				\
 	make-manuf					\
+	make-plugin-reg.py				\
 	make-sminmpec.pl				\
 	make-services.py				\
-	make-tap-reg.py					\
 	make-usb.py					\
 	make_charset_table.c				\
 	msnchat						\
@@ -84,7 +83,6 @@ EXTRA_DIST = \
 	randpkt-test.sh					\
 	rdps.py						\
 	rpm_setup.sh 					\
-	runa2x.sh					\
 	test-common.sh					\
 	test-captures.sh				\
 	textify.ps1					\

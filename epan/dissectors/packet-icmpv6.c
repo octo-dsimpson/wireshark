@@ -18,24 +18,10 @@
  *
  * P2P-RPL support added by Cenk Gundogan <cnkgndgn@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
-
-#include "math.h"
 
 #include <epan/packet.h>
 #include <epan/in_cksum.h>
@@ -47,6 +33,8 @@
 #include <epan/capture_dissectors.h>
 #include <epan/proto_data.h>
 #include <epan/strutil.h>
+
+#include <wsutil/pow2.h>
 
 #include "packet-ber.h"
 #include "packet-dns.h"
@@ -1377,11 +1365,11 @@ static conversation_t *_find_or_create_conversation(packet_info *pinfo)
 
     /* Have we seen this conversation before? */
     conv = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst,
-        pinfo->ptype, 0, 0, 0);
+        conversation_pt_to_endpoint_type(pinfo->ptype), 0, 0, 0);
     if (conv == NULL) {
         /* No, this is a new conversation. */
         conv = conversation_new(pinfo->num, &pinfo->src, &pinfo->dst,
-            pinfo->ptype, 0, 0, 0);
+            conversation_pt_to_endpoint_type(pinfo->ptype), 0, 0, 0);
     }
     return conv;
 }
@@ -1479,7 +1467,7 @@ static icmp_transaction_t *transaction_start(packet_info *pinfo, proto_tree *tre
                 icmpv6_trans->resp_frame);
             PROTO_ITEM_SET_GENERATED(it);
         }
-        col_append_fstr(pinfo->cinfo, COL_INFO, " (reply in %d)", icmpv6_trans->resp_frame);
+        col_append_frame_number(pinfo, COL_INFO, " (reply in %d)", icmpv6_trans->resp_frame);
     }
 
     return icmpv6_trans;
@@ -1498,7 +1486,7 @@ static icmp_transaction_t *transaction_end(packet_info *pinfo, proto_tree *tree,
     double resp_time;
 
     conversation = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst,
-        pinfo->ptype, 0, 0, 0);
+        conversation_pt_to_endpoint_type(pinfo->ptype), 0, 0, 0);
     if (conversation == NULL)
         return NULL;
 
@@ -1572,7 +1560,7 @@ static icmp_transaction_t *transaction_end(packet_info *pinfo, proto_tree *tree,
         PROTO_ITEM_SET_GENERATED(it);
     }
 
-    col_append_fstr(pinfo->cinfo, COL_INFO, " (request in %d)",
+    col_append_frame_number(pinfo, COL_INFO, " (request in %d)",
         icmpv6_trans->rqst_frame);
 
     return icmpv6_trans;
@@ -3009,7 +2997,7 @@ dissect_icmpv6_rpl_opt(tvbuff_t *tvb, int offset, packet_info *pinfo, proto_tree
                             }
                         }
 
-                        proto_item_append_text(ti_opt_lifetime, " (%d sec)", (int) pow(4.0, (lt_mr_nh & RPL_OPT_ROUTE_DISCOVERY_L) >> 6));
+                        proto_item_append_text(ti_opt_lifetime, " (%u sec)", pow4(guint32, (lt_mr_nh & RPL_OPT_ROUTE_DISCOVERY_L) >> 6));
 
                         if (!(lt_mr_nh & RPL_OPT_ROUTE_DISCOVERY_MR_NH)) {
                             proto_item_append_text(ti_opt_mr_nh, " (Infinity)");

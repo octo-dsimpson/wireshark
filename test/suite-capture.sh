@@ -6,19 +6,7 @@
 # By Gerald Combs <gerald@wireshark.org>
 # Copyright 2005 Ulf Lamping
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, writeto the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
 
 
@@ -28,7 +16,6 @@ EXIT_COMMAND_LINE=1
 EXIT_ERROR=2
 
 WIRESHARK_CMD="$WIRESHARK -o gui.update.enabled:FALSE -k"
-WIRESHARK_GTK_CMD="$WIRESHARK_GTK -o gui.update.enabled:FALSE -k"
 
 PING_PID=
 
@@ -219,7 +206,7 @@ capture_step_fifo() {
 # capture packets via a fifo
 capture_step_stdin() {
 	CONSOLE_LOG_ARGS=""
-	if [[ ( "$DUT" == "$WIRESHARK_CMD" || "$DUT" == "$WIRESHARK_GTK_CMD" ) && "$WS_SYSTEM" == "Windows" ]] ; then
+	if [[ "$DUT" == "$WIRESHARK_CMD" && "$WS_SYSTEM" == "Windows" ]] ; then
 		CONSOLE_LOG_ARGS="-o console.log.level:127"
 	fi
 
@@ -457,45 +444,6 @@ wireshark_capture_suite() {
 	test_step_add "Capture snapshot length 68 bytes (${TRAFFIC_CAPTURE_DURATION}s)" capture_step_snapshot
 }
 
-wireshark_gtk_capture_suite() {
-	if [ ! -x "$WIRESHARK_GTK" ]; then
-		echo -n ' (no GTK support)'
-		test_step_skipped
-		return
-	fi
-
-	# k: start capture immediately
-	# WIRESHARK_QUIT_AFTER_CAPTURE needs to be set.
-
-	#
-	# NOTE: if, on macOS, we start using a native-Quartz toolkit,
-	# this would need to change to check for WS_SYSTEM being
-	# "Darwin" and, if it is, check whether the standard output
-	# of "launchctl managername" is "Aqua".
-	#
-	# This may not do the right thing if we use toolkits that
-	# use Wayland or Mir directly, unless they also depend on
-	# the DISPLAY environment variable.
-	#
-	if [[ $WS_SYSTEM != Windows ]] && [ -z "$DISPLAY" ]; then
-		echo -n ' (X server not available)'
-		test_step_skipped
-		return
-	fi
-
-	DUT="$WIRESHARK_GTK_CMD"
-	test_step_add "Capture 10 packets" capture_step_10packets
-	# piping to stdout doesn't work with Wireshark and capturing!
-	#test_step_add "Capture 10 packets using stdout: -w -" capture_step_10packets_stdout
-	if [ $TEST_FIFO ]; then
-		test_step_add "Capture via fifo" capture_step_fifo
-	fi
-	test_step_add "Capture via stdin" capture_step_stdin
-	# read filter doesn't work with Wireshark and capturing!
-	#test_step_add "Capture read filter (${TRAFFIC_CAPTURE_DURATION}s)" capture_step_read_filter
-	test_step_add "Capture snapshot length 68 bytes (${TRAFFIC_CAPTURE_DURATION}s)" capture_step_snapshot
-}
-
 tshark_capture_suite() {
 	DUT=$TSHARK
 	test_step_add "Capture 10 packets" capture_step_10packets
@@ -539,7 +487,6 @@ capture_suite() {
 	test_suite_add "Dumpcap capture" dumpcap_capture_suite
 	test_suite_add "TShark capture" tshark_capture_suite
 	test_suite_add "Wireshark capture" wireshark_capture_suite
-	test_suite_add "Wireshark 1 capture" wireshark_gtk_capture_suite
 }
 
 #

@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "config.h"
 
@@ -28,6 +15,7 @@
 #endif
 
 #include "capture_preferences_frame.h"
+#include <ui/qt/models/pref_models.h>
 #include <ui_capture_preferences_frame.h>
 #include "wireshark_application.h"
 
@@ -49,6 +37,7 @@ CapturePreferencesFrame::CapturePreferencesFrame(QWidget *parent) :
     pref_pcap_ng_ = prefFromPrefPtr(&prefs.capture_pcap_ng);
     pref_real_time_ = prefFromPrefPtr(&prefs.capture_real_time);
     pref_auto_scroll_ = prefFromPrefPtr(&prefs.capture_auto_scroll);
+    pref_no_extcap_ = prefFromPrefPtr(&prefs.capture_no_extcap);
 
     // Setting the left margin via a style sheet clobbers its
     // appearance.
@@ -116,6 +105,7 @@ void CapturePreferencesFrame::updateWidgets()
     ui->captureRealTimeCheckBox->setChecked(prefs_get_bool_value(pref_real_time_, pref_stashed));
     ui->captureAutoScrollCheckBox->setChecked(prefs_get_bool_value(pref_auto_scroll_, pref_stashed));
 #endif // HAVE_LIBPCAP
+    ui->captureNoExtcapCheckBox->setChecked(prefs_get_bool_value(pref_no_extcap_, pref_stashed));
 }
 
 void CapturePreferencesFrame::on_defaultInterfaceComboBox_editTextChanged(const QString &new_iface)
@@ -141,6 +131,11 @@ void CapturePreferencesFrame::on_captureRealTimeCheckBox_toggled(bool checked)
 void CapturePreferencesFrame::on_captureAutoScrollCheckBox_toggled(bool checked)
 {
     prefs_set_bool_value(pref_auto_scroll_, checked, pref_stashed);
+}
+
+void CapturePreferencesFrame::on_captureNoExtcapCheckBox_toggled(bool checked)
+{
+    prefs_set_bool_value(pref_no_extcap_, checked, pref_stashed);
 }
 
 /*

@@ -5,19 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #ifndef __PREFS_H__
@@ -186,8 +174,8 @@ typedef struct _e_prefs {
   gchar       *gui_prepend_window_title;
   gchar       *gui_start_title;
   version_info_e gui_version_placement;
-  gboolean     gui_auto_scroll_on_expand;
-  guint        gui_auto_scroll_percentage;
+  gboolean     gui_auto_scroll_on_expand; /* GTK+ only */
+  guint        gui_auto_scroll_percentage; /* GTK+ only */
   layout_type_e gui_layout_type;
   layout_pane_content_e gui_layout_content_1;
   layout_pane_content_e gui_layout_content_2;
@@ -213,6 +201,7 @@ typedef struct _e_prefs {
   gboolean     capture_pcap_ng;
   gboolean     capture_real_time;
   gboolean     capture_auto_scroll;
+  gboolean     capture_no_extcap;
   gboolean     capture_show_info;
   GList       *capture_columns;
   guint        rtp_player_max_visible;
@@ -245,9 +234,7 @@ typedef struct _e_prefs {
   gint         st_sort_defcolflag;
   gboolean     st_sort_defdescending;
   gboolean     st_sort_showfullname;
-#ifdef HAVE_EXTCAP
   gboolean     extcap_save_on_start;
-#endif
 } e_prefs;
 
 WS_DLL_PUBLIC e_prefs prefs;
@@ -296,6 +283,19 @@ void prefs_deregister_protocol(int id);
  * "description" is a longer human-readable description of the tap.
  */
 WS_DLL_PUBLIC module_t *prefs_register_stat(const char *name, const char *title,
+    const char *description, void (*apply_cb)(void));
+
+/*
+ * Register that a codec has preferences.
+ *
+ * "name" is a name for the codec to use on the command line with "-o"
+ * and in preference files.
+ *
+ * "title" is a short human-readable name for the codec.
+ *
+ * "description" is a longer human-readable description of the codec.
+ */
+WS_DLL_PUBLIC module_t *prefs_register_codec(const char *name, const char *title,
     const char *description, void (*apply_cb)(void));
 
 /*

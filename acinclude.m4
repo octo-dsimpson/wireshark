@@ -2,20 +2,7 @@ dnl Macros that test for specific features.
 dnl This file is part of the Autoconf packaging for Wireshark.
 dnl Copyright (C) 1998-2000 by Gerald Combs.
 dnl
-dnl This program is free software; you can redistribute it and/or modify
-dnl it under the terms of the GNU General Public License as published by
-dnl the Free Software Foundation; either version 2, or (at your option)
-dnl any later version.
-dnl
-dnl This program is distributed in the hope that it will be useful,
-dnl but WITHOUT ANY WARRANTY; without even the implied warranty of
-dnl MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-dnl GNU General Public License for more details.
-dnl
-dnl You should have received a copy of the GNU General Public License
-dnl along with this program; if not, write to the Free Software
-dnl Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-dnl 02111-1307, USA.
+dnl SPDX-License-Identifier: GPL-2.0-or-later
 dnl
 dnl As a special exception, the Free Software Foundation gives unlimited
 dnl permission to copy, distribute and modify the configure scripts that
@@ -177,7 +164,7 @@ AC_DEFUN([AC_WIRESHARK_PCAP_CHECK],
 	    # Found it, and it's usable; use it to get the include flags
 	    # for libpcap.
 	    #
-	    PCAP_CFLAGS=`\"$PCAP_CONFIG\" --cflags`
+	    PCAP_CFLAGS="`\"$PCAP_CONFIG\" --cflags`"
 	    #
 	    # We have pcap-config; we assume that means we have libpcap
 	    # installed and that pcap-config will tell us whatever
@@ -310,6 +297,33 @@ and did you also install that package?]])
 	# libpcap.
 	#
 	AC_CHECK_FUNCS(pcap_open_dead pcap_freecode)
+	AC_CHECK_FUNCS(pcap_open)
+	if test $ac_cv_func_pcap_open = "yes" ; then
+	  AC_DEFINE(HAVE_PCAP_REMOTE, 1,
+            [Define to 1 if you have libpcap/WinPcap remote capturing support])
+
+	  #
+	  # XXX - this *should* be checked for independently of checking
+	  # for pcap_open(), as you might have pcap_setsampling() without
+	  # remote capture support.
+	  #
+	  # However, 1) the sampling options are treated as remote options
+	  # in the GUI and and 2) having pcap_setsampling() doesn't mean
+	  # you have sampling support.  libpcap needs a way to indicate
+	  # whether a given device supports sampling, and the GUI should
+	  # be changed to decouple them.
+	  #
+	  # (Actually, libpcap needs a general mechanism to offer options
+	  # for particular devices, and Wireshark needs to use that
+	  # mechanism.  The former is a work in progress.)
+	  #
+	  # (Note: another work in progress is support for remote
+	  # capturing using pcap_create()/pcap_activate(), which we
+	  # also need to support once it's available.)
+	  #
+	  AC_CHECK_FUNCS(pcap_setsampling)
+	fi
+
 	#
 	# pcap_breakloop may be present in the library but not declared
 	# in the pcap.h header file.  If it's not declared in the header
@@ -423,19 +437,6 @@ install a newer version of the header file.])
 
 	AC_WIRESHARK_POP_FLAGS
 	LIBS="$ws_ac_save_LIBS"
-])
-
-AC_DEFUN([AC_WIRESHARK_PCAP_REMOTE_CHECK],
-[
-    ac_save_LIBS="$LIBS"
-    LIBS="$PCAP_LIBS $LIBS"
-    AC_CHECK_FUNCS(pcap_open)
-    if test $ac_cv_func_pcap_open = "yes" ; then
-        AC_DEFINE(HAVE_PCAP_REMOTE, 1,
-            [Define to 1 if you have libpcap/WinPcap remote capturing support and prefer to use these new API features.])
-    fi
-    AC_CHECK_FUNCS(pcap_setsampling)
-    LIBS="$ac_save_LIBS"
 ])
 
 #
@@ -690,7 +691,18 @@ AC_DEFUN([AC_WIRESHARK_LIBLUA_CHECK],[
 					LUA_LIBS="-L$lua_dir/lib $ac_cv_search_luaL_openlibs -lm"
 					have_lua=yes
 				],[
-					have_lua=no
+					# Try again with -ldl
+
+					# Tell autoconf we don't want to use the cached result
+					unset ac_cv_search_luaL_openlibs
+
+					AC_SEARCH_LIBS(luaL_openlibs, [lua-${lua_ver} lua${lua_ver} lua],
+					[
+						LUA_LIBS="-L$lua_dir/lib $ac_cv_search_luaL_openlibs -lm -ldl"
+						have_lua=yes
+					],[
+						have_lua=no
+					], -lm -ldl)
 				], -lm)
 			fi
 		fi
@@ -919,7 +931,7 @@ AC_DEFUN([AC_WIRESHARK_KRB5_CHECK],
 	  ac_krb5_version="$ac_heimdal_version$ac_mit_version_olddir$ac_mit_version_newdir"
 	  if test "x$ac_krb5_version" = "xHEIMDAL"
 	  then
-	      KRB5_LIBS="-L$krb5_dir/lib -lkrb5 -lasn1 $SSL_LIBS -lroken -lcrypt"
+	      KRB5_LIBS="-L$krb5_dir/lib -lkrb5 -lasn1 -lcrypto -lroken -lcrypt"
 	  else
 	      KRB5_LIBS="-L$krb5_dir/lib -lkrb5 -lk5crypto -lcom_err"
 	  fi
@@ -933,33 +945,23 @@ AC_DEFUN([AC_WIRESHARK_KRB5_CHECK],
 	  then
 	    KRB5_CFLAGS=`"$KRB5_CONFIG" --cflags`
 	    KRB5_LIBS=`"$KRB5_CONFIG" --libs`
-	    #
-	    # If -lcrypto is in KRB5_FLAGS, we require it to build
-	    # with Heimdal/MIT.  We don't want to built with it by
-	    # default, due to annoying license incompatibilities
-	    # between the OpenSSL license and the GPL, so:
-	    #
-	    #	if SSL_LIBS is set to a non-empty string, we
-	    #	remove -lcrypto from KRB5_LIBS and replace
-	    #	it with SSL_LIBS;
-	    #
-	    #	if SSL_LIBS is not set to a non-empty string
-	    #	we fail with an appropriate error message.
-	    #
-	    case "$KRB5_LIBS" in
-	    *-lcrypto*)
-		if test ! -z "$SSL_LIBS"
-		then
-		    KRB5_LIBS=`echo $KRB5_LIBS | sed 's/-lcrypto//'`
-		    KRB5_LIBS="$KRB5_LIBS $SSL_LIBS"
-		else
-		    AC_MSG_ERROR([Kerberos library requires -lcrypto, so you must specify --with-ssl])
-		fi
-		;;
-	    esac
 	    ac_krb5_version=`"$KRB5_CONFIG" --version | head -n 1 | sed -e 's/^.*heimdal.*$/HEIMDAL/' -e 's/^Kerberos .*$/MIT/' -e 's/^Solaris Kerberos .*$/MIT/'`
  	  fi
 	fi
+	#
+	# If -lcrypto is in KRB5_LIBS, we require it to build
+	# with Heimdal/MIT.  We don't want to built with it by
+	# default, due to annoying license incompatibilities
+	# between the OpenSSL license and the GPL.
+	#
+	case "$KRB5_LIBS" in
+	*-lcrypto*)
+	  if test "x$with_krb5_crypto_openssl" != "xyes"
+	    then
+	      AC_MSG_ERROR([Kerberos library requires -lcrypto, so you must specify --with-krb5-crypto-openssl])
+	    fi
+	    ;;
+	esac
 
 	CPPFLAGS="$CPPFLAGS $KRB5_CFLAGS"
 
@@ -1147,36 +1149,24 @@ AC_DEFUN([AC_WIRESHARK_KRB5_CHECK],
 ])
 
 #
-# AC_WIRESHARK_GEOIP_CHECK
+# AC_WIRESHARK_MAXMINDDB_CHECK
 #
-AC_DEFUN([AC_WIRESHARK_GEOIP_CHECK],
+AC_DEFUN([AC_WIRESHARK_MAXMINDDB_CHECK],
 [
-	want_geoip=defaultyes
+	want_maxminddb=defaultyes
 
-	if test "x$want_geoip" = "xdefaultyes"; then
-		want_geoip=yes
+	if test "x$want_maxminddb" = "xdefaultyes"; then
+		want_maxminddb=yes
 	fi
 
-	if test "x$want_geoip" = "xyes"; then
-		AC_CHECK_LIB(GeoIP, GeoIP_new,
+	if test "x$want_maxminddb" = "xyes"; then
+		AC_CHECK_LIB(maxminddb, MMDB_open,
 		  [
-		    GEOIP_LIBS=-lGeoIP
-	    	AC_DEFINE(HAVE_GEOIP, 1, [Define to use GeoIP library])
-		have_good_geoip=yes
+		    MAXMINDDB_LIBS=-lmaxminddb
+		    AC_DEFINE(HAVE_MAXMINDDB, 1, [Define to use MaxMind DB library])
+		    have_good_maxminddb=yes
 		  ],,
 		)
-		if test "x$have_good_geoip" = "xyes"; then
-			AC_CHECK_LIB(GeoIP, GeoIP_country_name_by_ipnum_v6,
-			  [
-				AC_DEFINE(HAVE_GEOIP_V6, 1, [Define if GeoIP supports IPv6 (GeoIP 1.4.5 and later)])
-			  ],,
-			)
-			AC_CHECK_LIB(GeoIP, GeoIP_free,
-			  [
-				AC_DEFINE(HAVE_GEOIP_FREE, 1, [Define if GeoIP has GeoIP_free (not available upstream with 1.6.10 or earlier)])
-			  ],,
-			)
-		fi
 	else
 		AC_MSG_RESULT(not required)
 	fi
@@ -1686,18 +1676,6 @@ AC_DEFUN([AC_WIRESHARK_QT_MODULE_CHECK_WITH_QT_VERSION],
 [
 	case "$3" in
 
-	4)
-		#
-		# Check for Qt 4.
-		#
-		modprefix="Qt"
-		#
-		# Version of the module we're checking for.
-		# Default to 4.0.0.
-		#
-		min_qt_version=ifelse([$2], ,4.0.0,$2)
-		;;
-
 	5)
 		#
 		# Check for Qt 5.
@@ -1705,9 +1683,9 @@ AC_DEFUN([AC_WIRESHARK_QT_MODULE_CHECK_WITH_QT_VERSION],
 		modprefix="Qt5"
 		#
 		# Version of the module we're checking for.
-		# Default to 5.0.0.
+		# Default to 5.2.0.
 		#
-		min_qt_version=5.0.0
+		min_qt_version=5.2.0
 		;;
 
 	*)
@@ -1747,30 +1725,16 @@ AC_DEFUN([AC_WIRESHARK_QT_MODULE_CHECK],
 	#
 	case "$3" in
 
-	yes|unspecified)
+	yes|5)
 		#
 		# Check for all versions of Qt we support.
 		# Try the Qt 5 version first.
-		#
-		versions="5 4"
-		;;
-
-	4)
-		#
-		# Check for Qt 4.
-		#
-		versions="4"
-		;;
-
-	5)
-		#
-		# Check for Qt 5.
 		#
 		versions="5"
 		;;
 
 	*)
-		AC_MSG_ERROR([Qt version $3 is not a known Qt version])
+		AC_MSG_ERROR([$3 is not a known Qt option])
 		;;
 	esac
 
@@ -1779,7 +1743,7 @@ AC_DEFUN([AC_WIRESHARK_QT_MODULE_CHECK],
 		AC_WIRESHARK_QT_MODULE_CHECK_WITH_QT_VERSION($1, $2,
 		    $version, [foundit=yes], [foundit=no])
 		if test "x$foundit" = "xyes"; then
-                        break
+			break
 		fi
 	done
 

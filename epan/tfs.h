@@ -6,19 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #ifndef __TFS_H__
@@ -65,6 +53,7 @@ WS_DLL_PUBLIC const true_false_string tfs_more_nomore;
 WS_DLL_PUBLIC const true_false_string tfs_present_absent;
 WS_DLL_PUBLIC const true_false_string tfs_present_not_present;
 WS_DLL_PUBLIC const true_false_string tfs_active_inactive;
+WS_DLL_PUBLIC const true_false_string tfs_activated_deactivated;
 WS_DLL_PUBLIC const true_false_string tfs_found_not_found;
 WS_DLL_PUBLIC const true_false_string tfs_command_response;
 WS_DLL_PUBLIC const true_false_string tfs_response_command;
@@ -72,6 +61,8 @@ WS_DLL_PUBLIC const true_false_string tfs_capable_not_capable;
 WS_DLL_PUBLIC const true_false_string tfs_supported_not_supported;
 WS_DLL_PUBLIC const true_false_string tfs_used_notused;
 WS_DLL_PUBLIC const true_false_string tfs_high_low;
+WS_DLL_PUBLIC const true_false_string tfs_high_normal;
+WS_DLL_PUBLIC const true_false_string tfs_low_normal;
 WS_DLL_PUBLIC const true_false_string tfs_pressed_not_pressed;
 WS_DLL_PUBLIC const true_false_string tfs_implemented_not_implemented;
 WS_DLL_PUBLIC const true_false_string tfs_requested_not_requested;

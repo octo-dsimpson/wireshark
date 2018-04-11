@@ -37,11 +37,11 @@
 #include "ui/gtk/main.h"
 #include "ui/gtk/addr_resolution_dlg.h"
 
+#include "globals.h"
+
 static GtkWidget *addr_resolution_dlg_w = NULL;
 
 
-#define HOSTNAME_POS 48
-#define ADDRSTRLEN 46 /* Covers IPv4 & IPv6 */
 #define ADDRESS_STR_MAX     1024
 
 static void

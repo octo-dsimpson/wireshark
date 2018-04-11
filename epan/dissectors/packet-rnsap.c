@@ -17,19 +17,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  * Ref: 3GPP TS 25.423 version 6.7.0 Release 6
  */
@@ -1275,7 +1263,7 @@ typedef enum _ProtocolIE_ID_enum {
 } ProtocolIE_ID_enum;
 
 /*--- End of included file: packet-rnsap-val.h ---*/
-#line 49 "./asn1/rnsap/packet-rnsap-template.c"
+#line 37 "./asn1/rnsap/packet-rnsap-template.c"
 
 void proto_register_rnsap(void);
 void proto_reg_handoff_rnsap(void);
@@ -4396,7 +4384,7 @@ static int hf_rnsap_value_04 = -1;                /* UnsuccessfulOutcome_value *
 static int hf_rnsap_value_05 = -1;                /* Outcome_value */
 
 /*--- End of included file: packet-rnsap-hf.c ---*/
-#line 61 "./asn1/rnsap/packet-rnsap-template.c"
+#line 49 "./asn1/rnsap/packet-rnsap-template.c"
 
 /* Initialize the subtree pointers */
 static int ett_rnsap = -1;
@@ -5833,7 +5821,7 @@ static gint ett_rnsap_UnsuccessfulOutcome = -1;
 static gint ett_rnsap_Outcome = -1;
 
 /*--- End of included file: packet-rnsap-ett.c ---*/
-#line 66 "./asn1/rnsap/packet-rnsap-template.c"
+#line 54 "./asn1/rnsap/packet-rnsap-template.c"
 
 /* Global variables */
 static guint32 ProcedureCode;
@@ -49045,7 +49033,7 @@ static int dissect_NULL_PDU(tvbuff_t *tvb _U_, packet_info *pinfo _U_, proto_tre
 
 
 /*--- End of included file: packet-rnsap-fn.c ---*/
-#line 92 "./asn1/rnsap/packet-rnsap-template.c"
+#line 80 "./asn1/rnsap/packet-rnsap-template.c"
 
 static int dissect_ProtocolIEFieldValue(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 {
@@ -61523,7 +61511,7 @@ void proto_register_rnsap(void) {
         "Outcome_value", HFILL }},
 
 /*--- End of included file: packet-rnsap-hfarr.c ---*/
-#line 149 "./asn1/rnsap/packet-rnsap-template.c"
+#line 137 "./asn1/rnsap/packet-rnsap-template.c"
   };
 
   /* List of subtrees */
@@ -62961,7 +62949,7 @@ void proto_register_rnsap(void) {
     &ett_rnsap_Outcome,
 
 /*--- End of included file: packet-rnsap-ettarr.c ---*/
-#line 155 "./asn1/rnsap/packet-rnsap-template.c"
+#line 143 "./asn1/rnsap/packet-rnsap-template.c"
   };
 
 
@@ -63922,7 +63910,7 @@ proto_reg_handoff_rnsap(void)
 
 
 /*--- End of included file: packet-rnsap-dis-tab.c ---*/
-#line 190 "./asn1/rnsap/packet-rnsap-template.c"
+#line 178 "./asn1/rnsap/packet-rnsap-template.c"
 }
 
 

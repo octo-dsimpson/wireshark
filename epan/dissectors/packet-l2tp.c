@@ -14,19 +14,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 /*
@@ -2538,7 +2526,7 @@ process_l2tpv3_data(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
 {
     int         idx         = *pIdx;
     int         sid;
-    guint32      oam_cell   = 0;
+    guint32     oam_cell    = 0;
     proto_tree *l2_specific = NULL;
     proto_item *ti          = NULL;
     tvbuff_t   *next_tvb;
@@ -2583,17 +2571,18 @@ process_l2tpv3_data(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     if (cookie_len == -1)
         cookie_len = L2TPv3_COOKIE_DEFAULT;
 
-    col_add_fstr(pinfo->cinfo,COL_INFO,
-                    "%s            (session id=%u)",
-                    data_msg, sid);
+    col_append_fstr(pinfo->cinfo, COL_INFO, "D[S:0x%02X]", sid);
+    col_set_fence(pinfo->cinfo, COL_INFO);
 
     if (tree) {
         proto_tree_add_item(l2tp_tree, hf_l2tp_sid, tvb, idx-4, 4, ENC_BIG_ENDIAN);
         proto_item_set_len(l2tp_item, idx);
-        if (!(tvb_offset_exists(tvb, idx)))
+        if (!(tvb_offset_exists(tvb, idx))) {
             return;
-        if (cookie_len != 0)
+        }
+        if (cookie_len != 0) {
             proto_tree_add_item(l2tp_tree, hf_l2tp_cookie, tvb, idx, cookie_len, ENC_NA);
+        }
     }
 
     switch(l2_spec){
@@ -2940,16 +2929,16 @@ dissect_l2tp_udp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
         return 0;
     }
 
-    conv = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, PT_UDP,
+    conv = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, ENDPOINT_UDP,
                          pinfo->srcport, pinfo->destport, NO_PORT_B);
 
     if (conv == NULL) {
-        conv = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, PT_UDP,
+        conv = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, ENDPOINT_UDP,
                              pinfo->srcport, pinfo->destport, 0);
     }
 
     if ((conv == NULL) || (conversation_get_dissector(conv, pinfo->num) != l2tp_udp_handle)) {
-        conv = conversation_new(pinfo->num, &pinfo->src, &pinfo->dst, PT_UDP,
+        conv = conversation_new(pinfo->num, &pinfo->src, &pinfo->dst, ENDPOINT_UDP,
                         pinfo->srcport, 0, NO_PORT2);
         conversation_set_dissector(conv, l2tp_udp_handle);
     }

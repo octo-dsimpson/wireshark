@@ -5,20 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #ifndef DECODE_AS_MODEL_H
 #define DECODE_AS_MODEL_H
@@ -32,6 +19,7 @@
 #include "cfile.h"
 
 #include <epan/packet.h>
+#include <epan/dissectors/packet-dcerpc.h>
 
 class DecodeAsItem
 {
@@ -46,6 +34,7 @@ public:
     //between (lack of) persistent data in GUI and underlying data
     uint selectorUint_;
     QString selectorString_;
+    decode_dcerpc_bind_values_t* selectorDCERPC_; //for special handling of DCE/RPC
 
     QString default_proto_;
     QString current_proto_;
@@ -60,11 +49,11 @@ public:
     DecodeAsModel(QObject *parent, capture_file *cf = NULL);
 
     enum DecodeAsColumn {
-        colTable = 0,
-        colSelector,
-        colType,
-        colDefault, // aka "initial"
-        colProtocol, // aka "current"
+        colTable = 0, // aka "Field" (or dissector table like "TCP Port")
+        colSelector, // the actual table value (e.g., port number 80)
+        colType,    // field type (e.g. "Integer, base 16")
+        colDefault, // aka "initial" protocol chosen by Wireshark
+        colProtocol, // aka "current" protocol selected by user
         colDecodeAsMax //not used
     };
 

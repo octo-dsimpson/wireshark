@@ -4,19 +4,7 @@
 # By Gerald Combs <gerald@wireshark.org>
 # Copyright 1998 Gerald Combs
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
 
 include(UseABICheck)
@@ -39,26 +27,6 @@ endif()
 include_directories(
 	${CMAKE_CURRENT_BINARY_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-set(COMPRESS_FILES
-	compress/lzxpress.c
-)
-source_group(compress FILES ${COMPRESS_FILES})
-
-set(LIBWIRESHARK_ASM_FILES
-	asm_utils.c
-# todo
-#	!IFDEF NASM
-#	asm_utils_win32_x86.obj: asm_utils_win32_x86.asm
-#	        $(NASM) -f $(WIRESHARK_TARGET_PLATFORM) -o $@ $?
-#	!ENDIF
-#	...
-#	!IF defined(NASM) && "$(WIRESHARK_TARGET_PLATFORM)" == "win32"
-#	        asm_utils_win32_x86.obj
-#	!ELSE
-#	        asm_utils.obj
-#	!ENDIF
 )
 
 add_custom_command(
@@ -88,7 +56,6 @@ set(LIBWIRESHARK_PUBLIC_HEADERS
 	capture_dissectors.h
 	charsets.h
 	chdlctypes.h
-	circuit.h
 	color_filters.h
 	column.h
 	column-info.h
@@ -109,7 +76,6 @@ set(LIBWIRESHARK_PUBLIC_HEADERS
 	dtd.h
 	dtd_parse.h
 	dvb_chartbl.h
-	dwarf.h
 	eap.h
 	eapol_keydes_types.h
 	epan.h
@@ -121,14 +87,13 @@ set(LIBWIRESHARK_PUBLIC_HEADERS
 	expert.h
 	export_object.h
 	exported_pdu.h
-	plugin_if.h
 	filter_expressions.h
 	follow.h
 	frame_data.h
 	frame_data_sequence.h
 	funnel.h
 	garrayfix.h
-	geoip_db.h
+	#geoip_db.h
 	golay.h
 	guid-utils.h
 	iana_charsets.h
@@ -140,6 +105,7 @@ set(LIBWIRESHARK_PUBLIC_HEADERS
 	ipv6.h
 	lapd_sapi.h
 	llcsaps.h
+	maxmind_db.h
 	media_params.h
 	next_tvb.h
 	nlpid.h
@@ -149,6 +115,7 @@ set(LIBWIRESHARK_PUBLIC_HEADERS
 	packet.h
 	packet_info.h
 	params.h
+	plugin_if.h
 	ppptypes.h
 	print.h
 	print_stream.h
@@ -161,6 +128,7 @@ set(LIBWIRESHARK_PUBLIC_HEADERS
 	range.h
 	reassemble.h
 	reedsolomon.h
+	register.h
 	req_resp_hdrs.h
 	rtd_table.h
 	rtp_pt.h
@@ -194,7 +162,7 @@ set(LIBWIRESHARK_PUBLIC_HEADERS
 	xdlc.h
 )
 
-set(LIBWIRESHARK_FILES
+set(LIBWIRESHARK_NONGENERATED_FILES
 	addr_and_mask.c
 	addr_resolv.c
 	address_types.c
@@ -204,7 +172,6 @@ set(LIBWIRESHARK_FILES
 	asn1.c
 	capture_dissectors.c
 	charsets.c
-	circuit.c
 	color_filters.c
 	column.c
 	column-utils.c
@@ -219,39 +186,39 @@ set(LIBWIRESHARK_FILES
 	disabled_protos.c
 	dissector_filters.c
 	dvb_chartbl.c
-	dwarf.c
 	epan.c
 	ex-opt.c
 	except.c
 	expert.c
 	export_object.c
 	exported_pdu.c
-	plugin_if.c
 	filter_expressions.c
 	follow.c
 	frame_data.c
 	frame_data_sequence.c
 	funnel.c
-	geoip_db.c
+	#geoip_db.c
 	golay.c
 	guid-utils.c
 	iana_charsets.c
 	in_cksum.c
 	ipproto.c
+	maxmind_db.c
 	media_params.c
 	next_tvb.c
 	oids.c
 	osi-utils.c
 	packet.c
+	plugin_if.c
 	print.c
 	print_stream.c
 	prefs.c
 	proto.c
 	proto_data.c
-	ps.c
 	range.c
 	reassemble.c
 	reedsolomon.c
+	register.c
 	req_resp_hdrs.c
 	rtd_table.c
 	sequence_analysis.c
@@ -278,14 +245,13 @@ set(LIBWIRESHARK_FILES
 	value_string.c
 	unit_strings.c
 	xdlc.c
+	${CMAKE_CURRENT_BINARY_DIR}/ps.c
 	${CMAKE_SOURCE_DIR}/version_info.c
 )
 
-set(LIBWIRESHARK_CLEAN_FILES
-	${LIBWIRESHARK_FILES}
-)
+set(LIBWIRESHARK_FILES ${LIBWIRESHARK_NONGENERATED_FILES})
 
-add_lex_files(LEX_FILES GENERATED_FILES
+add_lex_files(LEX_FILES LIBWIRESHARK_FILES
 	diam_dict.l
 	dtd_parse.l
 	dtd_preparse.l
@@ -293,7 +259,7 @@ add_lex_files(LEX_FILES GENERATED_FILES
 	uat_load.l
 )
 
-add_lemon_files(LEMON_FILES GENERATED_FILES
+add_lemon_files(LEMON_FILES LIBWIRESHARK_FILES
 	dtd_grammar.lemon
 )
 
@@ -302,8 +268,10 @@ set(epan_LIBS
 	wsutil
 	${CARES_LIBRARIES}
 	${GCRYPT_LIBRARIES}
-	${GEOIP_LIBRARIES}
+	#${GEOIP_LIBRARIES}
 	${GLIB2_LIBRARIES}
+	${GIO2_LIBRARIES}
+	${GTHREAD2_LIBRARIES}
 	${GNUTLS_LIBRARIES}
 	${KERBEROS_LIBRARIES}
 	${LUA_LIBRARIES}
@@ -317,14 +285,8 @@ set(epan_LIBS
 	${LIBXML2_LIBRARIES}
 )
 
-set(CLEAN_FILES
-	${LIBWIRESHARK_CLEAN_FILES}
-	${COMPRESS_FILES}
-	${LIBWIRESHARK_ASM_FILES}
-)
-
 set_source_files_properties(
-	${CLEAN_FILES}
+	${LIBWIRESHARK_FILES}
 	PROPERTIES
 	COMPILE_FLAGS "${WERROR_COMMON_FLAGS}"
 )
@@ -336,11 +298,8 @@ if(HAVE_LIBLUA)
 else()
 	set(wslua_sources)
 endif()
-add_library(epan ${LINK_MODE_LIB}
+add_library(epan
 	${LIBWIRESHARK_FILES}
-	${GENERATED_FILES}
-	${COMPRESS_FILES}
-	${LIBWIRESHARK_ASM_FILES}
 	$<TARGET_OBJECTS:crypt>
 	$<TARGET_OBJECTS:dfilter>
 	$<TARGET_OBJECTS:dissectors>
@@ -369,9 +328,8 @@ endif()
 
 ABICHECK(libwireshark)
 
-set(TOP_LEVEL_HEADERS ${CMAKE_BINARY_DIR}/config.h ${CMAKE_SOURCE_DIR}/register.h)
+set(TOP_LEVEL_HEADERS ${CMAKE_BINARY_DIR}/config.h)
 file(GLOB CRYPT_HEADERS crypt/*.h)
-file(GLOB COMPRESS_HEADERS compress/*.h)
 file(GLOB DFILTER_HEADERS dfilter/*.h ../tools/lemon/cppmagic.h)
 file(GLOB D_HEADERS dissectors/*.h)
 file(GLOB FTYPES_HEADERS ftypes/*.h)
@@ -382,7 +340,6 @@ add_custom_command(OUTPUT libwireshark.abi.tar.gz
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${ABICHECK_TMPDIR}
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${ABICHECK_TMPDIR}/epan
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${ABICHECK_TMPDIR}/crypt
-	COMMAND ${CMAKE_COMMAND} -E make_directory ${ABICHECK_TMPDIR}/compress
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${ABICHECK_TMPDIR}/dfilter
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${ABICHECK_TMPDIR}/dissectors
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${ABICHECK_TMPDIR}/ftypes
@@ -390,7 +347,6 @@ add_custom_command(OUTPUT libwireshark.abi.tar.gz
 	COMMAND ${ABI_COPY_COMMAND} ${TOP_LEVEL_HEADERS} ${ABICHECK_TMPDIR} ${ABI_COPY_FLAGS}
 	COMMAND ${ABI_COPY_COMMAND} ${ABICHECK_HEADERS} ${ABICHECK_TMPDIR}/epan ${ABI_COPY_FLAGS}
 	COMMAND ${ABI_COPY_COMMAND} ${CRYPT_HEADERS} ${ABICHECK_TMPDIR}/crypt ${ABI_COPY_FLAGS}
-	COMMAND ${ABI_COPY_COMMAND} ${COMPRESS_HEADERS} ${ABICHECK_TMPDIR}/compress ${ABI_COPY_FLAGS}
 	COMMAND ${ABI_COPY_COMMAND} ${DFILTER_HEADERS} ${ABICHECK_TMPDIR}/dfilter ${ABI_COPY_FLAGS}
 	COMMAND ${ABI_COPY_COMMAND} ${D_HEADERS} ${ABICHECK_TMPDIR}/dissectors ${ABI_COPY_FLAGS}
 	COMMAND ${ABI_COPY_COMMAND} ${FTYPES_HEADERS} ${ABICHECK_TMPDIR}/ftypes ${ABI_COPY_FLAGS}
@@ -405,11 +361,10 @@ add_custom_command(OUTPUT libwireshark.abi.tar.gz
 	COMMAND rm -rf ${ABICHECK_TMPDIR} ${CMAKE_CURRENT_BINARY_DIR}/abi_dumps
 #	COMMAND rm -rf ${CMAKE_CURRENT_BINARY_DIR}/abi_dumps ${ABICHECK_TMPDIR}/config.h
 #		${ABICHECK_TMPDIR}/epan/* ${ABICHECK_TMPDIR}/crypt/*
-#		${ABICHECK_TMPDIR}/epan/* ${ABICHECK_TMPDIR}/compress/*
 #		${ABICHECK_TMPDIR}/dfilter/* ${ABICHECK_TMPDIR}/dissectors/*
 #		${ABICHECK_TMPDIR}/ftypes/* ${ABICHECK_TMPDIR}/wmem/*
 	DEPENDS ${HEADERS}
-		${CRYPT_HEADERS} ${COMPRESS_HEADERS} ${DFILTER_HEADERS} ${D_HEADERS}
+		${CRYPT_HEADERS} ${DFILTER_HEADERS} ${D_HEADERS}
 		${FTYPES_HEADERS} ${WMEM_HEADERS} epan)
 
 # By default the name for a library with target name epan will be libepan,
@@ -424,13 +379,11 @@ target_link_libraries(epan ${epan_LIBS})
 
 add_dependencies(epan lemon)
 
-if(NOT ${ENABLE_STATIC})
-	install(TARGETS epan
-		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-		RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
-		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	)
-endif()
+install(TARGETS epan
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
 
 if(NOT WIN32)
 	install(FILES ${LIBWIRESHARK_PUBLIC_HEADERS}
@@ -442,6 +395,7 @@ add_executable(exntest EXCLUDE_FROM_ALL exntest.c except.c)
 target_link_libraries(exntest ${GLIB2_LIBRARIES})
 set_target_properties(exntest PROPERTIES
 	FOLDER "Tests"
+	EXCLUDE_FROM_DEFAULT_BUILD True
 	COMPILE_DEFINITIONS "WS_BUILD_DLL"
 )
 
@@ -449,6 +403,7 @@ add_executable(oids_test EXCLUDE_FROM_ALL oids_test.c)
 target_link_libraries(oids_test epan ${ZLIB_LIBRARIES})
 set_target_properties(oids_test PROPERTIES
 	FOLDER "Tests"
+	EXCLUDE_FROM_DEFAULT_BUILD True
 	COMPILE_DEFINITIONS "WS_BUILD_DLL"
 )
 
@@ -456,12 +411,14 @@ add_executable(reassemble_test EXCLUDE_FROM_ALL reassemble_test.c)
 target_link_libraries(reassemble_test epan)
 set_target_properties(reassemble_test PROPERTIES
 	FOLDER "Tests"
+	EXCLUDE_FROM_DEFAULT_BUILD True
 )
 
 add_executable(tvbtest EXCLUDE_FROM_ALL tvbtest.c)
 target_link_libraries(tvbtest epan)
 set_target_properties(tvbtest PROPERTIES
 	FOLDER "Tests"
+	EXCLUDE_FROM_DEFAULT_BUILD True
 	COMPILE_DEFINITIONS "WS_BUILD_DLL"
 )
 
@@ -471,7 +428,7 @@ CHECKAPI(
 	SWITCHES
 	  -g termoutput -build
 	SOURCES
-	  ${LIBWIRESHARK_FILES}
+	  ${LIBWIRESHARK_NONGENERATED_FILES}
 )
 
 #

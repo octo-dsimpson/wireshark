@@ -26,22 +26,16 @@
 *_dict.c
 *_lex.h
 init.lua
-epan/declare_wslua.h
 epan/dissectors/dcerpc/idl2wrs
 epan/dissectors/dcerpc/*/packet-dcerpc-*.[hc]
 epan/dissectors/mesa
 epan/dissectors/xcbproto
 epan/dissectors/packet-ncp2222.c
-epan/dissectors/register-cache.pkl
-epan/dissectors/register.c
+epan/dissectors/dissectors.c
+epan/dissectors/dissectors.in.txt
+epan/dissectors/make-dissectors
 epan/dtd_parse.c
 epan/dtd_preparse.c
-epan/packet-ncp2222.c
-epan/register-cache.pkl
-epan/register.c
-epan/register_wslua.c
-epan/taps.txt
-epan/taps_wslua.c
 epan/uat_load.c
 epan/version_info.c
 epan/wslua/declare_wslua.h
@@ -49,9 +43,10 @@ epan/wslua/register_wslua.c
 epan/wslua/taps.txt
 epan/wslua/taps_wslua.c
 epan/ps.c
-ui/cli/tshark-tap-register-cache.pkl
-plugin.c
-plugins/mate/mate_parser.c
+plugins/epan/*/plugin.c
+plugins/wiretap/*/plugin.c
+plugins/codecs/*/plugin.c
+plugins/epan/mate/mate_parser.c
 version.h
 tools/lemon/lemon
 tshark-tap-register.c
@@ -60,7 +55,7 @@ wiretap/ascend.h
 wiretap/k12text.c
 wiretap/version_info.c
 wireshark-tap-register.c
-wireshark-tap-register-cache.pkl
+ui/make-taps
 ui/gtk/wireshark-gresources.c
 ui/gtk/wireshark-gresources.h
 
@@ -85,6 +80,7 @@ dftest
 dumpcap
 editcap
 exntest
+fuzzshark
 install-sh
 libtool
 libtool.m4
@@ -97,6 +93,7 @@ Makefile
 Makefile.in
 mergecap
 missing
+mmdbresolve
 oids_test
 randpkt
 randpktdump
@@ -126,11 +123,8 @@ CPackSourceConfig.cmake
 lib/
 WiresharkConfig.cmake
 WiresharkConfigVersion.cmake
-epan/dissectors/_regc.tmp
-epan/dissectors/files.txt
 wireshark.pc
 run/
-tshark-tap-register-cache.pkl
 build.ninja
 rules.ninja
 .ninja_deps
@@ -258,6 +252,7 @@ macosx-support-libs
 packaging/macosx/COPYING.txt
 packaging/macosx/Info.plist
 packaging/macosx/osx-dmg.sh
+packaging/macosx/PkgInfo
 packaging/macosx/Wireshark_package.pmdoc/index.xml
 packaging/nsis/config.nsh
 packaging/nsis/qt-dll-manifest.nsh
@@ -265,3 +260,4 @@ packaging/portableapps/Files/
 packaging/portableapps/appinfo.ini
 packaging/rpm/SPECS/wireshark.spec
 vgcore.*
+Wireshark.*

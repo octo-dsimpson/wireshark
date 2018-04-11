@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 /* 3GPP TS 48.018 V 6.5.0 (2004-07) Release 6 */
@@ -210,6 +198,7 @@ static int hf_bssgp_tunpo_minutes = -1;
 static int hf_bssgp_tunpo_seconds = -1;
 static int hf_bssgp_ec_dl_coveradge_class = -1;
 static int hf_bssgp_ec_ul_coveradge_class = -1;
+static int hf_bssgp_pei = -1;
 static int hf_bssgp_paging_attempt_count = -1;
 static int hf_bssgp_intended_num_of_pag_attempts = -1;
 static int hf_bssgp_extended_feature_bitmap = -1;
@@ -3334,7 +3323,9 @@ static const value_string bssgp_redir_indiction_reroute_reject_cause_vals[] = {
     {0x0E, "GPRS services not allowed in this PLMN"},
     {0x0F, "No suitable cell in location area"},
     {0x10, "CS/PS domain registration coordination required"},
-    /* {0x11~0xFF, "Reserved"} */
+    {0x11, "Network failure" },
+    {0x12, "Rerouting to a DCN required" },
+/* {0x13~0xFF, "Reserved"} */
     { 0,    NULL },
 };
 
@@ -3545,7 +3536,13 @@ de_bssgp_coveradge_class(tvbuff_t *tvb, proto_tree *tree, packet_info *pinfo _U_
 /*
  * 11.3.125 Paging Attempt Information
  */
-    static const value_string bssgp_paging_attempt_count_vals[] = {
+static const value_string bssgp_pei_vals[] = {
+    { 0x0, "Positioning event not triggered" },
+    { 0x1, "Positioning event triggered" },
+    { 0, NULL }
+
+};
+static const value_string bssgp_paging_attempt_count_vals[] = {
     { 0x0, "1st paging attempt" },
     { 0x1, "2nd paging attempt" },
     { 0x2, "3rd paging attempt" },
@@ -3571,6 +3568,7 @@ static const value_string bssgp_intended_num_of_pag_attempts_vals[] = {
     { 0, NULL }
 };
 
+
 static guint16
 de_bssgp_pag_attempt_info(tvbuff_t *tvb, proto_tree *tree, packet_info *pinfo _U_, guint32 offset, guint len _U_, gchar *add_string _U_, int string_len _U_)
 {
@@ -3578,8 +3576,9 @@ de_bssgp_pag_attempt_info(tvbuff_t *tvb, proto_tree *tree, packet_info *pinfo _U
 
     curr_offset = offset;
 
-    proto_tree_add_item(tree, hf_bssgp_paging_attempt_count, tvb, curr_offset, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_item(tree, hf_bssgp_pei, tvb, curr_offset, 1, ENC_BIG_ENDIAN);
     proto_tree_add_item(tree, hf_bssgp_intended_num_of_pag_attempts, tvb, curr_offset, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_item(tree, hf_bssgp_paging_attempt_count, tvb, curr_offset, 1, ENC_BIG_ENDIAN);
     curr_offset++;
 
     return(curr_offset - offset);
@@ -3781,7 +3780,7 @@ static const value_string bssgp_elem_strings[] = {
     /* 11.3.50  LCS QoS BSSGP_IEI_LCS_QOS, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_LCSQOS*/
     /* 11.3.51  LCS Client Type BSSGP_IEI_LCS_CLIENT_TYPE, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_LCS_CLIENT_TYPE*/
     /* 11.3.52  Requested GPS Assistance Data BSSGP_IEI_REQUESTED_GPS_ASSISTANCE_DATA, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_REQ_GPS_ASSIST_D*/
-    /* 11.3.53  Location Type 0x7c, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_GANSS_LOC_TYPE*/
+    /* 11.3.53  Location Type BSSGP_IEI_LOCATION_TYPE, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_GANSS_LOC_TYPE*/
     /* 11.3.54  Location Estimate BSSGP_IEI_LOCATION_ESTIMATE, GSM_A_PDU_TYPE_BSSMAP, BE_LOC_EST*/
     /* 11.3.55  Positioning Data 0x7d, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_POS_DATA*/
     /* 11.3.56  Deciphering Keys BSSGP_IEI_DECIPHERING_KEYS, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_DECIPH_KEYS */
@@ -4506,7 +4505,7 @@ bssgp_paging_ps(tvbuff_t *tvb, proto_tree *tree, packet_info *pinfo, guint32 off
     /* MS Radio Access Capability (note 5) MS Radio Access Capability/11.3.22 O TLV 7-? */
     ELEM_OPT_TELV(BSSGP_IEI_MS_RADIO_ACCESS_CAPABILITY, GSM_A_PDU_TYPE_GM, DE_MS_RAD_ACC_CAP, NULL);
     /* Paging Attempt Information (note 6)  Paging Attempt Information/11.3.125 O   TLV 3 */
-    ELEM_OPT_TELV(BSSGP_IEI_PAG_ATTEMPT_INFO, BSSGP_PDU_TYPE, DE_BSSGP_CELL_ID, NULL);
+    ELEM_OPT_TELV(BSSGP_IEI_PAG_ATTEMPT_INFO, BSSGP_PDU_TYPE, DE_BSSGP_PAG_ATTEMPT_INFO, NULL);
 
     EXTRANEOUS_DATA_CHECK(curr_len, 0, pinfo, &ei_bssgp_extraneous_data);
 }
@@ -5983,9 +5982,9 @@ bssgp_perform_loc_request(tvbuff_t *tvb, proto_tree *tree, packet_info *pinfo, g
     /* BVCI (PCU-PTP) BVCI/11.3.6 M TLV 4 */
     ELEM_MAND_TELV(BSSGP_IEI_BVCI, BSSGP_PDU_TYPE, DE_BSSGP_BVCI, " - (PCU-PTP)", ei_bssgp_missing_mandatory_element);
     /* NSEI (PCU-PTP) NSEI/11.3.48 M TLV 4-? */
-    ELEM_OPT_TELV(0x3e, GSM_A_PDU_TYPE_RR, DE_BSSGP_NSEI , " - (PCU-PTP)");
+    ELEM_MAND_TELV(BSSGP_IEI_NSEI, BSSGP_PDU_TYPE, DE_BSSGP_NSEI , " - (PCU-PTP)", ei_bssgp_missing_mandatory_element);
     /* Location Type Location Type/11.3.53 M TLV 3-? */
-    ELEM_OPT_TELV(0x7c, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_GANSS_LOC_TYPE, NULL);
+    ELEM_MAND_TELV(BSSGP_IEI_LOCATION_TYPE, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_LOC_TYPE, NULL, ei_bssgp_missing_mandatory_element);
     /* Cell Identifier Cell Identifier/11.3.9 M TLV 10 */
     ELEM_OPT_TELV(BSSGP_IEI_CELL_IDENTIFIER, BSSGP_PDU_TYPE, DE_BSSGP_CELL_ID , NULL);
     /* LCS Capability (note 2) LCS Capability/11.3.59 O TLV 3-? */
@@ -6041,7 +6040,7 @@ bssgp_perform_loc_response(tvbuff_t *tvb, proto_tree *tree, packet_info *pinfo, 
     /* Location Estimate (note 1) Location Estimate/11.3.54 C TLV 3-? */
     ELEM_OPT_TELV(BSSGP_IEI_LOCATION_ESTIMATE, GSM_A_PDU_TYPE_BSSMAP, BE_LOC_EST, NULL);
     /* Positioning Data Positioning Data/11.3.55 O TLV 3-? */
-    ELEM_OPT_TELV(0x7d, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_POS_DATA, NULL);
+    ELEM_OPT_TELV(BSSGP_IEI_POSITIONING_DATA, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_POS_DATA, NULL);
     /* Deciphering Keys (note 2) Deciphering Keys/11.3.56 C TLV 3-? */
     ELEM_OPT_TELV(BSSGP_IEI_DECIPHERING_KEYS, GSM_PDU_TYPE_BSSMAP_LE, DE_BMAPLE_DECIPH_KEYS, NULL);
     /* LCS Cause (note 3) LCS Cause/11.3.58 O TLV 3-? */
@@ -7502,6 +7501,11 @@ proto_register_bssgp(void)
         { &hf_bssgp_ggsn_pgw_location,
           { "GGSN/P-GW location", "bssgp.ggsn_pgw_location",
             FT_UINT8, BASE_DEC, VALS(bssgp_ggsn_pgw_location_vals), 0x0,
+            NULL, HFILL } },
+
+        { &hf_bssgp_pei,
+          { "Positioning Event Indicator(PEI)", "bssgp.pei",
+            FT_UINT8, BASE_DEC, VALS(bssgp_pei_vals), 0x80,
             NULL, HFILL } },
 
         { &hf_bssgp_paging_attempt_count,

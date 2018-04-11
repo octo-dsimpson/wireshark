@@ -4,19 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #ifdef HAVE_CONFIG_H
@@ -24,6 +12,7 @@
 #endif
 
 #include <epan/packet.h>
+#include <epan/proto.h>
 #include <ws_attributes.h>
 
 #ifndef VERSION
@@ -37,8 +26,6 @@ DLL_PUBLIC const gchar plugin_release[] = VERSION_RELEASE;
 
 DLL_PUBLIC void plugin_register(void);
 
-DLL_PUBLIC void plugin_reg_handoff(void);
-
 
 static int proto_hello = -1;
 static dissector_handle_t handle_hello;
@@ -50,14 +37,26 @@ dissect_hello(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree, void *dat
     return tvb_captured_length(tvb);
 }
 
-void plugin_register(void)
+static void
+proto_register_hello(void)
 {
-    proto_hello = proto_register_protocol("Wireshark Hello Plugin", "Hello", "hello");
+    proto_hello = proto_register_protocol("Wireshark Hello Plugin", "Hello WS", "hello_ws");
     handle_hello = create_dissector_handle(dissect_hello, proto_hello);
     register_postdissector(handle_hello);
 }
 
-void plugin_reg_handoff(void)
+static void
+proto_reg_handoff_hello(void)
 {
     /* empty */
+}
+
+void
+plugin_register(void)
+{
+    static proto_plugin plug;
+
+    plug.register_protoinfo = proto_register_hello;
+    plug.register_handoff = proto_reg_handoff_hello; /* or NULL */
+    proto_register_plugin(&plug);
 }

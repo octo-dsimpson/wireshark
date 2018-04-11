@@ -1,6 +1,8 @@
 /* packet-couchbase.c
  *
  * Routines for Couchbase Protocol
+ *
+ * Copyright 2018, Jim Walker <jim@couchbase.com>
  * Copyright 2015-2016, Dave Rigby <daver@couchbase.com>
  * Copyright 2011, Sergey Avseyev <sergey.avseyev@gmail.com>
  *
@@ -23,19 +25,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -45,9 +35,16 @@
 #include <epan/prefs.h>
 #include <epan/expert.h>
 
+#ifdef HAVE_SNAPPY
+#include <snappy-c.h>
+#endif
 
 #include "packet-tcp.h"
 #include "packet-ssl.h"
+
+#include <glib.h>
+#include <math.h>
+#include <stdio.h>
 
 #define PNAME  "Couchbase Protocol"
 #define PSNAME "Couchbase"
@@ -59,6 +56,7 @@
  /* Magic Byte */
 #define MAGIC_REQUEST         0x80
 #define MAGIC_RESPONSE        0x81
+#define MAGIC_RESPONSE_FLEX   0x18
 
  /* Response Status */
 #define PROTOCOL_BINARY_RESPONSE_SUCCESS            0x00
@@ -150,6 +148,11 @@
 /* Control */
 #define PROTOCOL_BINARY_CMD_IOCTL_GET               0x23
 #define PROTOCOL_BINARY_CMD_IOCTL_SET               0x24
+#define PROTOCOL_BINARY_CMD_CONFIG_VALIDATE         0x25
+#define PROTOCOL_BINARY_CMD_CONFIG_RELOAD           0x26
+#define PROTOCOL_BINARY_CMD_AUDIT_PUT               0x27
+#define PROTOCOL_BINARY_CMD_AUDIT_CONFIG_RELOAD     0x28
+#define PROTOCOL_BINARY_CMD_SHUTDOWN                0x29
 
  /* Range operations.
   * These commands are used for range operations and exist within
@@ -237,6 +240,12 @@
 #define PROTOCOL_BINARY_CMD_SET_CLUSTER_CONFIG      0xb4
 #define PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG      0xb5
 
+#define PROTOCOL_BINARY_CMD_COLLECTIONS_SET_MANIFEST 0xb9
+#define PROTOCOL_BINARY_CMD_COLLECTIONS_GET_MANIFEST 0xba
+
+#define PROTOCOL_BINARY_CMD_SET_DRIFT_COUNTER_STATE 0xc1
+#define PROTOCOL_BINARY_CMD_GET_ADJUSTED_TIME       0xc2
+
 /* Sub-document API commands */
 #define PROTOCOL_BINARY_CMD_SUBDOC_GET              0xc5
 #define PROTOCOL_BINARY_CMD_SUBDOC_EXISTS           0xc6
@@ -268,16 +277,21 @@
 #define PROTOCOL_BINARY_DCP_NOOP                    0x5c
 #define PROTOCOL_BINARY_DCP_BUFFER_ACKNOWLEDGEMENT  0x5d
 #define PROTOCOL_BINARY_DCP_CONTROL                 0x5e
-#define PROTOCOL_BINARY_DCP_RESERVED4               0x5f
+#define PROTOCOL_BINARY_DCP_SYSTEM_EVENT            0x5f
 
 #define PROTOCOL_BINARY_CMD_GET_RANDOM_KEY          0xb6
 #define PROTOCOL_BINARY_CMD_SEQNO_PERSISTENCE       0xb7
+#define PROTOCOL_BINARY_CMD_GET_KEYS                0xb8
 #define PROTOCOL_BINARY_CMD_SCRUB                   0xf0
 #define PROTOCOL_BINARY_CMD_ISASL_REFRESH           0xf1
 #define PROTOCOL_BINARY_CMD_SSL_CERTS_REFRESH       0xf2
 #define PROTOCOL_BINARY_CMD_GET_CMD_TIMER           0xf3
 #define PROTOCOL_BINARY_CMD_SET_CTRL_TOKEN          0xf4
 #define PROTOCOL_BINARY_CMD_GET_CTRL_TOKEN          0xf5
+#define PROTOCOL_BINARY_CMD_RBAC_REFRESH            0xf7
+#define PROTOCOL_BINARY_CMD_DROP_PRIVILEGE          0xfb
+#define PROTOCOL_BINARY_CMD_ADJUST_TIMEOFDAY        0xfc
+#define PROTOCOL_BINARY_CMD_EWOULDBLOCK_CTL         0xfd
 #define PROTOCOL_BINARY_CMD_GET_ERROR_MAP           0xfe
 
  /* vBucket states */
@@ -313,6 +327,8 @@ static int hf_opaque = -1;
 static int hf_cas = -1;
 static int hf_ttp = -1;
 static int hf_ttr = -1;
+static int hf_flex_extras_length = -1;
+static int hf_flex_keylength = -1;
 static int hf_extras = -1;
 static int hf_extras_flags = -1;
 static int hf_extras_flags_backfill = -1;
@@ -332,6 +348,8 @@ static int hf_extras_flags_dcp_snapshot_marker_chk = -1;
 static int hf_extras_flags_dcp_snapshot_marker_ack = -1;
 static int hf_extras_flags_dcp_include_xattrs = -1;
 static int hf_extras_flags_dcp_no_value = -1;
+static int hf_extras_flags_dcp_include_delete_times = -1;
+static int hf_extras_flags_dcp_collections = -1;
 static int hf_subdoc_doc_flags = -1;
 static int hf_subdoc_doc_flags_mkdoc = -1;
 static int hf_subdoc_doc_flags_add = -1;
@@ -360,6 +378,9 @@ static int hf_extras_lock_time = -1;
 static int hf_extras_nmeta = -1;
 static int hf_extras_nru = -1;
 static int hf_extras_bytes_to_ack = -1;
+static int hf_extras_delete_time = -1;
+static int hf_extras_collection_len = -1;
+static int hf_extras_system_event_id = -1;
 static int hf_extras_pathlen = -1;
 static int hf_key = -1;
 static int hf_path = -1;
@@ -426,9 +447,20 @@ static int hf_xattr_key = -1;
 static int hf_xattr_value = -1;
 static int hf_xattrs = -1;
 
+static int hf_flex_extras = -1;
+static int hf_flex_frame = -1;
+static int hf_flex_frame_id_len = -1;
+static int hf_flex_frame_id = -1;
+static int hf_flex_frame_len = -1;
+static int hf_flex_frame_id_esc = -1;
+static int hf_flex_frame_len_esc = -1;
+static int hf_flex_frame_tracing_duration = -1;
+
 static expert_field ef_warn_shall_not_have_value = EI_INIT;
 static expert_field ef_warn_shall_not_have_extras = EI_INIT;
 static expert_field ef_warn_shall_not_have_key = EI_INIT;
+static expert_field ef_compression_error = EI_INIT;
+static expert_field ef_warn_unknown_flex_code = EI_INIT;
 
 static expert_field ei_value_missing = EI_INIT;
 static expert_field ef_warn_must_have_extras = EI_INIT;
@@ -454,10 +486,20 @@ static gint ett_hello_features = -1;
 static gint ett_datatype = -1;
 static gint ett_xattrs = -1;
 static gint ett_xattr_pair = -1;
+static gint ett_flex_frame_extras = -1;
 
 static const value_string magic_vals[] = {
-  { MAGIC_REQUEST,     "Request"  },
-  { MAGIC_RESPONSE,    "Response" },
+  { MAGIC_REQUEST,       "Request"  },
+  { MAGIC_RESPONSE,      "Response" },
+  { MAGIC_RESPONSE_FLEX, "Response with flexible framing extras" },
+  { 0, NULL }
+};
+
+#define FLEX_ID_RX_TX_DURATION 0
+#define FLEX_ID_ESCAPE 0x0F
+static const value_string flex_frame_ids[] = {
+  { FLEX_ID_RX_TX_DURATION, "Server Recv->Send duration"  },
+  { FLEX_ID_ESCAPE, "Escape"  },
   { 0, NULL }
 };
 
@@ -576,6 +618,11 @@ static const value_string opcode_vals[] = {
   { PROTOCOL_BINARY_CMD_SASL_STEP,                  "SASL Step"                },
   { PROTOCOL_BINARY_CMD_IOCTL_GET,                  "IOCTL Get"                },
   { PROTOCOL_BINARY_CMD_IOCTL_SET,                  "IOCTL Set"                },
+  { PROTOCOL_BINARY_CMD_CONFIG_VALIDATE,            "Config Validate"          },
+  { PROTOCOL_BINARY_CMD_CONFIG_RELOAD,              "Config Reload"            },
+  { PROTOCOL_BINARY_CMD_AUDIT_PUT,                  "Audit Put"                },
+  { PROTOCOL_BINARY_CMD_AUDIT_CONFIG_RELOAD,        "Audit Config Reload"      },
+  { PROTOCOL_BINARY_CMD_SHUTDOWN,                   "Shutdown"                 },
   { PROTOCOL_BINARY_CMD_RGET,                       "Range Get"                },
   { PROTOCOL_BINARY_CMD_RSET,                       "Range Set"                },
   { PROTOCOL_BINARY_CMD_RSETQ,                      "Range Set Quietly"        },
@@ -616,7 +663,7 @@ static const value_string opcode_vals[] = {
   { PROTOCOL_BINARY_DCP_NOOP,                       "DCP NOOP"                 },
   { PROTOCOL_BINARY_DCP_BUFFER_ACKNOWLEDGEMENT,     "DCP Buffer Acknowledgement"},
   { PROTOCOL_BINARY_DCP_CONTROL,                    "DCP Control"              },
-  { PROTOCOL_BINARY_DCP_RESERVED4,                  "DCP Set Reserved"         },
+  { PROTOCOL_BINARY_DCP_SYSTEM_EVENT,               "DCP System Event"         },
   { PROTOCOL_BINARY_CMD_STOP_PERSISTENCE,           "Stop Persistence"         },
   { PROTOCOL_BINARY_CMD_START_PERSISTENCE,          "Start Persistence"        },
   { PROTOCOL_BINARY_CMD_SET_PARAM,                  "Set Parameter"            },
@@ -664,6 +711,11 @@ static const value_string opcode_vals[] = {
   { PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG,         "Get Cluster Config"       },
   { PROTOCOL_BINARY_CMD_GET_RANDOM_KEY,             "Get Random Key"           },
   { PROTOCOL_BINARY_CMD_SEQNO_PERSISTENCE,          "Seqno Persistence"        },
+  { PROTOCOL_BINARY_CMD_GET_KEYS,                   "Get Keys"                 },
+  { PROTOCOL_BINARY_CMD_COLLECTIONS_SET_MANIFEST,   "Set Collection's Manifest" },
+  { PROTOCOL_BINARY_CMD_COLLECTIONS_GET_MANIFEST,   "Get Collection's Manifest" },
+  { PROTOCOL_BINARY_CMD_SET_DRIFT_COUNTER_STATE,    "Set Drift Counter State"  },
+  { PROTOCOL_BINARY_CMD_GET_ADJUSTED_TIME,          "Get Adjusted Time"        },
   { PROTOCOL_BINARY_CMD_SUBDOC_GET,                 "Subdoc Get"               },
   { PROTOCOL_BINARY_CMD_SUBDOC_EXISTS,              "Subdoc Exists"            },
   { PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD,            "Subdoc Dictionary Add"    },
@@ -683,6 +735,10 @@ static const value_string opcode_vals[] = {
   { PROTOCOL_BINARY_CMD_GET_CMD_TIMER,              "Internal Timer Control"   },
   { PROTOCOL_BINARY_CMD_SET_CTRL_TOKEN,             "Set Control Token"        },
   { PROTOCOL_BINARY_CMD_GET_CTRL_TOKEN,             "Get Control Token"        },
+  { PROTOCOL_BINARY_CMD_RBAC_REFRESH,               "RBAC Refresh"             },
+  { PROTOCOL_BINARY_CMD_DROP_PRIVILEGE,             "Drop Privilege"           },
+  { PROTOCOL_BINARY_CMD_ADJUST_TIMEOFDAY,           "Adjust Timeofday"         },
+  { PROTOCOL_BINARY_CMD_EWOULDBLOCK_CTL,            "EWOULDBLOCK Control"      },
   { PROTOCOL_BINARY_CMD_GET_ERROR_MAP,              "Get Error Map"            },
 
   /* Internally defined values not valid here */
@@ -730,7 +786,7 @@ static const int * subdoc_doc_flags[] = {
 };
 
 static const value_string feature_vals[] = {
-  {0x01, "Datatype"},
+  {0x01, "Datatype (deprecated)"},
   {0x02, "TLS"},
   {0x03, "TCP Nodelay"},
   {0x04, "Mutation Seqno"},
@@ -742,7 +798,17 @@ static const value_string feature_vals[] = {
   {0x0a, "Snappy"},
   {0x0b, "JSON"},
   {0x0c, "Duplex"},
+  {0x0d, "Clustermap Change Notification"},
+  {0x0e, "Unordered Execution"},
+  {0x0f, "Tracing"},
   {0, NULL}
+};
+
+static const value_string dcp_system_event_id_vals [] = {
+    {0, "CreateCollection"},
+    {1, "DeleteCollection"},
+    {2, "CollectionSeparatorChanged"},
+    {0, NULL}
 };
 
 static dissector_handle_t couchbase_handle;
@@ -774,15 +840,27 @@ get_couchbase_pdu_len(packet_info *pinfo _U_, tvbuff_t *tvb,
 
 /* Returns true if the specified opcode's response value is JSON. */
 static gboolean
-has_json_value(guint8 opcode)
+has_json_value(gboolean is_request, guint8 opcode)
 {
-  switch (opcode) {
-  case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG:
-  case PROTOCOL_BINARY_CMD_SUBDOC_GET:
-    return TRUE;
+  if (is_request) {
+    switch (opcode) {
+    case PROTOCOL_BINARY_CMD_AUDIT_PUT:
+      return TRUE;
 
-  default:
-    return FALSE;
+    default:
+      return FALSE;
+    }
+  } else {
+    switch (opcode) {
+    case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG:
+    case PROTOCOL_BINARY_CMD_SUBDOC_GET:
+    case PROTOCOL_BINARY_CMD_COLLECTIONS_GET_MANIFEST:
+    case PROTOCOL_BINARY_CMD_COLLECTIONS_SET_MANIFEST:
+      return TRUE;
+
+    default:
+      return FALSE;
+    }
   }
 }
 
@@ -1044,6 +1122,8 @@ dissect_extras(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
           &hf_extras_flags_dcp_connection_type,
           &hf_extras_flags_dcp_include_xattrs,
           &hf_extras_flags_dcp_no_value,
+          &hf_extras_flags_dcp_collections,
+          &hf_extras_flags_dcp_include_delete_times,
           NULL
         };
 
@@ -1157,6 +1237,12 @@ dissect_extras(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
         offset += 2;
         proto_tree_add_item(extras_tree, hf_extras_nru, tvb, offset, 1, ENC_BIG_ENDIAN);
         offset += 1;
+
+        // Add the collections_len when extlen == 32
+        if (extlen == 32) {
+          proto_tree_add_item(extras_tree, hf_extras_collection_len, tvb, offset, 1, ENC_BIG_ENDIAN);
+          offset += 1;
+        }
       } else {
         illegal = TRUE;
       }
@@ -1167,6 +1253,30 @@ dissect_extras(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     break;
 
   case PROTOCOL_BINARY_DCP_DELETION:
+    if (request) {
+      if (extlen == 18 || extlen == 21) {
+        proto_tree_add_item(extras_tree, hf_extras_by_seqno, tvb, offset, 8, ENC_BIG_ENDIAN);
+        offset += 8;
+        proto_tree_add_item(extras_tree, hf_extras_rev_seqno, tvb, offset, 8, ENC_BIG_ENDIAN);
+        offset += 8;
+
+        // Is this a delete with delete_time (21 bytes) or not (18 bytes)?
+        if (extlen == 18) {
+          proto_tree_add_item(extras_tree, hf_extras_nmeta, tvb, offset, 2, ENC_BIG_ENDIAN);
+          offset += 2;
+        } else if (extlen == 21) {
+          proto_tree_add_item(extras_tree, hf_extras_delete_time, tvb, offset, 4, ENC_BIG_ENDIAN);
+          offset += 4;
+          proto_tree_add_item(extras_tree, hf_extras_collection_len, tvb, offset, 1, ENC_BIG_ENDIAN);
+          offset += 1;
+        }
+      } else if (extlen == 0) {
+        missing = TRUE; // request with no extras
+      }
+    } else if (extlen) {
+        illegal = TRUE; // response with extras
+    }
+    break;
   case PROTOCOL_BINARY_DCP_EXPIRATION:
   case PROTOCOL_BINARY_DCP_FLUSH:
     if (extlen) {
@@ -1199,7 +1309,15 @@ dissect_extras(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
       missing = TRUE;
     }
     break;
-
+  case PROTOCOL_BINARY_DCP_SYSTEM_EVENT: {
+    if (request && extlen == 12) {
+      proto_tree_add_item(extras_tree, hf_extras_by_seqno, tvb, offset, 8, ENC_BIG_ENDIAN);
+      offset += 8;
+      proto_tree_add_item(extras_tree, hf_extras_system_event_id, tvb, offset, 4, ENC_BIG_ENDIAN);
+      offset += 4;
+    }
+    break;
+  }
   case PROTOCOL_BINARY_CMD_SUBDOC_GET:
   case PROTOCOL_BINARY_CMD_SUBDOC_EXISTS:
     dissect_subdoc_spath_required_extras(tvb, extras_tree, extlen, request,
@@ -1441,6 +1559,7 @@ dissect_key(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     case PROTOCOL_BINARY_DCP_MUTATION:
     case PROTOCOL_BINARY_DCP_DELETION:
     case PROTOCOL_BINARY_DCP_EXPIRATION:
+    case PROTOCOL_BINARY_DCP_SYSTEM_EVENT:
       /* Request must have key */
       if (request) {
         missing = TRUE;
@@ -1744,7 +1863,7 @@ dissect_value(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
       if (value_len != 8) {
         expert_add_info_format(pinfo, ti, &ef_warn_illegal_value_length, "Illegal Value length, should be 8");
       }
-    } else if (!request && has_json_value(opcode)) {
+    } else if (has_json_value(request, opcode)) {
       tvbuff_t *json_tvb;
       ti = proto_tree_add_item(tree, hf_value, tvb, offset, value_len, ENC_ASCII | ENC_NA);
       json_tvb = tvb_new_subset_length_caplen(tvb, offset, value_len, value_len);
@@ -1839,6 +1958,36 @@ dissect_value(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
       }
     } else {
       ti = proto_tree_add_item(tree, hf_value, tvb, offset, value_len, ENC_ASCII | ENC_NA);
+#ifdef HAVE_SNAPPY
+      if (datatype & DT_SNAPPY) {
+        size_t orig_size = 0;
+        snappy_status ret;
+        guchar *decompressed_buffer = NULL;
+        tvbuff_t* compressed_tvb = NULL;
+
+        ret = snappy_uncompressed_length(tvb_get_ptr(tvb, offset, -1),
+                                         tvb_captured_length_remaining(tvb, offset),
+                                         &orig_size);
+        if (ret == SNAPPY_OK) {
+          decompressed_buffer = (guchar*)wmem_alloc(pinfo->pool, orig_size);
+          ret = snappy_uncompress(tvb_get_ptr(tvb, offset, -1),
+                                  tvb_captured_length_remaining(tvb, offset),
+                                  decompressed_buffer,
+                                  &orig_size);
+          if (ret == SNAPPY_OK) {
+            compressed_tvb = tvb_new_child_real_data(tvb, decompressed_buffer, (guint32)orig_size, (guint32)orig_size);
+            add_new_data_source(pinfo, compressed_tvb, "Decompressed Data");
+            if (datatype & DT_JSON) {
+              call_dissector(json_handle, compressed_tvb, pinfo, tree);
+            }
+          } else {
+            expert_add_info_format(pinfo, ti, &ef_compression_error, "Error uncompressing snappy data");
+          }
+        } else {
+            expert_add_info_format(pinfo, ti, &ef_compression_error, "Error uncompressing snappy data");
+        }
+      }
+#endif
     }
   }
 
@@ -1917,6 +2066,101 @@ dissect_value(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
   }
 }
 
+/*
+  Add an escaped field for Flexible Framing Extras:
+  https://github.com/couchbase/kv_engine/blob/master/docs/BinaryProtocol.md
+
+  len or id can be escaped, i.e. the len/id is derived from more then 1 byte
+*/
+static guint16 add_escaped_field(tvbuff_t* tvb,
+                                 proto_tree* tree,
+                                 int hfid,
+                                 gint* offset) {
+    guint16 escaped_val = 0x0F + tvb_get_guint8(tvb, *offset);
+    char str[32];
+    g_snprintf(str, 32, "%" G_GUINT16_FORMAT , escaped_val);
+    proto_tree_add_string(tree, hfid, tvb, *offset, 1, str);
+    (*offset)++;
+    return escaped_val;
+}
+
+/*
+  Flexible Framing Extras:
+  https://github.com/couchbase/kv_engine/blob/master/docs/BinaryProtocol.md
+*/
+static void dissect_flexible_framing_extras(tvbuff_t* tvb,
+                                            packet_info* pinfo,
+                                            proto_tree* tree,
+                                            gint offset,
+                                            guint8 flex_frame_extra_len) {
+
+  proto_item* flex_item = proto_tree_add_item(tree,
+                                              hf_flex_extras,
+                                              tvb,
+                                              offset,
+                                              flex_frame_extra_len,
+                                              ENC_NA);
+
+  /* iterate until we've consumed the flex_frame_extra_len */
+  gint bytes_remaining = flex_frame_extra_len;
+  while(bytes_remaining > 0) {
+    guint8 id_and_len = tvb_get_guint8(tvb, offset);
+    /*id/len u16 as they may be escaped and derived from 2 bytes */
+    guint16 id = id_and_len >> 4;
+    guint16 len = id_and_len & 0x0F;
+
+    proto_tree* frame_tree = proto_item_add_subtree(flex_item,
+                                                    ett_flex_frame_extras);
+
+    static const gint* frame_id_len_fields[] = {
+      &hf_flex_frame_id,
+      &hf_flex_frame_len,
+      NULL
+    };
+
+    proto_item* frame = proto_tree_add_bitmask(frame_tree,
+                                               tvb,
+                                               offset,
+                                               hf_flex_frame_id_len,
+                                               ett_flex_frame_extras,
+                                               frame_id_len_fields,
+                                               ENC_BIG_ENDIAN);
+    offset++;
+    bytes_remaining--;
+
+    /* Handle escaped id and/or len, this where 0xF is reserved to mean the rest
+       of id is in the next byte (same for len)
+       Final id or len is 0xF + the next byte value*/
+    if (id == 0x0F) {
+        id = add_escaped_field(tvb, frame_tree, hf_flex_frame_id_esc, &offset);
+        bytes_remaining--;
+    }
+
+     if (len == 0x0F) {
+        len = add_escaped_field(tvb, frame_tree, hf_flex_frame_len_esc, &offset);
+        bytes_remaining--;
+    }
+
+    if (id == FLEX_ID_RX_TX_DURATION) {
+      // Decode the u16 time value into a double
+      guint16 encoded_micros = tvb_get_ntohs(tvb, offset);
+      proto_tree_add_double(frame_tree,
+                            hf_flex_frame_tracing_duration,
+                            tvb,
+                            offset,
+                            2,
+                            pow(encoded_micros, 1.74) / 2);
+    } else {
+        expert_add_info_format(pinfo,
+                               frame,
+                               &ef_warn_unknown_flex_code,
+                               "Unknown flexible ID");
+    }
+    offset += len;
+    bytes_remaining -= len;
+  }
+}
+
 static gboolean
 is_xerror(guint8 datatype, guint16 status)
 {
@@ -1932,7 +2176,7 @@ dissect_couchbase(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* dat
   proto_tree *couchbase_tree;
   proto_item *couchbase_item, *ti;
   gint        offset = 0;
-  guint8      magic, opcode, extlen, datatype;
+  guint8      magic, opcode, extlen, datatype, flex_frame_extras = 0;
   guint16     keylen, status = 0, vbucket;
   guint32     bodylen, value_len;
   gboolean    request;
@@ -1969,9 +2213,21 @@ dissect_couchbase(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* dat
                   val_to_str(magic, magic_vals, "Unknown magic (0x%x)"),
                   opcode);
 
-  keylen = tvb_get_ntohs(tvb, offset);
-  proto_tree_add_item(couchbase_tree, hf_keylength, tvb, offset, 2, ENC_BIG_ENDIAN);
-  offset += 2;
+  /* A response now has two magic values */
+  if (magic == MAGIC_RESPONSE_FLEX) {
+    /* 2 separate bytes for the flex_extras and keylen */
+    flex_frame_extras = tvb_get_guint8(tvb, offset);
+    proto_tree_add_item(couchbase_tree, hf_flex_extras_length, tvb, offset, 1, ENC_BIG_ENDIAN);
+    offset++;
+    keylen = tvb_get_guint8(tvb, offset);
+    proto_tree_add_item(couchbase_tree, hf_flex_keylength, tvb, offset, 1, ENC_BIG_ENDIAN);
+    offset++;
+  } else {
+    /* 2 bytes for the key */
+    keylen = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_item(couchbase_tree, hf_keylength, tvb, offset, 2, ENC_BIG_ENDIAN);
+    offset += 2;
+  }
 
   extlen = tvb_get_guint8(tvb, offset);
   proto_tree_add_item(couchbase_tree, hf_extlength, tvb, offset, 1, ENC_BIG_ENDIAN);
@@ -1981,7 +2237,8 @@ dissect_couchbase(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* dat
   proto_tree_add_bitmask(couchbase_tree, tvb, offset, hf_datatype, ett_datatype, datatype_vals, ENC_BIG_ENDIAN);
   offset += 1;
 
-  if (magic & 0x01) {    /* We suppose this is a response, even when unknown magic byte */
+  /* We suppose this is a response, even when unknown magic byte */
+  if (magic & 0x01 || magic == MAGIC_RESPONSE_FLEX) {
     request = FALSE;
     status = tvb_get_ntohs(tvb, offset);
     ti = proto_tree_add_item(couchbase_tree, hf_status, tvb, offset, 2, ENC_BIG_ENDIAN);
@@ -2002,7 +2259,7 @@ dissect_couchbase(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* dat
   offset += 2;
 
   bodylen = tvb_get_ntohl(tvb, offset);
-  value_len = bodylen - extlen - keylen;
+  value_len = bodylen - extlen - keylen - flex_frame_extras;
   ti = proto_tree_add_uint(couchbase_tree, hf_value_length, tvb, offset, 0, value_len);
   PROTO_ITEM_SET_GENERATED(ti);
 
@@ -2022,6 +2279,12 @@ dissect_couchbase(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* dat
   } else {
     proto_tree_add_item(couchbase_tree, hf_cas, tvb, offset, 8, ENC_BIG_ENDIAN);
     offset += 8;
+  }
+
+  // Flex frame extras should be dissected for success and errors
+  if (flex_frame_extras) {
+    dissect_flexible_framing_extras(tvb, pinfo, couchbase_tree, offset, flex_frame_extras);
+    offset += flex_frame_extras;
   }
 
   if (status == 0) {
@@ -2126,6 +2389,17 @@ proto_register_couchbase(void)
     { &hf_cas, { "CAS", "couchbase.cas", FT_UINT64, BASE_HEX, NULL, 0x0, "Data version check", HFILL } },
     { &hf_ttp, { "Time to Persist", "couchbase.ttp", FT_UINT32, BASE_DEC, NULL, 0x0, "Approximate time needed to persist the key (milliseconds)", HFILL } },
     { &hf_ttr, { "Time to Replicate", "couchbase.ttr", FT_UINT32, BASE_DEC, NULL, 0x0, "Approximate time needed to replicate the key (milliseconds)", HFILL } },
+    { &hf_flex_keylength, { "Key Length", "couchbase.key.length", FT_UINT8, BASE_DEC, NULL, 0x0, "Length in bytes of the text key that follows the command extras", HFILL } },
+    { &hf_flex_extras_length, { "Flexible Framing Extras Length", "couchbase.flex_extras", FT_UINT8, BASE_DEC, NULL, 0x0, "Length in bytes of the flexible framing extras that follows the response header", HFILL } },
+    { &hf_flex_extras, {"Flexible Framing Extras", "couchbase.flex_frame_extras", FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL } },
+    { &hf_flex_frame, {"Flexible Frame", "couchbase.flex_frame.frame", FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL } },
+    { &hf_flex_frame_id_len, {"Flexible Frame Byte0", "couchbase.flex_frame.byte0", FT_UINT8, BASE_DEC, NULL, 0x0, NULL, HFILL } },
+    { &hf_flex_frame_id, {"Flexible Frame ID", "couchbase.flex_frame.frame.id", FT_UINT8, BASE_DEC, VALS(flex_frame_ids), 0xF0, NULL, HFILL } },
+    { &hf_flex_frame_id_esc, {"Flexible Frame ID (escaped)", "couchbase.flex_frame.frame.id", FT_UINT16, BASE_DEC, VALS(flex_frame_ids), 0xF0, NULL, HFILL } },
+    { &hf_flex_frame_len, {"Flexible Frame Len", "couchbase.flex_frame.frame.len", FT_UINT8, BASE_DEC, NULL, 0x0F, NULL, HFILL } },
+    { &hf_flex_frame_len_esc, {"Flexible Frame Len (escaped)", "couchbase.flex_frame.frame.len", FT_UINT16, BASE_DEC, NULL, 0x0F, NULL, HFILL } },
+    { &hf_flex_frame_tracing_duration, {"Server Recv->Send duration", "couchbase.flex_frame.frame.duration", FT_DOUBLE, BASE_NONE|BASE_UNIT_STRING, &units_microseconds, 0, NULL, HFILL } },
+
     { &hf_extras, { "Extras", "couchbase.extras", FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL } },
     { &hf_extras_flags, { "Flags", "couchbase.extras.flags", FT_UINT32, BASE_HEX, NULL, 0x0, NULL, HFILL } },
     { &hf_extras_flags_backfill, { "Backfill Age", "couchbase.extras.flags.backfill", FT_BOOLEAN, 16, TFS(&tfs_set_notset), 0x01, NULL, HFILL } },
@@ -2160,6 +2434,8 @@ proto_register_couchbase(void)
     { &hf_extras_flags_dcp_snapshot_marker_ack, {"Ack", "couchbase.extras.flags.dcp_snapshot_marker_ack", FT_BOOLEAN, 16, TFS(&tfs_set_notset), 0x08, NULL, HFILL } },
     { &hf_extras_flags_dcp_include_xattrs, {"Include XATTRs", "couchbase.extras.flags.dcp_include_xattrs", FT_BOOLEAN, 16, TFS(&tfs_set_notset), 0x04, "Indicates the server should include documents XATTRs", HFILL} },
     { &hf_extras_flags_dcp_no_value, {"No Value", "couchbase.extras.flags.dcp_no_value", FT_BOOLEAN, 16, TFS(&tfs_set_notset), 0x08, "Indicates the server should strip off values", HFILL} },
+    { &hf_extras_flags_dcp_collections, {"Enable Collections", "couchbase.extras.flags.dcp_collections", FT_BOOLEAN, 16, TFS(&tfs_set_notset), 0x10, "Indicates the server should stream collections", HFILL} },
+    { &hf_extras_flags_dcp_include_delete_times, {"Include Delete Times", "couchbase.extras.flags.dcp_include_delete_times", FT_BOOLEAN, 16, TFS(&tfs_set_notset), 0x20, "Indicates the server should include delete timestamps", HFILL} },
     { &hf_extras_seqno, { "Sequence number", "couchbase.extras.seqno", FT_UINT32, BASE_HEX, NULL, 0x0, NULL, HFILL } },
     { &hf_extras_opaque, { "Opaque (vBucket identifier)", "couchbase.extras.opaque", FT_UINT32, BASE_HEX, NULL, 0x0, NULL, HFILL } },
     { &hf_extras_reserved, { "Reserved", "couchbase.extras.reserved", FT_UINT32, BASE_HEX, NULL, 0x0, NULL, HFILL } },
@@ -2174,6 +2450,9 @@ proto_register_couchbase(void)
     { &hf_extras_nmeta, { "nmeta", "couchbase.extras.nmeta", FT_UINT32, BASE_HEX, NULL, 0x0, NULL, HFILL } },
     { &hf_extras_nru, { "nru", "couchbase.extras.nru", FT_UINT16, BASE_HEX, NULL, 0x0, NULL, HFILL } },
     { &hf_extras_bytes_to_ack, { "bytes_to_ack", "couchbase.extras.bytes_to_ack", FT_UINT32, BASE_DEC, NULL, 0x0, NULL, HFILL } },
+    { &hf_extras_delete_time, { "delete_time", "couchbase.extras.delete_time", FT_UINT32, BASE_DEC, NULL, 0x0, NULL, HFILL } },
+    { &hf_extras_collection_len, { "collection_len", "couchbase.extras.collection_len", FT_UINT8, BASE_DEC, NULL, 0x0, NULL, HFILL } },
+    { &hf_extras_system_event_id, { "system_event_id", "couchbase.extras.system_event_id", FT_UINT32, BASE_DEC, VALS(dcp_system_event_id_vals), 0x0, NULL, HFILL } },
 
     { &hf_failover_log, { "Failover Log", "couchbase.dcp.failover_log", FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL } },
     { &hf_failover_log_size, { "Size", "couchbase.dcp.failover_log.size", FT_UINT32, BASE_DEC, NULL, 0x0, NULL, HFILL } },
@@ -2258,12 +2537,16 @@ proto_register_couchbase(void)
     { &ef_warn_unknown_opcode, { "couchbase.warn.unknown_opcode", PI_UNDECODED, PI_WARN, "Unknown opcode", EXPFILL }},
     { &ef_note_status_code, { "couchbase.note.status_code", PI_RESPONSE_CODE, PI_NOTE, "Status", EXPFILL }},
     { &ef_separator_not_found, { "couchbase.warn.separator_not_found", PI_UNDECODED, PI_WARN, "Separator not found", EXPFILL }},
-    { &ef_illegal_value, { "couchbase.warn.illegal_value", PI_UNDECODED, PI_WARN, "Illegal value for command", EXPFILL }}
+    { &ef_illegal_value, { "couchbase.warn.illegal_value", PI_UNDECODED, PI_WARN, "Illegal value for command", EXPFILL }},
+    { &ef_compression_error, { "couchbase.error.compression", PI_UNDECODED, PI_WARN, "Compression error", EXPFILL }},
+    { &ef_warn_unknown_flex_code, { "couchbase.warn.unknown_flexible_frame_id", PI_UNDECODED, PI_WARN, "Flexible Response ID warning", EXPFILL }}
+
   };
 
   static gint *ett[] = {
     &ett_couchbase,
     &ett_extras,
+    &ett_flex_frame_extras,
     &ett_extras_flags,
     &ett_observe,
     &ett_failover_log,

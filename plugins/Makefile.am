@@ -21,25 +21,28 @@
 
 -include Custom.make
 
-SUBDIRS = $(_CUSTOM_SUBDIRS_) \
-	docsis \
-	ethercat \
-	gryphon \
-	irda \
-	mate \
-	opcua \
-	profinet \
-	stats_tree \
-	transum \
-	unistim \
-	wimax \
-	wimaxasncp \
-	wimaxmacphy
+SUBDIRS = \
+	$(_CUSTOM_SUBDIRS_) \
+	epan/ethercat		\
+	epan/gryphon		\
+	epan/irda		\
+	epan/mate		\
+	epan/opcua		\
+	epan/profinet		\
+	epan/stats_tree		\
+	epan/transum		\
+	epan/unistim		\
+	epan/wimax		\
+	epan/wimaxasncp		\
+	epan/wimaxmacphy	\
+	wiretap/usbdump		\
+	codecs/l16_mono
 
 EXTRA_DIST = \
 	$(_CUSTOM_EXTRA_DIST_) \
-	Custom.make.example \
-	Custom.m4.example
+	Custom.make.example	\
+	Custom.m4.example	\
+	plugin.rc.in
 
 checkapi:
 	for i in $(SUBDIRS); do \

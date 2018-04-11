@@ -14,19 +14,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -335,7 +323,7 @@ static const value_string charsetreg_vals [] = {
 #define ub_telephone_number            32
 
 /*--- End of included file: packet-p22-val.h ---*/
-#line 79 "./asn1/p22/packet-p22-template.c"
+#line 67 "./asn1/p22/packet-p22-template.c"
 
 
 /*--- Included file: packet-p22-hf.c ---*/
@@ -720,7 +708,7 @@ static int hf_p22_RecipientSecurityRequest_ipn_non_repudiation = -1;
 static int hf_p22_RecipientSecurityRequest_ipn_proof = -1;
 
 /*--- End of included file: packet-p22-hf.c ---*/
-#line 81 "./asn1/p22/packet-p22-template.c"
+#line 69 "./asn1/p22/packet-p22-template.c"
 
 /* Initialize the subtree pointers */
 static gint ett_p22 = -1;
@@ -854,7 +842,7 @@ static gint ett_p22_T_body_part_token_choice = -1;
 static gint ett_p22_T_choice = -1;
 
 /*--- End of included file: packet-p22-ett.c ---*/
-#line 85 "./asn1/p22/packet-p22-template.c"
+#line 73 "./asn1/p22/packet-p22-template.c"
 
 
 /*--- Included file: packet-p22-fn.c ---*/
@@ -4671,7 +4659,7 @@ static int dissect_ForwardedContentToken_PDU(tvbuff_t *tvb _U_, packet_info *pin
 
 
 /*--- End of included file: packet-p22-fn.c ---*/
-#line 87 "./asn1/p22/packet-p22-template.c"
+#line 75 "./asn1/p22/packet-p22-template.c"
 
 /*
 * Dissect P22 PDUs inside a PPDU.
@@ -6217,7 +6205,7 @@ void proto_register_p22(void) {
         NULL, HFILL }},
 
 /*--- End of included file: packet-p22-hfarr.c ---*/
-#line 120 "./asn1/p22/packet-p22-template.c"
+#line 108 "./asn1/p22/packet-p22-template.c"
   };
 
   /* List of subtrees */
@@ -6353,7 +6341,7 @@ void proto_register_p22(void) {
     &ett_p22_T_choice,
 
 /*--- End of included file: packet-p22-ettarr.c ---*/
-#line 126 "./asn1/p22/packet-p22-template.c"
+#line 114 "./asn1/p22/packet-p22-template.c"
   };
 
   /* Register protocol */
@@ -6473,7 +6461,7 @@ void proto_reg_handoff_p22(void) {
 
 
 /*--- End of included file: packet-p22-dis-tab.c ---*/
-#line 142 "./asn1/p22/packet-p22-template.c"
+#line 130 "./asn1/p22/packet-p22-template.c"
 
   register_ber_oid_dissector("2.6.1.10.0", dissect_p22, proto_p22, "InterPersonal Message (1984)");
   register_ber_oid_dissector("2.6.1.10.1", dissect_p22, proto_p22, "InterPersonal Message (1988)");

@@ -6,19 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -1249,6 +1237,8 @@ rlc_is_duplicate(enum rlc_mode mode, packet_info *pinfo, guint16 seq,
     struct rlc_seqlist  lookup, *list;
     struct rlc_seq      seq_item, *seq_new;
     guint16 snmod;
+    nstime_t delta;
+    gboolean is_duplicate,is_unseen;
 
     if (rlc_channel_assign(&lookup.ch, mode, pinfo, atm) == -1)
         return FALSE;
@@ -1274,26 +1264,39 @@ rlc_is_duplicate(enum rlc_mode mode, packet_info *pinfo, guint16 seq,
         }
     }
 
+    is_duplicate = FALSE;
+    is_unseen = TRUE;
     element = g_list_find_custom(list->list, &seq_item, rlc_cmp_seq);
-    if (element) {
+    while(element) {
+        /* Check if this is a different frame (by comparing frame numbers) which arrived less than */
+        /* RLC_RETRANSMISSION_TIMEOUT seconds ago */
         seq_new = (struct rlc_seq *)element->data;
-        if (seq_new->frame_num != seq_item.frame_num) {
-            nstime_t delta;
+        if (seq_new->frame_num < seq_item.frame_num) {
             nstime_delta(&delta, &pinfo->abs_ts, &seq_new->arrival);
             if (delta.secs < RLC_RETRANSMISSION_TIMEOUT) {
-                if (original)
+                /* This is a duplicate. */
+                if (original) {
+                    /* Save the frame number where our sequence number was previously seen */
                     *original = seq_new->frame_num;
-                return TRUE;
+                }
+                is_duplicate = TRUE;
             }
-            return FALSE;
         }
-        return FALSE; /* we revisit the seq that was already seen */
+        else if (seq_new->frame_num == seq_item.frame_num) {
+            /* Check if our frame is already in the list and this is a secondary check.*/
+            /* in this case raise a flag so the frame isn't entered more than once to the list */
+            is_unseen = FALSE;
+        }
+        element = g_list_find_custom(element->next, &seq_item, rlc_cmp_seq);
     }
-    seq_new = (struct rlc_seq *)wmem_alloc0(wmem_file_scope(), sizeof(struct rlc_seq));
-    *seq_new = seq_item;
-    seq_new->arrival = pinfo->abs_ts;
-    list->list = g_list_append(list->list, seq_new); /* insert in order of arrival */
-    return FALSE;
+    if(is_unseen) {
+        /* Add to list for the first time this frame is checked */
+        seq_new = (struct rlc_seq *)wmem_alloc0(wmem_file_scope(), sizeof(struct rlc_seq));
+        *seq_new = seq_item;
+        seq_new->arrival = pinfo->abs_ts;
+        list->list = g_list_append(list->list, seq_new); /* insert in order of arrival */
+    }
+    return is_duplicate;
 }
 
 static void
@@ -1381,7 +1384,7 @@ translate_hex_key(gchar * char_key){
     int i,j;
     guint8 * key_in;
 
-    key_in = g_malloc0(sizeof(guint8)*16);
+    key_in = wmem_alloc0(wmem_packet_scope(), sizeof(guint8)*16);
     j= (int)(strlen(char_key)/2)-1;
     /*Translate "hex-string" into a byte aligned block */
     for(i = (int)strlen(char_key); i> 0; i-=2 ){
@@ -1419,7 +1422,6 @@ rlc_decipher_tvb(tvbuff_t *tvb _U_, packet_info *pinfo, guint32 counter _U_,
     return NULL;
 #else
 rlc_decipher_tvb(tvbuff_t *tvb, packet_info *pinfo, guint32 counter, guint8 rbid, gboolean dir, guint8 header_size) {
-    guint i;
     guint8* out=NULL,*key_in = NULL;
     tvbuff_t *t;
 
@@ -1429,25 +1431,15 @@ rlc_decipher_tvb(tvbuff_t *tvb, packet_info *pinfo, guint32 counter, guint8 rbid
     memcpy(out,global_rlc_kasumi_key,strlen(global_rlc_kasumi_key));    /*Copy from prefrence const pointer*/
     key_in = translate_hex_key(out);    /*Translation*/
 
-    /*Location for decrypted data*/
-    out = g_malloc( tvb_captured_length(tvb) );
+    /*Location for decrypted data & original RLC header*/
+    out = tvb_memdup(pinfo->pool, tvb, 0, tvb_captured_length(tvb));
 
-    /*Build data input but don't send the header*/
-    for(i = 0; i< tvb_captured_length(tvb)-header_size; i++ ){
-        out[i+header_size] = tvb_get_guint8(tvb, header_size+i);
-    }
-    /*Call KASUMI confidentiality function, note that rbid is zero indexed*/
+    /*Call f8 confidentiality function, note that rbid is zero indexed*/
     f8( key_in, counter, rbid-1, dir, &out[header_size], (tvb_captured_length(tvb)-header_size)*8 );
-
-    /*Restore header in tvb*/
-    for (i = 0; i < header_size; i++) {
-        out[i] = tvb_get_guint8(tvb, i);
-    }
 
     /*Create new tvb.*/
     t = tvb_new_real_data(out,tvb_captured_length(tvb), tvb_reported_length(tvb));
-    /*add_new_data_source(pinfo, tvb, "Data enciphered");*/
-    add_new_data_source(pinfo, t, "Deciphered data");
+    add_new_data_source(pinfo, t, "Deciphered RLC");
     return t;
 #endif /* HAVE_UMTS_KASUMI */
 }
@@ -1479,7 +1471,7 @@ is_ciphered_according_to_rrc(packet_info *pinfo, fp_info *fpinf, rlc_info *rlcin
     ciphering_info =  (rrc_ciphering_info *)g_tree_lookup(rrc_ciph_info_tree, GINT_TO_POINTER((gint)ueid));
     if(ciphering_info != NULL) {
         rbid = rlcinf->rbid[cur_tb];
-        direction = fpinf->is_uplink ? 1 : 0;
+        direction = fpinf->is_uplink ? P2P_DIR_UL : P2P_DIR_DL;
         security_mode_frame_num = ciphering_info->setup_frame[direction];
         ciphering_begin_seq = ciphering_info->seq_no[rbid][direction];
         /* Making sure the rrc security message's frame number makes sense */
@@ -1541,7 +1533,7 @@ rlc_decipher(tvbuff_t *tvb, packet_info * pinfo, proto_tree * tree, fp_info * fp
     guint8 ext;
     int ciphered_data_hf;
 
-    indx = fpinf->is_uplink ? 1 : 0;
+    indx = fpinf->is_uplink ? P2P_DIR_UL : P2P_DIR_DL;
     pos = fpinf->cur_tb;
     if (mode ==RLC_UM) {
         header_size = 1;

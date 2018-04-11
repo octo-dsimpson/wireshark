@@ -59,6 +59,7 @@ WSUTIL_PUBLIC_INCLUDES = \
 	g711.h			\
 	glib-compat.h		\
 	inet_addr.h		\
+	inet_ipv4.h		\
 	inet_ipv6.h		\
 	interface.h		\
 	jsmn.h			\
@@ -67,6 +68,7 @@ WSUTIL_PUBLIC_INCLUDES = \
 	os_version_info.h	\
 	pint.h			\
 	plugins.h		\
+	pow2.h			\
 	privileges.h		\
 	processes.h		\
 	report_message.h	\
@@ -85,6 +87,7 @@ WSUTIL_PUBLIC_INCLUDES = \
 	ws_cpuid.h		\
 	ws_mempbrk.h		\
 	ws_mempbrk_int.h	\
+	ws_pipe.h		\
 	ws_printf.h		\
 	wsjsmn.h		\
 	wsgcrypt.h		\
@@ -121,7 +124,6 @@ libwsutil_sse42_la_CFLAGS = $(AM_CFLAGS) $(CFLAGS_SSE42)
 
 libwsutil_la_SOURCES = \
 	adler32.c		\
-	airpdcap_wep.c		\
 	base32.c		\
 	base64.c		\
 	bitswap.c		\
@@ -139,6 +141,7 @@ libwsutil_la_SOURCES = \
 	crc16.c			\
 	crc16-plain.c		\
 	crc32.c			\
+	dot11decrypt_wep.c	\
 	eax.c			\
 	filesystem.c		\
 	frequency-utils.c	\
@@ -150,7 +153,6 @@ libwsutil_la_SOURCES = \
 	mpeg-audio.c		\
 	nstime.c		\
 	os_version_info.c	\
-	plugins.c		\
 	privileges.c		\
 	report_message.c	\
 	rsa.c			\
@@ -163,9 +165,14 @@ libwsutil_la_SOURCES = \
 	type_util.c		\
 	unicode-utils.c		\
 	ws_mempbrk.c		\
+	ws_pipe.c		\
 	wsgcrypt.c		\
 	wsjsmn.c		\
 	xtea.c
+
+if HAVE_PLUGINS
+libwsutil_la_SOURCES += plugins.c
+endif
 
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 libwsutil_la_LDFLAGS = -version-info 0:0:0 @LDFLAGS_SHAREDLIB@
@@ -191,17 +198,10 @@ EXTRA_DIST = \
 	file_util.h		\
 	getopt_long.c		\
 	getopt_long.h		\
-	popcount.c		\
-	popcount.h		\
 	strptime.c		\
 	strptime.h		\
 	win32-utils.c		\
 	win32-utils.h
-
-CLEANFILES = \
-	libwsutil.a	\
-	libwsutil.la	\
-	*~
 
 checkapi:
 	$(PERL) $(top_srcdir)/tools/checkAPIs.pl -g termoutput -build \

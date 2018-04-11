@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -27,9 +15,7 @@
 #include <epan/packet.h>
 #include <epan/expert.h>
 #include <epan/prefs.h>
-#include <epan/uat.h>
 #include <epan/conversation.h>
-#include <epan/addr_resolv.h>
 #include <epan/proto_data.h>
 
 #include <wsutil/crc7.h> /* For FP data header and control frame CRC. */
@@ -54,10 +40,6 @@
  */
 void proto_register_fp(void);
 void proto_reg_handoff_fp(void);
-
-
-#define UMTS_FP_IPV4 1
-#define UMTS_FP_IPV6 2
 
 /* Initialize the protocol and registered fields. */
 
@@ -261,28 +243,6 @@ static gboolean preferences_payload_checksum = TRUE;
 static gboolean preferences_header_checksum = TRUE;
 static gboolean preferences_track_paging_indications = TRUE;
 
-#define UMTS_FP_USE_UAT 1
-
-#ifdef UMTS_FP_USE_UAT
-/* UAT entry structure. */
-typedef struct {
-   guint8 protocol;
-   gchar *srcIP;
-   guint16 src_port;
-   gchar *dstIP;
-   guint16 dst_port;
-   guint8 interface_type;
-   guint8 division;
-   guint8 rlc_mode;
-   guint8 channel_type;
-} uat_umts_fp_ep_and_ch_record_t;
-
-static uat_umts_fp_ep_and_ch_record_t *uat_umts_fp_ep_and_ch_records = NULL;
-
-static uat_t *umts_fp_uat = NULL;
-static guint  num_umts_fp_ep_and_ch_items = 0;
-
-#endif /* UMTS_FP_USE_UAT */
 /* E-DCH (T1) channel header information */
 struct edch_t1_subframe_info
 {
@@ -2914,8 +2874,8 @@ dissect_e_dch_channel_info(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
                         tvbuff_t *next_tvb;
                         pinfo->fd->subnum = macd_idx; /* set subframe number to current TB */
                         /* create new TVB and pass further on */
-                        next_tvb = tvb_new_subset_length_caplen(tvb, offset + bit_offset/8,
-                                ((bit_offset % 8) + size + 7) / 8, -1);
+                        next_tvb = tvb_new_subset_length(tvb, offset + bit_offset/8,
+                                ((bit_offset % 8) + size + 7) / 8);
 
 
                         /*This was all previously stored in [0] rather than [macd_idx] and cur_tb wasn't updated!*/
@@ -3931,14 +3891,14 @@ check_header_crc_for_heur(tvbuff_t *tvb, guint16 header_length)
 {
     guint8 crc = 0;
     guint8 calc_crc = 0;
-    guint8 * data = NULL;
+    const guint8 * data = NULL;
 
     if (header_length > tvb_captured_length(tvb))
         return FALSE;
 
     crc = tvb_get_guint8(tvb, 0) >> 1;
     /* Get data of header excluding the first byte */
-    data = (guint8 *)tvb_get_ptr(tvb, 1, header_length - 1);
+    data = tvb_get_ptr(tvb, 1, header_length - 1);
 
     calc_crc = crc7update(0, data, header_length - 1);
     calc_crc = crc7finalize(calc_crc);
@@ -3956,7 +3916,7 @@ check_payload_crc_for_heur(tvbuff_t *tvb, guint16 header_length)
     guint16 calc_crc = 0;
     guint16 payload_index;
     guint16 payload_length;
-    guint8 *data = NULL;
+    const guint8 *data = NULL;
 
     reported_length = tvb_reported_length(tvb);
     if (reported_length < 2 || reported_length > tvb_captured_length(tvb)) {
@@ -3968,7 +3928,7 @@ check_payload_crc_for_heur(tvbuff_t *tvb, guint16 header_length)
 
     payload_index = header_length; /* payload first index is the same as the header length */
     payload_length = (reported_length - payload_index) - 2;
-    data = (guint8 *)tvb_get_ptr(tvb, payload_index, payload_length);
+    data = tvb_get_ptr(tvb, payload_index, payload_length);
     calc_crc = crc16_8005_noreflect_noxor(data, payload_length);
 
     return calc_crc == crc;
@@ -3986,12 +3946,12 @@ generate_ue_id_for_heur(packet_info *pinfo)
         /* srcXor: [ ------- Source Address ------- ] (4 bytes)*/
         /*                         XOR                         */
         /*         [  Source Port  ][  Source Port  ] (4 bytes)*/
-        int srcXor = *((guint32*)pinfo->src.data) ^ ((pinfo->srcport << 16) | (pinfo->srcport));
+        int srcXor = *((const guint32*)pinfo->src.data) ^ ((pinfo->srcport << 16) | (pinfo->srcport));
 
         /* dstXor: [ ---- Destination  Address ---- ] (4 bytes)*/
         /*                         XOR                         */
         /*         [ - Dest Port - ][ - Dest Port - ] (4 bytes)*/
-        int dstXor = *((guint32*)pinfo->dst.data) ^ ((pinfo->destport << 16) | (pinfo->destport));
+        int dstXor = *((const guint32*)pinfo->dst.data) ^ ((pinfo->destport << 16) | (pinfo->destport));
         return srcXor ^ dstXor;
     }
     else {
@@ -4037,26 +3997,26 @@ set_both_sides_umts_fp_conv_data(packet_info *pinfo, umts_fp_conversation_info_t
 
     /* Finding or creating conversation for the way the packet is heading */
     packet_direction_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-        pinfo->ptype,
+        conversation_pt_to_endpoint_type(pinfo->ptype),
         pinfo->destport, pinfo->srcport, NO_ADDR_B);
 
     if (packet_direction_conv == NULL) {
         /* Conversation does not exist yet, creating one now. */
         packet_direction_conv = conversation_new(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-            pinfo->ptype,
+            conversation_pt_to_endpoint_type(pinfo->ptype),
             pinfo->destport, pinfo->srcport, NO_ADDR_B);
     }
     conversation_add_proto_data(packet_direction_conv, proto_fp, umts_fp_conversation_info);
 
     /* Finding or creating conversation for the other side */
     other_direction_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_src, &pinfo->net_dst,
-        pinfo->ptype,
+        conversation_pt_to_endpoint_type(pinfo->ptype),
         pinfo->srcport, pinfo->destport, NO_ADDR_B);
 
     if (other_direction_conv == NULL) {
         /* Conversation does not exist yet, creating one now. */
         other_direction_conv = conversation_new(pinfo->num, &pinfo->net_src, &pinfo->net_dst,
-            pinfo->ptype,
+            conversation_pt_to_endpoint_type(pinfo->ptype),
             pinfo->srcport, pinfo->destport, NO_ADDR_B);
     }
     conversation_add_proto_data(other_direction_conv, proto_fp, umts_fp_conversation_info);
@@ -4075,7 +4035,7 @@ heur_dissect_fp_dcch_over_dch(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tre
 
     /* Trying to find existing conversation */
     p_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-        pinfo->ptype,
+        conversation_pt_to_endpoint_type(pinfo->ptype),
         pinfo->destport, pinfo->srcport, NO_ADDR_B);
 
     if (p_conv != NULL) {
@@ -4130,7 +4090,7 @@ heur_dissect_fp_dcch_over_dch(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tre
         /* the conversation must be created here if it doesn't exist yet*/
         if (p_conv == NULL) {
             conversation_new(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-                pinfo->ptype,
+                conversation_pt_to_endpoint_type(pinfo->ptype),
                 pinfo->destport, pinfo->srcport, NO_ADDR_B);
         }
         return FALSE;
@@ -4201,7 +4161,7 @@ heur_dissect_fp_fach1(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void 
 
     /* Finding or creating conversation */
     p_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-        pinfo->ptype,
+        conversation_pt_to_endpoint_type(pinfo->ptype),
         pinfo->destport, pinfo->srcport, NO_ADDR_B);
 
     if (p_conv != NULL) {
@@ -4311,7 +4271,7 @@ heur_dissect_fp_fach2(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void 
 
     /* Finding or creating conversation */
     p_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-        pinfo->ptype,
+        conversation_pt_to_endpoint_type(pinfo->ptype),
         pinfo->destport, pinfo->srcport, NO_ADDR_B);
 
     if (p_conv != NULL) {
@@ -4426,7 +4386,7 @@ heur_dissect_fp_rach(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *
 
     /* Finding or creating conversation */
     p_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-        pinfo->ptype,
+        conversation_pt_to_endpoint_type(pinfo->ptype),
         pinfo->destport, pinfo->srcport, NO_ADDR_B);
 
     if (p_conv != NULL) {
@@ -4550,7 +4510,7 @@ heur_dissect_fp_pch(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *d
 
     /* Finding or creating conversation */
     p_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-        pinfo->ptype,
+        conversation_pt_to_endpoint_type(pinfo->ptype),
         pinfo->destport, pinfo->srcport, NO_ADDR_B);
 
     if (p_conv != NULL) {
@@ -4736,7 +4696,7 @@ heur_dissect_fp_hsdsch_type_1(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tre
 
     /* Trying to find existing conversation */
     p_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-        pinfo->ptype,
+        conversation_pt_to_endpoint_type(pinfo->ptype),
         pinfo->destport, pinfo->srcport, NO_ADDR_B);
 
     if (p_conv != NULL) {
@@ -4867,7 +4827,7 @@ heur_dissect_fp_hsdsch_type_2(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tre
 
     /* Trying to find existing conversation */
     p_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-        pinfo->ptype,
+        conversation_pt_to_endpoint_type(pinfo->ptype),
         pinfo->destport, pinfo->srcport, NO_ADDR_B);
 
     if (p_conv != NULL) {
@@ -5026,7 +4986,7 @@ heur_dissect_fp_unknown_format(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tr
 
     /* Trying to find existing conversation */
     p_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-        pinfo->ptype,
+        conversation_pt_to_endpoint_type(pinfo->ptype),
         pinfo->destport, pinfo->srcport, NO_ADDR_B);
 
     /* Check if FP Conversation Info is attached */
@@ -5165,10 +5125,9 @@ make_fake_lchid(packet_info *pinfo _U_, gint trchld)
     return fake_map[trchld];
 }
 
-/* Figures the best "UE ID" to use in RLC reassembly logic */
-static guint32 get_ue_id_from_conv(umts_fp_conversation_info_t *p_conv_data)
+/* Tries to resolve the U-RNTI of a channel user based on info in the fp conv info */
+static void fp_conv_resolve_urnti(umts_fp_conversation_info_t *p_conv_data)
 {
-    guint32 user_identity;
     /* Trying to resolve the U-RNTI of the user if missing */
     /* Resolving based on the 'C-RNC Communication Context' field found in NBAP */
     if (!p_conv_data->urnti && p_conv_data->com_context_id != 0) {
@@ -5177,6 +5136,12 @@ static guint32 get_ue_id_from_conv(umts_fp_conversation_info_t *p_conv_data)
             p_conv_data->urnti = GPOINTER_TO_UINT(mapped_urnti);
         }
     }
+}
+
+/* Figures the best "UE ID" to use in RLC reassembly logic */
+static guint32 get_ue_id_from_conv(umts_fp_conversation_info_t *p_conv_data)
+{
+    guint32 user_identity;
     /* Choosing RLC 'UE ID': */
     /* 1. Preferring the U-RNTI if attached */
     /* 2. Fallback - Using the 'C-RNC Communication Context' used in NBAP for this user */
@@ -5234,6 +5199,9 @@ fp_set_per_packet_inf_from_conv(conversation_t *p_conv,
     fpi->destport = pinfo->destport;
 
     fpi->com_context_id = p_conv_data->com_context_id;
+    if(!p_conv_data->urnti) {
+        fp_conv_resolve_urnti(p_conv_data);
+    }
     fpi->urnti = p_conv_data->urnti;
 
     if (pinfo->link_dir == P2P_DIR_UL) {
@@ -5570,7 +5538,7 @@ dissect_fp_common(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
     /* Check if we have conversation info */
     /* Trying to find exact match - with both RNC's address & port and Node B's address & port */
     p_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-                               pinfo->ptype,
+                               conversation_pt_to_endpoint_type(pinfo->ptype),
                                pinfo->destport, pinfo->srcport, 0);
     if (p_conv) {
         p_conv_data = (umts_fp_conversation_info_t *)conversation_get_proto_data(p_conv, proto_fp);
@@ -5579,7 +5547,7 @@ dissect_fp_common(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
         /* Didn't find exact conversation match */
         /* Try to find a partial match with just the source/destination included */
         p_conv = (conversation_t *)find_conversation(pinfo->num, &pinfo->net_dst, &pinfo->net_src,
-                                   pinfo->ptype,
+                                   conversation_pt_to_endpoint_type(pinfo->ptype),
                                    pinfo->destport, pinfo->srcport, NO_ADDR2);
         if (p_conv) {
             p_conv_data = (umts_fp_conversation_info_t *)conversation_get_proto_data(p_conv, proto_fp);
@@ -5818,120 +5786,6 @@ dissect_fp_aal2(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data)
 {
     return dissect_fp_common(tvb, pinfo, tree, data);
 }
-
-#ifdef UMTS_FP_USE_UAT
-UAT_VS_DEF(uat_umts_fp_ep_and_ch_records, protocol, uat_umts_fp_ep_and_ch_record_t, guint8, UMTS_FP_IPV4, "IPv4")
-UAT_CSTRING_CB_DEF(uat_umts_fp_ep_and_ch_records, srcIP, uat_umts_fp_ep_and_ch_record_t)
-UAT_DEC_CB_DEF(uat_umts_fp_ep_and_ch_records, src_port, uat_umts_fp_ep_and_ch_record_t)
-UAT_CSTRING_CB_DEF(uat_umts_fp_ep_and_ch_records, dstIP, uat_umts_fp_ep_and_ch_record_t)
-UAT_DEC_CB_DEF(uat_umts_fp_ep_and_ch_records, dst_port, uat_umts_fp_ep_and_ch_record_t)
-UAT_VS_DEF(uat_umts_fp_ep_and_ch_records, interface_type, uat_umts_fp_ep_and_ch_record_t, guint8, IuB_Interface, "IuB Interface")
-UAT_VS_DEF(uat_umts_fp_ep_and_ch_records, division, uat_umts_fp_ep_and_ch_record_t, guint8, Division_FDD, "Division FDD")
-UAT_VS_DEF(uat_umts_fp_ep_and_ch_records, rlc_mode, uat_umts_fp_ep_and_ch_record_t, guint8, FP_RLC_TM, "RLC mode")
-UAT_VS_DEF(uat_umts_fp_ep_and_ch_records, channel_type, uat_umts_fp_ep_and_ch_record_t, guint8, CHANNEL_RACH_FDD, "RACH FDD")
-
-static void *uat_umts_fp_record_copy_cb(void *n, const void *o, size_t siz _U_) {
-    uat_umts_fp_ep_and_ch_record_t *new_rec = (uat_umts_fp_ep_and_ch_record_t *)n;
-    const uat_umts_fp_ep_and_ch_record_t *old_rec = (const uat_umts_fp_ep_and_ch_record_t *)o;
-
-    new_rec->srcIP = g_strdup(old_rec->srcIP);
-    new_rec->dstIP = g_strdup(old_rec->dstIP);
-
-    return new_rec;
-}
-
-static void uat_umts_fp_record_free_cb(void*r) {
-    uat_umts_fp_ep_and_ch_record_t *rec = (uat_umts_fp_ep_and_ch_record_t *)r;
-
-    g_free(rec->srcIP);
-    g_free(rec->dstIP);
-}
-/*
- * Set up UAT predefined conversations for specified channels
- *  typedef struct {
- *    guint8 protocol;
- *    gchar *srcIP;
- *    guint16 src_port;
- *    gchar *dstIP;
- *    guint16 dst_port;
- *    guint8 interface_type;
- *    guint8 division;
- *    guint8 rlc_mode;
- *    guint8 channel_type;
- * } uat_umts_fp_ep_and_ch_record_t;
- */
-static void
-umts_fp_init_protocol(void)
-{
-    guint32 hosta_addr[4];
-    guint32 hostb_addr[4];
-    address     src_addr, dst_addr;
-    conversation_t *conversation;
-    umts_fp_conversation_info_t *umts_fp_conversation_info;
-    guint i, j, num_tf;
-
-    for (i=0; i<num_umts_fp_ep_and_ch_items; i++) {
-        /* check if we have a conversation allready */
-
-        /* Convert the strings to ADDR */
-        if (uat_umts_fp_ep_and_ch_records[i].protocol == UMTS_FP_IPV4) {
-            if ((uat_umts_fp_ep_and_ch_records[i].srcIP) && (!str_to_ip(uat_umts_fp_ep_and_ch_records[i].srcIP, &hosta_addr))) {
-                continue; /* parsing failed, skip this entry */
-            }
-            if ((uat_umts_fp_ep_and_ch_records[i].dstIP) && (!str_to_ip(uat_umts_fp_ep_and_ch_records[i].dstIP, &hostb_addr))) {
-                continue; /* parsing failed, skip this entry */
-            }
-            set_address(&src_addr, AT_IPv4, 4, &hosta_addr);
-            set_address(&dst_addr, AT_IPv4, 4, &hostb_addr);
-        } else {
-            continue; /* Not implemented yet */
-        }
-        conversation = find_conversation(1, &src_addr, &dst_addr, PT_UDP, uat_umts_fp_ep_and_ch_records[i].src_port, 0, NO_ADDR2|NO_PORT2);
-        if (conversation == NULL) {
-            /* It's not part of any conversation - create a new one. */
-            conversation = conversation_new(1, &src_addr, &dst_addr, PT_UDP, uat_umts_fp_ep_and_ch_records[i].src_port, 0, NO_ADDR2|NO_PORT2);
-            if (conversation == NULL)
-                continue;
-            conversation_set_dissector(conversation, fp_handle);
-            switch (uat_umts_fp_ep_and_ch_records[i].channel_type) {
-            case CHANNEL_RACH_FDD:
-                /* set up conversation info for RACH FDD channels */
-                umts_fp_conversation_info = wmem_new0(wmem_file_scope(), umts_fp_conversation_info_t);
-                /* Fill in the data */
-                umts_fp_conversation_info->iface_type        = (enum fp_interface_type)uat_umts_fp_ep_and_ch_records[i].interface_type;
-                umts_fp_conversation_info->division          = (enum division_type) uat_umts_fp_ep_and_ch_records[i].division;
-                umts_fp_conversation_info->channel           = uat_umts_fp_ep_and_ch_records[i].channel_type;
-                umts_fp_conversation_info->dl_frame_number   = 0;
-                umts_fp_conversation_info->ul_frame_number   = 1;
-                copy_address_wmem(wmem_file_scope(), &(umts_fp_conversation_info->crnc_address), &src_addr);
-                umts_fp_conversation_info->crnc_port         = uat_umts_fp_ep_and_ch_records[i].src_port;
-                umts_fp_conversation_info->rlc_mode          = (enum fp_rlc_mode) uat_umts_fp_ep_and_ch_records[i].rlc_mode;
-                /*Save unique UE-identifier */
-                umts_fp_conversation_info->com_context_id = 1;
-
-
-                /* DCH's in this flow */
-                umts_fp_conversation_info->dch_crc_present = 2;
-                /* Set data for First or single channel */
-                umts_fp_conversation_info->fp_dch_channel_info[0].num_ul_chans = num_tf = 1;
-
-                for (j = 0; j < num_tf; j++) {
-                    umts_fp_conversation_info->fp_dch_channel_info[0].ul_chan_tf_size[j] = 168;
-                    umts_fp_conversation_info->fp_dch_channel_info[0].ul_chan_num_tbs[j] = 1;
-                }
-
-                umts_fp_conversation_info->dch_ids_in_flow_list[0] = 1;
-                umts_fp_conversation_info->num_dch_in_flow=1;
-                set_umts_fp_conv_data(conversation, umts_fp_conversation_info);
-            default:
-                break;
-            }
-        }
-    }
-}
-
-
-#endif /* UMTS_FP_USE_UAT */
 
 void proto_register_fp(void)
 {
@@ -6924,45 +6778,6 @@ void proto_register_fp(void)
     module_t *fp_module;
     expert_module_t *expert_fp;
 
-#ifdef UMTS_FP_USE_UAT
-    /* Define a UAT to set channel configuration data */
-
-  static const value_string umts_fp_proto_type_vals[] = {
-    { UMTS_FP_IPV4, "IPv4" },
-    { UMTS_FP_IPV6, "IPv6" },
-    { 0x00, NULL }
-  };
-  static const value_string umts_fp_uat_channel_type_vals[] = {
-    { CHANNEL_RACH_FDD, "RACH FDD" },
-    { 0x00, NULL }
-  };
-  static const value_string umts_fp_uat_interface_type_vals[] = {
-    { IuB_Interface, "IuB Interface" },
-    { 0x00, NULL }
-  };
-  static const value_string umts_fp_uat_division_type_vals[] = {
-    { Division_FDD, "Division FDD" },
-    { 0x00, NULL }
-  };
-
-  static const value_string umts_fp_uat_rlc_mode_vals[] = {
-    { FP_RLC_TM, "FP RLC TM" },
-    { 0x00, NULL }
-  };
-
-  static uat_field_t umts_fp_uat_flds[] = {
-      UAT_FLD_VS(uat_umts_fp_ep_and_ch_records, protocol, "IP address type", umts_fp_proto_type_vals, "IPv4 or IPv6"),
-      UAT_FLD_CSTRING(uat_umts_fp_ep_and_ch_records, srcIP, "RNC IP Address", "Source Address"),
-      UAT_FLD_DEC(uat_umts_fp_ep_and_ch_records, src_port, "RNC port for this channel", "Source port"),
-      UAT_FLD_CSTRING(uat_umts_fp_ep_and_ch_records, dstIP, "NodeB IP Address", "Destination Address"),
-      UAT_FLD_DEC(uat_umts_fp_ep_and_ch_records, dst_port, "NodeB port for this channel", "Destination port"),
-      UAT_FLD_VS(uat_umts_fp_ep_and_ch_records, interface_type, "Interface type", umts_fp_uat_interface_type_vals, "Interface type used"),
-      UAT_FLD_VS(uat_umts_fp_ep_and_ch_records, division, "division", umts_fp_uat_division_type_vals, "Division type used"),
-      UAT_FLD_VS(uat_umts_fp_ep_and_ch_records, channel_type, "Channel type", umts_fp_uat_channel_type_vals, "Channel type used"),
-      UAT_FLD_VS(uat_umts_fp_ep_and_ch_records, rlc_mode, "RLC mode", umts_fp_uat_rlc_mode_vals, "RLC mode used"),
-      UAT_END_FIELDS
-    };
-#endif /* UMTS_FP_USE_UAT */
     /* Register protocol. */
     proto_fp = proto_register_protocol("FP", "FP", "fp");
     proto_register_field_array(proto_fp, hf, array_length(hf));
@@ -7003,31 +6818,7 @@ void proto_register_fp(void)
                                     "For each PCH data frame, Try to show the paging indications bitmap found in the previous frame",
                                     &preferences_track_paging_indications);
     prefs_register_obsolete_preference(fp_module, "udp_heur");
-#ifdef UMTS_FP_USE_UAT
-
-  umts_fp_uat = uat_new("Endpoint and Channel Configuration",
-            sizeof(uat_umts_fp_ep_and_ch_record_t),   /* record size */
-            "umts_fp_ep_and_channel_cnf",     /* filename */
-            TRUE,                             /* from_profile */
-            &uat_umts_fp_ep_and_ch_records,   /* data_ptr */
-            &num_umts_fp_ep_and_ch_items,     /* numitems_ptr */
-            UAT_AFFECTS_DISSECTION,           /* affects dissection of packets, but not set of named fields */
-            NULL,                             /* help */
-            uat_umts_fp_record_copy_cb,       /* copy callback */
-            NULL,                             /* update callback */
-            uat_umts_fp_record_free_cb,       /* free callback */
-            NULL,                             /* post update callback */
-            NULL,                             /* reset callback */
-            umts_fp_uat_flds);                /* UAT field definitions */
-
-  prefs_register_uat_preference(fp_module,
-                                "epandchannelconfigurationtable",
-                                "Endpoints and Radio Channels configuration",
-                                "Preconfigured endpoint and Channels data",
-                                umts_fp_uat);
-
-  register_init_routine(&umts_fp_init_protocol);
-#endif
+    prefs_register_obsolete_preference(fp_module, "epandchannelconfigurationtable");
 
 }
 

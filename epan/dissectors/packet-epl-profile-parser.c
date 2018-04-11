@@ -13,19 +13,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -447,7 +435,7 @@ populate_datatype_list(xmlNodeSetPtr nodes, void *_profile)
 					if (subnode->type == XML_ELEMENT_NODE)
 					{
 						struct datatype *type;
-						const struct epl_datatype *ptr = epl_type_to_hf((char*)subnode->name);
+						const struct epl_datatype *ptr = epl_type_to_hf((const char*)subnode->name);
 						if (!ptr)
 						{
 							g_log(NULL, G_LOG_LEVEL_INFO, "Skipping unknown type '%s'\n", subnode->name);
@@ -476,8 +464,8 @@ parse_obj_tag(xmlNode *cur, struct od_entry *out, struct profile *profile) {
 
 		for(attr = cur->properties; attr; attr = attr->next)
 		{
-			const char *key = (char*)attr->name,
-			           *val = (char*)attr->children->content;
+			const char *key = (const char*)attr->name,
+			           *val = (const char*)attr->children->content;
 
 			if (g_str_equal("index", key))
 			{
@@ -672,10 +660,18 @@ epl_wmem_iarray_insert(epl_wmem_iarray_t *iarr, guint32 where, range_admin_t *da
 	g_array_append_vals(iarr->arr, data, 1);
 }
 
+static int u32cmp(guint32 a, guint32 b)
+{
+	if (a < b) return -1;
+	if (a > b) return +1;
+
+	return 0;
+}
+
 static int
 epl_wmem_iarray_cmp(const void *a, const void *b)
 {
-	return *(const guint32*)a - *(const guint32*)b;
+	return u32cmp(*(const guint32*)a, *(const guint32*)b);
 }
 
 /** Makes array suitable for searching */
@@ -716,7 +712,7 @@ find_in_range(const void *_a, const void *_b)
 	if (a->low <= b->high && b->low <= a->high) /* overlap */
 		return 0;
 
-	return a->low - b->low;
+	return u32cmp(a->low, b->low);
 }
 
 static void*

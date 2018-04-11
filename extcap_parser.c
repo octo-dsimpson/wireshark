@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include <config.h>
@@ -187,6 +175,8 @@ static extcap_token_sentence *extcap_tokenize_sentence(const gchar *s) {
                 param_type = EXTCAP_PARAM_ENABLED;
             } else if (g_ascii_strcasecmp(arg, "parent") == 0) {
                 param_type = EXTCAP_PARAM_PARENT;
+            } else if (g_ascii_strcasecmp(arg, "reload") == 0) {
+                param_type = EXTCAP_PARAM_RELOAD;
             } else if (g_ascii_strcasecmp(arg, "required") == 0) {
                 param_type = EXTCAP_PARAM_REQUIRED;
             } else if (g_ascii_strcasecmp(arg, "save") == 0) {
@@ -283,6 +273,7 @@ static void extcap_free_toolbar_value(iface_toolbar_value *v) {
 
     g_free(v->value);
     g_free(v->display);
+    g_free(v);
 }
 
 static void extcap_free_toolbar_control(iface_toolbar_control *c) {
@@ -293,6 +284,7 @@ static void extcap_free_toolbar_control(iface_toolbar_control *c) {
     g_free(c->validation);
     g_free(c->tooltip);
     g_free(c->placeholder);
+    g_free(c);
 }
 
 void extcap_free_arg_list(GList *a) {
@@ -331,13 +323,74 @@ static void extcap_free_tokenized_sentences(GList *sentences) {
     g_list_free(sentences);
 }
 
+static extcap_value *extcap_parse_value_sentence(extcap_token_sentence *s) {
+    extcap_value *value = NULL;
+    gchar *param_value = NULL;
+
+    int tint = 0;
+
+    if (s == NULL)
+        return value;
+
+    if (g_ascii_strcasecmp(s->sentence, "value") == 0) {
+
+        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_ARG)))
+                == NULL) {
+            printf("no arg in VALUE sentence\n");
+            return NULL;
+        }
+
+        if (sscanf(param_value, "%d", &tint) != 1) {
+            printf("invalid arg in VALUE sentence\n");
+            return NULL;
+        }
+
+        value = g_new0(extcap_value, 1);
+        value->arg_num = tint;
+
+        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_VALUE)))
+                == NULL) {
+            /* printf("no value in VALUE sentence\n"); */
+            extcap_free_value(value);
+            return NULL;
+        }
+        value->call = g_strdup(param_value);
+
+        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_DISPLAY)))
+                == NULL) {
+            /* printf("no display in VALUE sentence\n"); */
+            extcap_free_value(value);
+            return NULL;
+        }
+        value->display = g_strdup(param_value);
+
+        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_PARENT)))
+                != NULL) {
+            value->parent = g_strdup(param_value);
+        }
+
+        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_DEFAULT)))
+                != NULL) {
+            /* printf("found default value\n"); */
+            value->is_default = g_regex_match_simple(EXTCAP_BOOLEAN_REGEX, param_value, G_REGEX_CASELESS, (GRegexMatchFlags)0);
+        }
+
+        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_ENABLED)))
+                != NULL) {
+            value->enabled = g_regex_match_simple(EXTCAP_BOOLEAN_REGEX, param_value, G_REGEX_CASELESS, (GRegexMatchFlags)0);
+        }
+    }
+
+    return value;
+}
+
 static extcap_arg *extcap_parse_arg_sentence(GList *args, extcap_token_sentence *s) {
     gchar *param_value = NULL;
 
     extcap_arg *target_arg = NULL;
     extcap_value *value = NULL;
     GList *entry = NULL;
-    int tint;
+
     extcap_sentence_type sent = EXTCAP_SENTENCE_UNKNOWN;
 
     if (s == NULL)
@@ -461,6 +514,11 @@ static extcap_arg *extcap_parse_arg_sentence(GList *args, extcap_token_sentence 
             target_arg->save = g_regex_match_simple(EXTCAP_BOOLEAN_REGEX, param_value, G_REGEX_CASELESS, (GRegexMatchFlags)0);
         }
 
+        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_RELOAD)))
+                != NULL) {
+            target_arg->reload = g_regex_match_simple(EXTCAP_BOOLEAN_REGEX, param_value, G_REGEX_CASELESS, (GRegexMatchFlags)0);
+        }
+
         if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_RANGE)))
                 != NULL) {
             gchar *cp = g_strstr_len(param_value, -1, ",");
@@ -501,56 +559,12 @@ static extcap_arg *extcap_parse_arg_sentence(GList *args, extcap_token_sentence 
         }
 
     } else if (sent == EXTCAP_SENTENCE_VALUE) {
-        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_ARG)))
+        value = extcap_parse_value_sentence(s);
+
+        if ((entry = g_list_find_custom(args, &value->arg_num, glist_find_numbered_arg))
                 == NULL) {
-            printf("no arg in VALUE sentence\n");
+            printf("couldn't find arg %d in list for VALUE sentence\n", value->arg_num);
             return NULL;
-        }
-
-        if (sscanf(param_value, "%d", &tint) != 1) {
-            printf("invalid arg in VALUE sentence\n");
-            return NULL;
-        }
-
-        if ((entry = g_list_find_custom(args, &tint, glist_find_numbered_arg))
-                == NULL) {
-            printf("couldn't find arg %d in list for VALUE sentence\n", tint);
-            return NULL;
-        }
-
-        value = g_new0(extcap_value, 1);
-        value->arg_num = tint;
-
-        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_VALUE)))
-                == NULL) {
-            /* printf("no value in VALUE sentence\n"); */
-            extcap_free_value(value);
-            return NULL;
-        }
-        value->call = g_strdup(param_value);
-
-        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_DISPLAY)))
-                == NULL) {
-            /* printf("no display in VALUE sentence\n"); */
-            extcap_free_value(value);
-            return NULL;
-        }
-        value->display = g_strdup(param_value);
-
-        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_PARENT)))
-                != NULL) {
-            value->parent = g_strdup(param_value);
-        }
-
-        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_DEFAULT)))
-                != NULL) {
-            /* printf("found default value\n"); */
-            value->is_default = g_regex_match_simple(EXTCAP_BOOLEAN_REGEX, param_value, G_REGEX_CASELESS, (GRegexMatchFlags)0);
-        }
-
-        if ((param_value = (gchar *)g_hash_table_lookup(s->param_list, ENUM_KEY(EXTCAP_PARAM_ENABLED)))
-                != NULL) {
-            value->enabled = g_regex_match_simple(EXTCAP_BOOLEAN_REGEX, param_value, G_REGEX_CASELESS, (GRegexMatchFlags)0);
         }
 
         ((extcap_arg *) entry->data)->values = g_list_append(
@@ -575,6 +589,29 @@ GList *extcap_parse_args(gchar *output) {
         extcap_token_sentence *sentence = (extcap_token_sentence *)walker->data;
 
         if ((ra = extcap_parse_arg_sentence(result, sentence)) != NULL)
+            result = g_list_append(result, (gpointer) ra);
+
+        walker = g_list_next(walker);
+    }
+
+    extcap_free_tokenized_sentences(temp);
+
+    return result;
+}
+
+GList *extcap_parse_values(gchar *output) {
+    GList *result = NULL;
+    GList *walker = NULL;
+    GList *temp = NULL;
+
+    walker = extcap_tokenize_sentences(output);
+    temp = walker;
+
+    while (walker) {
+        extcap_value *ra = NULL;
+        extcap_token_sentence *sentence = (extcap_token_sentence *)walker->data;
+
+        if ((ra = extcap_parse_value_sentence(sentence)) != NULL)
             result = g_list_append(result, (gpointer) ra);
 
         walker = g_list_next(walker);

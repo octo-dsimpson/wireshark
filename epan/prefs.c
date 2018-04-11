@@ -5,22 +5,12 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
+
+#include "ws_diag_control.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -33,9 +23,7 @@
 #include <epan/address.h>
 #include <epan/addr_resolv.h>
 #include <epan/oids.h>
-#ifdef HAVE_GEOIP
-#include <epan/geoip_db.h>
-#endif
+#include <epan/maxmind_db.h>
 #include <epan/packet.h>
 #include <epan/prefs.h>
 #include <epan/proto.h>
@@ -109,6 +97,7 @@ static const enum_val_t gui_ptree_expander_style[] = {
     {NULL, NULL, -1}
 };
 
+/* GTK+ only. */
 static const enum_val_t gui_hex_dump_highlight_style[] = {
     {"BOLD", "BOLD", 0},
     {"INVERSE", "INVERSE", 1},
@@ -215,6 +204,8 @@ struct preference {
     const char *description;         /**< human-readable description of preference */
     int ordinal;                     /**< ordinal number of this preference */
     int type;                        /**< type of that preference */
+    unsigned int effect_flags;       /**< Flags of types effected by preference (PREF_TYPE_DISSECTION, PREF_EFFECT_CAPTURE, etc).
+                                          Flags must be non-zero to ensure saving to disk */
     gui_type_t gui;                  /**< type of the GUI (QT, GTK or both) the preference is registered for */
     union {                          /* The Qt preference code assumes that these will all be pointers (and unique) */
         guint *uint;
@@ -330,7 +321,9 @@ prefs_init(void)
 static void
 free_string_like_preference(pref_t *pref)
 {
-    g_free(*pref->varp.string);
+DIAG_OFF(cast-qual)
+    g_free((char *)*pref->varp.string);
+DIAG_ON(cast-qual)
     *pref->varp.string = NULL;
     g_free(pref->default_val.string);
     pref->default_val.string = NULL;
@@ -358,10 +351,7 @@ free_pref(gpointer data, gpointer user_data _U_)
     case PREF_SAVE_FILENAME:
     case PREF_OPEN_FILENAME:
     case PREF_DIRNAME:
-        g_free(*pref->varp.string);
-        *pref->varp.string = NULL;
-        g_free(pref->default_val.string);
-        pref->default_val.string = NULL;
+        free_string_like_preference(pref);
         break;
     case PREF_RANGE:
     case PREF_DECODE_AS_RANGE:
@@ -410,6 +400,9 @@ prefs_cleanup(void)
 
     /* Clean the uats */
     uat_cleanup();
+
+    /* Shut down mmdbresolve */
+    maxmind_db_pref_cleanup();
 
     g_free(prefs.saved_at_version);
     g_free(gpf_path);
@@ -507,9 +500,11 @@ prefs_register_module_or_subtree(module_t *parent, const char *name,
     module->parent = parent;
     module->submodules = NULL;    /* no submodules, to start */
     module->numprefs = 0;
-    module->prefs_changed = FALSE;
+    module->prefs_changed_flags = 0;
     module->obsolete = FALSE;
     module->use_gui = use_gui;
+    /* A module's preferences affects dissection unless otherwise told */
+    module->effect_flags = PREF_EFFECT_DISSECTION;
 
     /*
      * Do we have a module name?
@@ -748,6 +743,38 @@ prefs_register_stat(const char *name, const char *title,
                                  apply_cb, TRUE);
 }
 
+/*
+ * Register that a codec has preferences.
+ *
+ * "name" is a name for the codec to use on the command line with "-o"
+ * and in preference files.
+ *
+ * "title" is a short human-readable name for the codec.
+ *
+ * "description" is a longer human-readable description of the codec.
+ */
+module_t *codecs_module = NULL;
+
+module_t *
+prefs_register_codec(const char *name, const char *title,
+                     const char *description, void (*apply_cb)(void))
+{
+    /*
+     * Have we yet created the "Codecs" subtree?
+     */
+    if (codecs_module == NULL) {
+        /*
+         * No.  Register Codecs subtree as well as any preferences
+         * for non-dissector modules.
+         */
+        pre_init_prefs();
+        prefs_register_modules();
+    }
+
+    return prefs_register_module(codecs_module, name, title, description,
+                                 apply_cb, TRUE);
+}
+
 module_t *
 prefs_find_module(const char *name)
 {
@@ -864,10 +891,10 @@ call_apply_cb(const void *key _U_, void *value, void *data _U_)
 
     if (module->obsolete)
         return FALSE;
-    if (module->prefs_changed) {
+    if (module->prefs_changed_flags) {
         if (module->apply_cb != NULL)
             (*module->apply_cb)();
-        module->prefs_changed = FALSE;
+        module->prefs_changed_flags = 0;
     }
     if (module->submodules)
         wmem_tree_foreach(module->submodules, call_apply_cb, NULL);
@@ -895,7 +922,7 @@ prefs_apply_all(void)
 void
 prefs_apply(module_t *module)
 {
-    if (module && module->prefs_changed)
+    if (module && module->prefs_changed_flags)
         call_apply_cb(NULL, module, NULL);
 }
 
@@ -919,6 +946,9 @@ register_preference(module_t *module, const char *name, const char *title,
     preference->title = title;
     preference->description = description;
     preference->type = type;
+    /* Default to module's preference effects */
+    preference->effect_flags = module->effect_flags;
+
     preference->gui = GUI_ALL;  /* default */
     if (title != NULL)
         preference->ordinal = module->numprefs;
@@ -1158,28 +1188,28 @@ prefs_register_bool_preference(module_t *module, const char *name,
     preference->default_val.boolval = *var;
 }
 
-gboolean prefs_set_bool_value(pref_t *pref, gboolean value, pref_source_t source)
+unsigned int prefs_set_bool_value(pref_t *pref, gboolean value, pref_source_t source)
 {
-    gboolean changed = FALSE;
+    unsigned int changed = 0;
 
     switch (source)
     {
     case pref_default:
         if (pref->default_val.boolval != value) {
             pref->default_val.boolval = value;
-            changed = TRUE;
+            changed = prefs_get_effect_flags(pref);
         }
         break;
     case pref_stashed:
         if (pref->stashed_val.boolval != value) {
             pref->stashed_val.boolval = value;
-            changed = TRUE;
+            changed = prefs_get_effect_flags(pref);
         }
         break;
     case pref_current:
         if (*pref->varp.boolp != value) {
             *pref->varp.boolp = value;
-            changed = TRUE;
+            changed = prefs_get_effect_flags(pref);
         }
         break;
     default:
@@ -1253,28 +1283,28 @@ prefs_register_enum_preference(module_t *module, const char *name,
     preference->info.enum_info.radio_buttons = radio_buttons;
 }
 
-gboolean prefs_set_enum_value(pref_t *pref, gint value, pref_source_t source)
+unsigned int prefs_set_enum_value(pref_t *pref, gint value, pref_source_t source)
 {
-    gboolean changed = FALSE;
+    unsigned int changed = 0;
 
     switch (source)
     {
     case pref_default:
         if (pref->default_val.enumval != value) {
             pref->default_val.enumval = value;
-            changed = TRUE;
+            changed = prefs_get_effect_flags(pref);
         }
         break;
     case pref_stashed:
         if (pref->stashed_val.enumval != value) {
             pref->stashed_val.enumval = value;
-            changed = TRUE;
+            changed = prefs_get_effect_flags(pref);
         }
         break;
     case pref_current:
         if (*pref->varp.enump != value) {
             *pref->varp.enump = value;
-            changed = TRUE;
+            changed = prefs_get_effect_flags(pref);
         }
         break;
     default:
@@ -1356,19 +1386,31 @@ register_string_like_preference(module_t *module, const char *name,
 }
 
 /*
+ * Assign to a string preference.
+ */
+static void
+pref_set_string_like_pref_value(pref_t *pref, const gchar *value)
+{
+DIAG_OFF(cast-qual)
+    g_free((void *)*pref->varp.string);
+DIAG_ON(cast-qual)
+    *pref->varp.string = g_strdup(value);
+}
+
+/*
  * For use by UI code that sets preferences.
  */
-gboolean
+unsigned int
 prefs_set_string_value(pref_t *pref, const char* value, pref_source_t source)
 {
-    gboolean changed = FALSE;
+    unsigned int changed = 0;
 
     switch (source)
     {
     case pref_default:
         if (*pref->default_val.string) {
             if (strcmp(pref->default_val.string, value) != 0) {
-                changed = TRUE;
+                changed = prefs_get_effect_flags(pref);
                 g_free(pref->default_val.string);
                 pref->default_val.string = g_strdup(value);
             }
@@ -1379,7 +1421,7 @@ prefs_set_string_value(pref_t *pref, const char* value, pref_source_t source)
     case pref_stashed:
         if (pref->stashed_val.string) {
             if (strcmp(pref->stashed_val.string, value) != 0) {
-                changed = TRUE;
+                changed = prefs_get_effect_flags(pref);
                 g_free(pref->stashed_val.string);
                 pref->stashed_val.string = g_strdup(value);
             }
@@ -1390,12 +1432,11 @@ prefs_set_string_value(pref_t *pref, const char* value, pref_source_t source)
     case pref_current:
         if (*pref->varp.string) {
             if (strcmp(*pref->varp.string, value) != 0) {
-                changed = TRUE;
-                g_free(*pref->varp.string);
-                *pref->varp.string = g_strdup(value);
+                changed = prefs_get_effect_flags(pref);
+                pref_set_string_like_pref_value(pref, value);
             }
         } else if (value) {
-            *pref->varp.string = g_strdup(value);
+            pref_set_string_like_pref_value(pref, value);
         }
         break;
     default:
@@ -1516,7 +1557,7 @@ prefs_register_range_preference(module_t *module, const char *name,
 
 gboolean
 prefs_set_range_value_work(pref_t *pref, const gchar *value,
-                           gboolean return_range_errors, gboolean *changed)
+                           gboolean return_range_errors, unsigned int *changed_flags)
 {
     range_t *newrange;
 
@@ -1526,7 +1567,7 @@ prefs_set_range_value_work(pref_t *pref, const gchar *value,
     }
 
     if (!ranges_are_equal(*pref->varp.range, newrange)) {
-        *changed = TRUE;
+        *changed_flags |= prefs_get_effect_flags(pref);
         wmem_free(wmem_epan_scope(), *pref->varp.range);
         *pref->varp.range = newrange;
     } else {
@@ -1538,14 +1579,14 @@ prefs_set_range_value_work(pref_t *pref, const gchar *value,
 /*
  * For use by UI code that sets preferences.
  */
-gboolean
+unsigned int
 prefs_set_stashed_range_value(pref_t *pref, const gchar *value)
 {
     range_t *newrange;
 
     if (range_convert_str_work(wmem_epan_scope(), &newrange, value, pref->info.max_value,
                                TRUE) != CVT_NO_ERROR) {
-        return FALSE;        /* number was bad */
+        return 0;        /* number was bad */
     }
 
     if (!ranges_are_equal(pref->stashed_val.range, newrange)) {
@@ -1554,7 +1595,7 @@ prefs_set_stashed_range_value(pref_t *pref, const gchar *value)
     } else {
         wmem_free(wmem_epan_scope(), newrange);
     }
-    return TRUE;
+    return prefs_get_effect_flags(pref);
 
 }
 
@@ -1966,7 +2007,7 @@ pref_unstash(pref_t *pref, gpointer unstash_data_p)
 
     case PREF_DECODE_AS_UINT:
         if (*pref->varp.uint != pref->stashed_val.uint) {
-            unstash_data->module->prefs_changed = TRUE;
+            unstash_data->module->prefs_changed_flags |= prefs_get_effect_flags(pref);
 
             if (unstash_data->handle_decode_as) {
                 if (*pref->varp.uint != pref->default_val.uint) {
@@ -1979,7 +2020,7 @@ pref_unstash(pref_t *pref, gpointer unstash_data_p)
             if (unstash_data->handle_decode_as) {
                 sub_dissectors = find_dissector_table(pref->name);
                 if (sub_dissectors != NULL) {
-                    handle = dissector_table_get_dissector_handle(sub_dissectors, (gchar*)unstash_data->module->title);
+                    handle = dissector_table_get_dissector_handle(sub_dissectors, unstash_data->module->title);
                     if (handle != NULL) {
                         dissector_change_uint(pref->name, *pref->varp.uint, handle);
                     }
@@ -1990,21 +2031,21 @@ pref_unstash(pref_t *pref, gpointer unstash_data_p)
 
     case PREF_UINT:
         if (*pref->varp.uint != pref->stashed_val.uint) {
-            unstash_data->module->prefs_changed = TRUE;
+            unstash_data->module->prefs_changed_flags |= prefs_get_effect_flags(pref);
             *pref->varp.uint = pref->stashed_val.uint;
         }
         break;
 
     case PREF_BOOL:
         if (*pref->varp.boolp != pref->stashed_val.boolval) {
-            unstash_data->module->prefs_changed = TRUE;
+            unstash_data->module->prefs_changed_flags |= prefs_get_effect_flags(pref);
             *pref->varp.boolp = pref->stashed_val.boolval;
         }
         break;
 
     case PREF_ENUM:
         if (*pref->varp.enump != pref->stashed_val.enumval) {
-            unstash_data->module->prefs_changed = TRUE;
+            unstash_data->module->prefs_changed_flags |= prefs_get_effect_flags(pref);
             *pref->varp.enump = pref->stashed_val.enumval;
         }
         break;
@@ -2014,7 +2055,7 @@ pref_unstash(pref_t *pref, gpointer unstash_data_p)
     case PREF_OPEN_FILENAME:
     case PREF_DIRNAME:
         if (strcmp(*pref->varp.string, pref->stashed_val.string) != 0) {
-            unstash_data->module->prefs_changed = TRUE;
+            unstash_data->module->prefs_changed_flags |= prefs_get_effect_flags(pref);
             g_free(*pref->varp.string);
             *pref->varp.string = g_strdup(pref->stashed_val.string);
         }
@@ -2023,12 +2064,12 @@ pref_unstash(pref_t *pref, gpointer unstash_data_p)
     case PREF_DECODE_AS_RANGE:
         if (!ranges_are_equal(*pref->varp.range, pref->stashed_val.range)) {
             guint32 i, j;
-            unstash_data->module->prefs_changed = TRUE;
+            unstash_data->module->prefs_changed_flags |= prefs_get_effect_flags(pref);
 
             if (unstash_data->handle_decode_as) {
                 sub_dissectors = find_dissector_table(pref->name);
                 if (sub_dissectors != NULL) {
-                    handle = dissector_table_get_dissector_handle(sub_dissectors, (gchar*)unstash_data->module->title);
+                    handle = dissector_table_get_dissector_handle(sub_dissectors, unstash_data->module->title);
                     if (handle != NULL) {
                         /* Delete all of the old values from the dissector table */
                         for (i = 0; i < (*pref->varp.range)->nranges; i++) {
@@ -2068,14 +2109,19 @@ pref_unstash(pref_t *pref, gpointer unstash_data_p)
 
     case PREF_RANGE:
         if (!ranges_are_equal(*pref->varp.range, pref->stashed_val.range)) {
-            unstash_data->module->prefs_changed = TRUE;
+            unstash_data->module->prefs_changed_flags |= prefs_get_effect_flags(pref);
             wmem_free(wmem_epan_scope(), *pref->varp.range);
             *pref->varp.range = range_copy(wmem_epan_scope(), pref->stashed_val.range);
         }
     break;
 
     case PREF_COLOR:
-        *pref->varp.colorp = pref->stashed_val.color;
+        if ((pref->varp.colorp->blue != pref->stashed_val.color.blue) ||
+            (pref->varp.colorp->red != pref->stashed_val.color.red) ||
+            (pref->varp.colorp->green != pref->stashed_val.color.green)) {
+            unstash_data->module->prefs_changed_flags |= prefs_get_effect_flags(pref);
+            *pref->varp.colorp = pref->stashed_val.color;
+        }
         break;
 
     case PREF_STATIC_TEXT:
@@ -2327,14 +2373,14 @@ console_log_level_reset_cb(pref_t* pref)
 }
 
 static prefs_set_pref_e
-console_log_level_set_cb(pref_t* pref, const gchar* value, gboolean* changed)
+console_log_level_set_cb(pref_t* pref, const gchar* value, unsigned int* changed_flags)
 {
     guint    uval;
 
     uval = (guint)strtoul(value, NULL, 10);
 
     if (*pref->varp.uint != uval) {
-        *changed = TRUE;
+        *changed_flags = prefs_get_effect_flags(pref);
         *pref->varp.uint = uval;
     }
 
@@ -2382,13 +2428,13 @@ static char * console_log_level_to_str_cb(pref_t* pref, gboolean default_val) {
 static module_t *gui_column_module = NULL;
 
 static prefs_set_pref_e
-column_hidden_set_cb(pref_t* pref, const gchar* value, gboolean* changed)
+column_hidden_set_cb(pref_t* pref, const gchar* value, unsigned int* changed_flags)
 {
     GList       *clp;
     fmt_data    *cfmt;
     pref_t  *format_pref;
 
-    (*changed) |= prefs_set_string_value(pref, value, pref_current);
+    (*changed_flags) |= prefs_set_string_value(pref, value, pref_current);
 
     /*
      * Set the "visible" flag for the existing columns; we need to
@@ -2475,7 +2521,7 @@ column_num_reset_cb(pref_t* pref)
 }
 
 static prefs_set_pref_e
-column_num_set_cb(pref_t* pref _U_, const gchar* value _U_, gboolean* changed _U_)
+column_num_set_cb(pref_t* pref _U_, const gchar* value _U_, unsigned int* changed_flags _U_)
 {
     /* Don't write this to the preferences file */
     return PREFS_SET_OK;
@@ -2575,7 +2621,7 @@ column_format_reset_cb(pref_t* pref)
 }
 
 static prefs_set_pref_e
-column_format_set_cb(pref_t* pref, const gchar* value, gboolean* changed _U_)
+column_format_set_cb(pref_t* pref, const gchar* value, unsigned int* changed_flags _U_)
 {
     GList    *col_l, *col_l_elt;
     fmt_data *cfmt;
@@ -2779,7 +2825,7 @@ capture_column_reset_cb(pref_t* pref)
 }
 
 static prefs_set_pref_e
-capture_column_set_cb(pref_t* pref, const gchar* value, gboolean* changed _U_)
+capture_column_set_cb(pref_t* pref, const gchar* value, unsigned int* changed_flags _U_)
 {
     GList *col_l  = prefs_get_string_list(value);
     GList *col_l_elt;
@@ -2899,9 +2945,9 @@ capture_column_to_str_cb(pref_t* pref, gboolean default_val)
 }
 
 static prefs_set_pref_e
-colorized_frame_set_cb(pref_t* pref, const gchar* value, gboolean* changed)
+colorized_frame_set_cb(pref_t* pref, const gchar* value, unsigned int* changed_flags)
 {
-    (*changed) |= prefs_set_string_value(pref, value, pref_current);
+    (*changed_flags) |= prefs_set_string_value(pref, value, pref_current);
     return PREFS_SET_OK;
 }
 
@@ -2950,10 +2996,8 @@ prefs_register_modules(void)
 {
     module_t *printing, *capture_module, *console_module,
         *gui_layout_module, *gui_font_module;
-#ifdef HAVE_EXTCAP
     module_t *extcap_module;
-#endif
-
+    unsigned int layout_gui_flags;
     struct pref_custom_cbs custom_cbs;
 
     if (protocols_module != NULL) {
@@ -2961,7 +3005,6 @@ prefs_register_modules(void)
         return;
     }
 
-#ifdef HAVE_EXTCAP
     /* GUI
      * These are "simple" GUI preferences that can be read/written using the
      * preference module API.  These preferences still use their own
@@ -2977,7 +3020,6 @@ prefs_register_modules(void)
                                    "Save arguments on start of capture",
                                    "Save arguments on start of capture",
                                    &prefs.extcap_save_on_start);
-#endif
 
     /* GUI
      * These are "simple" GUI preferences that can be read/written using the
@@ -3277,27 +3319,35 @@ prefs_register_modules(void)
 
     /* User Interface : Layout */
     gui_layout_module = prefs_register_subtree(gui_module, "Layout", "Layout", gui_layout_callback);
+    /* Adjust the preference effects of layout GUI for better handling of preferences at Wireshark (GUI) level */
+    layout_gui_flags = prefs_get_module_effect_flags(gui_layout_module);
+    layout_gui_flags |= PREF_EFFECT_GUI_LAYOUT;
+    layout_gui_flags &= (~PREF_EFFECT_DISSECTION);
 
     prefs_register_uint_preference(gui_layout_module, "layout_type",
                                    "Layout type",
                                    "Layout type (1-6)",
                                    10,
                                    (guint*)(void*)(&prefs.gui_layout_type));
+    prefs_set_effect_flags_by_name(gui_layout_module, "layout_type", layout_gui_flags);
 
     prefs_register_enum_preference(gui_layout_module, "layout_content_1",
                        "Layout content of the pane 1",
                        "Layout content of the pane 1",
                        (gint*)(void*)(&prefs.gui_layout_content_1), gui_layout_content, FALSE);
+    prefs_set_effect_flags_by_name(gui_layout_module, "layout_content_1", layout_gui_flags);
 
     prefs_register_enum_preference(gui_layout_module, "layout_content_2",
                        "Layout content of the pane 2",
                        "Layout content of the pane 2",
                        (gint*)(void*)(&prefs.gui_layout_content_2), gui_layout_content, FALSE);
+    prefs_set_effect_flags_by_name(gui_layout_module, "layout_content_2", layout_gui_flags);
 
     prefs_register_enum_preference(gui_layout_module, "layout_content_3",
                        "Layout content of the pane 3",
                        "Layout content of the pane 3",
                        (gint*)(void*)(&prefs.gui_layout_content_3), gui_layout_content, FALSE);
+    prefs_set_effect_flags_by_name(gui_layout_module, "layout_content_3", layout_gui_flags);
 
     prefs_register_bool_preference(gui_layout_module, "packet_list_separator.enabled",
                                    "Enable Packet List Separator",
@@ -3391,6 +3441,8 @@ prefs_register_modules(void)
      */
     capture_module = prefs_register_module(NULL, "capture", "Capture",
         "Capture preferences", NULL, FALSE);
+    /* Capture preferences don't affect dissection */
+    prefs_set_module_effect_flags(capture_module, PREF_EFFECT_CAPTURE);
 
     register_string_like_preference(capture_module, "device", "Default capture device",
         "Default capture device",
@@ -3433,11 +3485,14 @@ prefs_register_modules(void)
         "Interface capture filter (Ex: en0(tcp),en1(udp),...)",
         &prefs.capture_devices_filter, PREF_STRING, NULL, FALSE);
 
-    prefs_register_bool_preference(capture_module, "pcap_ng", "Capture in Pcap-NG format",
-        "Capture in Pcap-NG format?", &prefs.capture_pcap_ng);
+    prefs_register_bool_preference(capture_module, "pcap_ng", "Capture in pcapng format",
+        "Capture in pcapng format?", &prefs.capture_pcap_ng);
 
     prefs_register_bool_preference(capture_module, "real_time_update", "Update packet list in real time during capture",
         "Update packet list in real time during capture?", &prefs.capture_real_time);
+
+    prefs_register_bool_preference(capture_module, "no_extcap", "Disable external capture interfaces",
+        "Disable external capture modules (extcap)", &prefs.capture_no_extcap);
 
     /* We might want to make this a "recent" setting. */
     prefs_register_bool_preference(capture_module, "auto_scroll", "Scroll packet list during capture",
@@ -3464,9 +3519,7 @@ prefs_register_modules(void)
         "Name Resolution", NULL, TRUE);
     addr_resolve_pref_init(nameres_module);
     oid_pref_init(nameres_module);
-#ifdef HAVE_GEOIP
-    geoip_db_pref_init(nameres_module);
-#endif
+    maxmind_db_pref_init(nameres_module);
 
     /* Printing */
     printing = prefs_register_module(NULL, "print", "Printing",
@@ -3489,6 +3542,10 @@ prefs_register_modules(void)
     register_string_like_preference(printing, "file", "File",
         "This is the file that gets written to when the destination is set to \"file\"",
         &prefs.pr_file, PREF_SAVE_FILENAME, NULL, TRUE);
+
+    /* Codecs */
+    codecs_module = prefs_register_module(NULL, "codecs", "Codecs",
+        "Codecs", NULL, TRUE);
 
     /* Statistics */
     stats_module = prefs_register_module(NULL, "statistics", "Statistics",
@@ -3959,7 +4016,7 @@ pre_init_prefs(void)
     prefs.gui_expert_composite_eyecandy = FALSE;
     prefs.gui_ptree_line_style = 0;
     prefs.gui_ptree_expander_style = 1;
-    prefs.gui_hex_dump_highlight_style = 1;
+    prefs.gui_hex_dump_highlight_style = 1; /* GTK+ only */
     prefs.filter_toolbar_show_in_statusbar = FALSE;
     prefs.restore_filter_after_following_stream = FALSE;
     prefs.gui_toolbar_main_style = TB_STYLE_ICONS;
@@ -4098,6 +4155,7 @@ pre_init_prefs(void)
     prefs.capture_pcap_ng               = FALSE;
 #endif
     prefs.capture_real_time             = TRUE;
+    prefs.capture_no_extcap             = FALSE;
     prefs.capture_auto_scroll           = TRUE;
     prefs.capture_show_info             = FALSE;
 
@@ -4687,27 +4745,27 @@ guint prefs_get_uint_value(const char *module_name, const char* pref_name)
     return prefs_get_uint_value_real(prefs_find_preference(prefs_find_module(module_name), pref_name), pref_current);
 }
 
-gboolean prefs_set_uint_value(pref_t *pref, guint value, pref_source_t source)
+unsigned int prefs_set_uint_value(pref_t *pref, guint value, pref_source_t source)
 {
-    gboolean changed = FALSE;
+    unsigned int changed = 0;
     switch (source)
     {
     case pref_default:
         if (pref->default_val.uint != value) {
             pref->default_val.uint = value;
-            changed = TRUE;
+            changed = prefs_get_effect_flags(pref);
         }
         break;
     case pref_stashed:
         if (pref->stashed_val.uint != value) {
             pref->stashed_val.uint = value;
-            changed = TRUE;
+            changed = prefs_get_effect_flags(pref);
         }
         break;
     case pref_current:
         if (*pref->varp.uint != value) {
             *pref->varp.uint = value;
-            changed = TRUE;
+            changed = prefs_get_effect_flags(pref);
         }
         break;
     default:
@@ -5206,11 +5264,11 @@ deprecated_port_pref(gchar *pref_name, const gchar *value)
             if (p == value || *p != '\0')
                 return FALSE;        /* number was bad */
 
-            module = prefs_find_module((gchar*)port_prefs[i].module_name);
+            module = prefs_find_module(port_prefs[i].module_name);
             pref = prefs_find_preference(module, port_prefs[i].table_name);
             if (pref != NULL)
             {
-                module->prefs_changed = TRUE;
+                module->prefs_changed_flags |= prefs_get_effect_flags(pref);
                 *pref->varp.uint = uval;
             }
 
@@ -5219,7 +5277,7 @@ deprecated_port_pref(gchar *pref_name, const gchar *value)
             {
                 sub_dissectors = find_dissector_table(port_prefs[i].table_name);
                 if (sub_dissectors != NULL) {
-                    handle = dissector_table_get_dissector_handle(sub_dissectors, (gchar*)port_prefs[i].module_name);
+                    handle = dissector_table_get_dissector_handle(sub_dissectors, port_prefs[i].module_name);
                     if (handle != NULL) {
                         dissector_change_uint(port_prefs[i].table_name, uval, handle);
                         decode_build_reset_list(port_prefs[i].table_name, dissector_table_get_type(sub_dissectors), GUINT_TO_POINTER(uval), NULL, NULL);
@@ -5251,16 +5309,16 @@ deprecated_port_pref(gchar *pref_name, const gchar *value)
                     g_assert_not_reached();
                 }
 
-                module = prefs_find_module((gchar*)port_range_prefs[i].module_name);
+                module = prefs_find_module(port_range_prefs[i].module_name);
                 pref = prefs_find_preference(module, port_range_prefs[i].table_name);
                 if (pref != NULL)
                 {
-                    if (!prefs_set_range_value_work(pref, value, TRUE, &module->prefs_changed))
+                    if (!prefs_set_range_value_work(pref, value, TRUE, &module->prefs_changed_flags))
                     {
                         return FALSE;        /* number was bad */
                     }
 
-                    handle = dissector_table_get_dissector_handle(sub_dissectors, (gchar*)port_range_prefs[i].module_name);
+                    handle = dissector_table_get_dissector_handle(sub_dissectors, port_range_prefs[i].module_name);
                     if (handle != NULL) {
 
                         for (range_i = 0; range_i < (*pref->varp.range)->nranges; range_i++) {
@@ -5752,7 +5810,7 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
             if (p == value || *p != '\0')
                 return PREFS_SET_SYNTAX_ERR;        /* number was bad */
             if (*pref->varp.uint != uval) {
-                containing_module->prefs_changed = TRUE;
+                containing_module->prefs_changed_flags |= prefs_get_effect_flags(pref);
                 *pref->varp.uint = uval;
             }
             break;
@@ -5771,13 +5829,13 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
                 return PREFS_SET_SYNTAX_ERR;        /* number was bad */
 
             if (*pref->varp.uint != uval) {
-                containing_module->prefs_changed = TRUE;
+                containing_module->prefs_changed_flags |= prefs_get_effect_flags(pref);
                 *pref->varp.uint = uval;
 
                 /* Name of preference is the dissector table */
                 sub_dissectors = find_dissector_table(pref->name);
                 if (sub_dissectors != NULL) {
-                    handle = dissector_table_get_dissector_handle(sub_dissectors, (gchar*)module->title);
+                    handle = dissector_table_get_dissector_handle(sub_dissectors, module->title);
                     if (handle != NULL) {
                         if (uval != 0) {
                             dissector_change_uint(pref->name, uval, handle);
@@ -5800,7 +5858,7 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
             else
                 bval = FALSE;
             if (*pref->varp.boolp != bval) {
-                containing_module->prefs_changed = TRUE;
+                containing_module->prefs_changed_flags |= prefs_get_effect_flags(pref);
                 *pref->varp.boolp = bval;
             }
             break;
@@ -5810,7 +5868,7 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
             enum_val = find_val_for_string(value, pref->info.enum_info.enumvals,
                                            *pref->varp.enump);
             if (*pref->varp.enump != enum_val) {
-                containing_module->prefs_changed = TRUE;
+                containing_module->prefs_changed_flags |= prefs_get_effect_flags(pref);
                 *pref->varp.enump = enum_val;
             }
             break;
@@ -5819,13 +5877,13 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
         case PREF_SAVE_FILENAME:
         case PREF_OPEN_FILENAME:
         case PREF_DIRNAME:
-            containing_module->prefs_changed |= prefs_set_string_value(pref, value, pref_current);
+            containing_module->prefs_changed_flags |= prefs_set_string_value(pref, value, pref_current);
             break;
 
         case PREF_RANGE:
         {
             if (!prefs_set_range_value_work(pref, value, return_range_errors,
-                                            &containing_module->prefs_changed))
+                                            &containing_module->prefs_changed_flags))
                 return PREFS_SET_SYNTAX_ERR;        /* number was bad */
             break;
         }
@@ -5847,12 +5905,12 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
             if (!ranges_are_equal(*pref->varp.range, newrange)) {
                 wmem_free(wmem_epan_scope(), *pref->varp.range);
                 *pref->varp.range = newrange;
-                containing_module->prefs_changed = TRUE;
+                containing_module->prefs_changed_flags |= prefs_get_effect_flags(pref);
 
                 /* Name of preference is the dissector table */
                 sub_dissectors = find_dissector_table(pref->name);
                 if (sub_dissectors != NULL) {
-                    handle = dissector_table_get_dissector_handle(sub_dissectors, (gchar*)module->title);
+                    handle = dissector_table_get_dissector_handle(sub_dissectors, module->title);
                     if (handle != NULL) {
                         /* Delete all of the old values from the dissector table */
 		                for (i = 0; i < (*pref->varp.range)->nranges; i++) {
@@ -5891,7 +5949,7 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
             if ((pref->varp.colorp->red != RED_COMPONENT(cval)) ||
                 (pref->varp.colorp->green != GREEN_COMPONENT(cval)) ||
                 (pref->varp.colorp->blue != BLUE_COMPONENT(cval))) {
-                containing_module->prefs_changed = TRUE;
+                containing_module->prefs_changed_flags |= prefs_get_effect_flags(pref);
                 pref->varp.colorp->red   = RED_COMPONENT(cval);
                 pref->varp.colorp->green = GREEN_COMPONENT(cval);
                 pref->varp.colorp->blue  = BLUE_COMPONENT(cval);
@@ -5900,7 +5958,7 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
         }
 
         case PREF_CUSTOM:
-            return pref->custom_cbs.set_cb(pref, value, &containing_module->prefs_changed);
+            return pref->custom_cbs.set_cb(pref, value, &containing_module->prefs_changed_flags);
 
         case PREF_STATIC_TEXT:
         case PREF_UAT:
@@ -6007,6 +6065,46 @@ prefs_pref_type_name(pref_t *pref)
         break;
     }
     return type_name;
+}
+
+unsigned int
+prefs_get_effect_flags(pref_t *pref)
+{
+    if (pref == NULL)
+        return 0;
+
+    return pref->effect_flags;
+}
+
+void
+prefs_set_effect_flags(pref_t *pref, unsigned int flags)
+{
+    if (pref != NULL) {
+        pref->effect_flags = flags;
+    }
+}
+
+void
+prefs_set_effect_flags_by_name(module_t * module, const char *pref, unsigned int flags)
+{
+    prefs_set_effect_flags(prefs_find_preference(module, pref), flags);
+}
+
+unsigned int
+prefs_get_module_effect_flags(module_t * module)
+{
+    if (module == NULL)
+        return 0;
+
+    return module->effect_flags;
+}
+
+void
+prefs_set_module_effect_flags(module_t * module, unsigned int flags)
+{
+    if (module != NULL) {
+        module->effect_flags = flags;
+    }
 }
 
 char *

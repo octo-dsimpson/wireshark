@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 #include "config.h"
 #include <stdio.h>
@@ -562,6 +550,7 @@ static const gchar *        lowpan_context_prefs[LOWPAN_CONTEXT_MAX];
 
 /* Preferences */
 static gboolean rfc4944_short_address_format = FALSE;
+static gboolean iid_has_universal_local_bit = FALSE;
 
 /* Helper macro to convert a bit offset/length into a byte count. */
 #define BITS_TO_BYTE_LEN(bitoff, bitlen)    ((bitlen)?(((bitlen) + ((bitoff)&0x07) + 7) >> 3):(0))
@@ -607,7 +596,7 @@ static gboolean     lowpan_dlsrc_to_ifcid   (packet_info *pinfo, guint8 *ifcid);
 static gboolean     lowpan_dldst_to_ifcid   (packet_info *pinfo, guint8 *ifcid);
 static void         lowpan_addr16_to_ifcid  (guint16 addr, guint8 *ifcid);
 static void         lowpan_addr16_with_panid_to_ifcid(guint16 panid, guint16 addr, guint8 *ifcid);
-static void         lowpan_addr48_to_ifcid    (guint8 *addr, guint8 *ifcid);
+static void         lowpan_addr48_to_ifcid  (const guint8 *addr, guint8 *ifcid);
 static tvbuff_t *   lowpan_reassemble_ipv6  (tvbuff_t *tvb, packet_info *pinfo, struct ws_ip6_hdr *ipv6, struct lowpan_nhdr *nhdr_list);
 static guint8       lowpan_parse_nhc_proto  (tvbuff_t *tvb, gint offset);
 
@@ -853,13 +842,13 @@ lowpan_addr16_with_panid_to_ifcid(guint16 panid, guint16 addr, guint8 *ifcid)
  *---------------------------------------------------------------
  */
 static void
-lowpan_addr48_to_ifcid(guint8 *addr, guint8 *ifcid)
+lowpan_addr48_to_ifcid(const guint8 *addr, guint8 *ifcid)
 {
     static const guint8 unknown_addr[] = { 0, 0, 0, 0, 0, 0 };
 
     /* Don't convert unknown addresses */
-    if (memcmp (addr, unknown_addr, sizeof(unknown_addr)) != 0) {
-        ifcid[0] = addr[0] | 0x02; /* Set the U/L bit. */
+    if (memcmp(addr, unknown_addr, sizeof(unknown_addr)) != 0) {
+        ifcid[0] = addr[0];
         ifcid[1] = addr[1];
         ifcid[2] = addr[2];
         ifcid[3] = 0xff;
@@ -867,6 +856,9 @@ lowpan_addr48_to_ifcid(guint8 *addr, guint8 *ifcid)
         ifcid[5] = addr[3];
         ifcid[6] = addr[4];
         ifcid[7] = addr[5];
+        if (iid_has_universal_local_bit) {
+            ifcid[0] ^= 0x02; /* Invert the U/L bit. */
+        }
     } else {
         memset(ifcid, 0, LOWPAN_IFC_ID_LEN);
     }
@@ -898,7 +890,7 @@ lowpan_dlsrc_to_ifcid(packet_info *pinfo, guint8 *ifcid)
         ifcid[0] ^= 0x02;
         return TRUE;
     } else if (pinfo->dl_src.type == AT_ETHER) {
-        lowpan_addr48_to_ifcid((guint8 *)pinfo->dl_src.data, ifcid);
+        lowpan_addr48_to_ifcid((const guint8 *)pinfo->dl_src.data, ifcid);
         return TRUE;
     }
 
@@ -948,7 +940,7 @@ lowpan_dldst_to_ifcid(packet_info *pinfo, guint8 *ifcid)
         ifcid[0] ^= 0x02;
         return TRUE;
     } else if (pinfo->dl_dst.type == AT_ETHER) {
-        lowpan_addr48_to_ifcid((guint8 *)pinfo->dl_dst.data, ifcid);
+        lowpan_addr48_to_ifcid((const guint8 *)pinfo->dl_dst.data, ifcid);
         return TRUE;
     }
 
@@ -1277,134 +1269,138 @@ dissect_6lowpan_6loRH(tvbuff_t *tvb, guint offset, proto_tree *tree)
 
             proto_item_append_text(loRH_tree, " %s", val_to_str_const(loRHE_type, lowpan_patterns_rh_type, "Unknown"));
 
-            if (tree) {
-                switch (loRHE_class){
-                    case (LOWPAN_PATTERN_6LORHE):/*Elective Routing Header*/
-                        condition = 1 ;
-                        if (loRHE_type >= 15) { /* BIER implementation */
-                            proto_tree_add_uint             (loRH_tree, hf_6lowpan_6lorhe_size, tvb, offset, 2, loRH_flags & LOWPAN_PATTERN_6LORHE_LENGTH);
-                            proto_tree_add_uint             (loRH_tree, hf_6lowpan_6lorhe_type, tvb, offset, 2, loRHE_type);
-                            offset += 2 ;
-                            if (loRHE_type == 15) {
+            switch (loRHE_class){
+                case (LOWPAN_PATTERN_6LORHE):/*Elective Routing Header*/
+                    condition = 1 ;
+                    if (loRHE_type >= 15) { /* BIER implementation */
+                        proto_tree_add_uint             (loRH_tree, hf_6lowpan_6lorhe_size, tvb, offset, 2, loRH_flags & LOWPAN_PATTERN_6LORHE_LENGTH);
+                        proto_tree_add_uint             (loRH_tree, hf_6lowpan_6lorhe_type, tvb, offset, 2, loRHE_type);
+                        offset += 2 ;
+                        if (loRHE_type == 15) {
+                            for (int i=0; i<loRHE_unitnums; i++) {
+                                proto_tree_add_item(loRH_tree, hf_6lowpan_6lorhe_bitmap, tvb, offset, 4, ENC_BIG_ENDIAN);
+                                offset += 4;
+                            }
+                        }
+                    }
+                    else if (loRHE_type == LOWPAN_IP_IN_IP_6LORH) {
+                        memset(&ipv6.ip6h_src, 0, sizeof(ipv6.ip6h_src));
+                        proto_tree_add_item(loRH_tree, hf_6lowpan_6lorhe_length, tvb, offset, 2,
+                                            loRH_flags & LOWPAN_PATTERN_6LORHE_LENGTH);
+                        proto_tree_add_item(loRH_tree, hf_6lowpan_6lorhe_type, tvb, offset, 2,
+                                            loRHE_type);
+                        proto_tree_add_item(loRH_tree, hf_6lowpan_6lorhe_hoplimit, tvb, offset + 2, 1, ENC_BIG_ENDIAN);
+
+                        if (loRHE_length > 1) {
+                            for (int i = 0; i < 16; ++i) {
+                                ipv6.ip6h_src.bytes[i] = tvb_get_guint8(tvb, offset + 3 + i);
+                            }
+                            proto_tree_add_ipv6(loRH_tree, hf_6lowpan_6lorhc_address_src, tvb, offset + 3, 16,
+                                                &ipv6.ip6h_src);
+                        }
+                        offset += 2 + loRHE_length;
+                    }
+                    else {
+                        condition -= 1;
+                    }
+                    break; /* case LOWPAN_PATTERN_6LORHE */
+
+                case (LOWPAN_PATTERN_6LORHC): /*Critical Routing Header*/
+                    condition = 1 ;
+                    if (loRHE_type == 5){
+                        proto_tree_add_bitmask_list (loRH_tree, tvb, offset, 2, bits_RHC, ENC_NA);
+                        proto_tree_add_item         (loRH_tree, hf_6lowpan_6lorhe_type, tvb, offset, 2, ENC_BIG_ENDIAN);
+                        offset += 2;
+                        switch (IK){
+                            case  BITS_IK_0:
+                                proto_tree_add_item             (loRH_tree, hf_6lowpan_rpl_instance, tvb, offset, 1, ENC_BIG_ENDIAN);
+                                proto_tree_add_item             (loRH_tree, hf_6lowpan_sender_rank2, tvb, offset+1, 2, ENC_BIG_ENDIAN);
+                                offset += 3;
+                                break;
+                            case BITS_IK_1:
+                                proto_tree_add_item             (loRH_tree, hf_6lowpan_rpl_instance, tvb, offset, 1, ENC_BIG_ENDIAN);
+                                proto_tree_add_item             (loRH_tree, hf_6lowpan_sender_rank1, tvb, offset+1, 1, ENC_BIG_ENDIAN);
+                                offset += 2;
+                                break;
+                            case BITS_IK_2:
+                                rpl_instance = 0x00;
+                                proto_tree_add_uint             (loRH_tree, hf_6lowpan_rpl_instance, tvb, offset, 0, rpl_instance);
+                                proto_tree_add_item             (loRH_tree, hf_6lowpan_sender_rank2, tvb, offset, 2, ENC_BIG_ENDIAN);
+                                offset += 2;
+                                break;
+                            case BITS_IK_3:
+                                rpl_instance = 0x00;
+                                proto_tree_add_uint             (loRH_tree, hf_6lowpan_rpl_instance, tvb, offset, 0, rpl_instance);
+                                proto_tree_add_item             (loRH_tree, hf_6lowpan_sender_rank1, tvb, offset, 1, ENC_BIG_ENDIAN);
+                                offset +=1;
+                                break;
+                            }
+                        }
+                    else if (loRHE_type <= 4){
+                        memset(&ipv6.ip6h_src, 0, sizeof(ipv6.ip6h_src));
+                        proto_tree_add_uint             (loRH_tree, hf_6lowpan_6lorhc_size, tvb, offset, 2, loRH_flags & LOWPAN_PATTERN_6LORHE_LENGTH);
+                        proto_tree_add_uint             (loRH_tree, hf_6lowpan_6lorhe_type, tvb, offset, 2, loRHE_type);
+                        offset += 2 ;
+                        switch (loRHE_type){
+                            case IPV6_ADDR_COMPRESSED_1_BYTE: /* IPv6 address compressed to 1 byte */
                                 for (int i=0; i<loRHE_unitnums; i++) {
-                                    proto_tree_add_item(loRH_tree, hf_6lowpan_6lorhe_bitmap, tvb, offset, 4, ENC_BIG_ENDIAN);
-                                    offset += 4;
-                                }
-                            }
-                        }
-                        else if (loRHE_type == LOWPAN_IP_IN_IP_6LORH) {
-                            memset(&ipv6.ip6h_src, 0, sizeof(ipv6.ip6h_src));
-                            proto_tree_add_item(loRH_tree, hf_6lowpan_6lorhe_length, tvb, offset, 2,
-                                                loRH_flags & LOWPAN_PATTERN_6LORHE_LENGTH);
-                            proto_tree_add_item(loRH_tree, hf_6lowpan_6lorhe_type, tvb, offset, 2,
-                                                loRHE_type);
-                            proto_tree_add_item(loRH_tree, hf_6lowpan_6lorhe_hoplimit, tvb, offset + 2, 1, ENC_BIG_ENDIAN);
-
-                            if (loRHE_length > 1) {
-                                for (int i = 0; i < 16; ++i) {
-                                    ipv6.ip6h_src.bytes[i] = tvb_get_guint8(tvb, offset + 3 + i);
-                                }
-                                proto_tree_add_ipv6(loRH_tree, hf_6lowpan_6lorhc_address_src, tvb, offset + 3, 16,
-                                                    &ipv6.ip6h_src);
-                            }
-                            offset += 2 + loRHE_length;
-                        }
-                        break; /* case LOWPAN_PATTERN_6LORHE */
-
-                    case (LOWPAN_PATTERN_6LORHC): /*Critical Routing Header*/
-                        condition = 1 ;
-                        if (loRHE_type == 5){
-                            proto_tree_add_bitmask_list (loRH_tree, tvb, offset, 2, bits_RHC, ENC_NA);
-                            proto_tree_add_item         (loRH_tree, hf_6lowpan_6lorhe_type, tvb, offset, 2, ENC_BIG_ENDIAN);
-                            offset += 2;
-                            switch (IK){
-                                case  BITS_IK_0:
-                                    proto_tree_add_item             (loRH_tree, hf_6lowpan_rpl_instance, tvb, offset, 1, ENC_BIG_ENDIAN);
-                                    proto_tree_add_item             (loRH_tree, hf_6lowpan_sender_rank2, tvb, offset+1, 2, ENC_BIG_ENDIAN);
-                                    offset += 3;
-                                    break;
-                                case BITS_IK_1:
-                                    proto_tree_add_item             (loRH_tree, hf_6lowpan_rpl_instance, tvb, offset, 1, ENC_BIG_ENDIAN);
-                                    proto_tree_add_item             (loRH_tree, hf_6lowpan_sender_rank1, tvb, offset+1, 1, ENC_BIG_ENDIAN);
-                                    offset += 2;
-                                    break;
-                                case BITS_IK_2:
-                                    rpl_instance = 0x00;
-                                    proto_tree_add_uint             (loRH_tree, hf_6lowpan_rpl_instance, tvb, offset, 0, rpl_instance);
-                                    proto_tree_add_item             (loRH_tree, hf_6lowpan_sender_rank2, tvb, offset, 2, ENC_BIG_ENDIAN);
-                                    offset += 2;
-                                    break;
-                                case BITS_IK_3:
-                                    rpl_instance = 0x00;
-                                    proto_tree_add_uint             (loRH_tree, hf_6lowpan_rpl_instance, tvb, offset, 0, rpl_instance);
-                                    proto_tree_add_item             (loRH_tree, hf_6lowpan_sender_rank1, tvb, offset, 1, ENC_BIG_ENDIAN);
+                                    for (int j = 0; j < 1; j++){
+                                        ipv6.ip6h_src.bytes[15-j] = tvb_get_guint8(tvb, offset);
+                                    }
+                                    proto_tree_add_ipv6(tree, hf_6lowpan_6lorhc_address_hop0, tvb, offset, 1, &ipv6.ip6h_src);
                                     offset +=1;
-                                    break;
                                 }
-                            }
-                        else if (loRHE_type <= 4){
-                            memset(&ipv6.ip6h_src, 0, sizeof(ipv6.ip6h_src));
-                            proto_tree_add_uint             (loRH_tree, hf_6lowpan_6lorhc_size, tvb, offset, 2, loRH_flags & LOWPAN_PATTERN_6LORHE_LENGTH);
-                            proto_tree_add_uint             (loRH_tree, hf_6lowpan_6lorhe_type, tvb, offset, 2, loRHE_type);
-                            offset += 2 ;
-                            switch (loRHE_type){
-                                case IPV6_ADDR_COMPRESSED_1_BYTE: /* IPv6 address compressed to 1 byte */
-                                    for (int i=0; i<loRHE_unitnums; i++) {
-                                        for (int j = 0; j < 1; j++){
-                                            ipv6.ip6h_src.bytes[15-j] = tvb_get_guint8(tvb, offset);
-                                        }
-                                        proto_tree_add_ipv6(tree, hf_6lowpan_6lorhc_address_hop0, tvb, offset, 1, &ipv6.ip6h_src);
+                                break;
+
+                            case IPV6_ADDR_COMPRESSED_2_BYTE: /* IPv6 address compressed to 2 bytes */
+                                for (int i=0; i<loRHE_unitnums; i++) {
+                                    for (int j = 0; j < 2; ++j){
+                                        ipv6.ip6h_src.bytes[15-1+j] = tvb_get_guint8(tvb, offset);
                                         offset +=1;
                                     }
-                                    break;
+                                    proto_tree_add_ipv6(tree, hf_6lowpan_6lorhc_address_hop1, tvb, offset - 2, 2, &ipv6.ip6h_src);
+                                }
+                                break;
 
-                                case IPV6_ADDR_COMPRESSED_2_BYTE: /* IPv6 address compressed to 2 bytes */
-                                    for (int i=0; i<loRHE_unitnums; i++) {
-                                        for (int j = 0; j < 2; ++j){
-                                            ipv6.ip6h_src.bytes[15-1+j] = tvb_get_guint8(tvb, offset);
-                                            offset +=1;
-                                        }
-                                        proto_tree_add_ipv6(tree, hf_6lowpan_6lorhc_address_hop1, tvb, offset - 2, 2, &ipv6.ip6h_src);
+                            case IPV6_ADDR_COMPRESSED_4_BYTE: /* IPv6 address compressed to 4 bytes */
+                                for (int i=0; i<loRHE_unitnums; i++) {
+                                    for (int j = 0; j < 4; j++){
+                                        ipv6.ip6h_src.bytes[15-3+j] = tvb_get_guint8(tvb, offset);
+                                        offset +=1;
                                     }
-                                    break;
+                                    proto_tree_add_ipv6(tree, hf_6lowpan_6lorhc_address_hop2, tvb, offset - 4, 4, &ipv6.ip6h_src);
+                                }
+                                break;
 
-                                case IPV6_ADDR_COMPRESSED_4_BYTE: /* IPv6 address compressed to 4 bytes */
-                                    for (int i=0; i<loRHE_unitnums; i++) {
-                                        for (int j = 0; j < 4; j++){
-                                            ipv6.ip6h_src.bytes[15-3+j] = tvb_get_guint8(tvb, offset);
-                                            offset +=1;
-                                        }
-                                        proto_tree_add_ipv6(tree, hf_6lowpan_6lorhc_address_hop2, tvb, offset - 4, 4, &ipv6.ip6h_src);
+                            case IPV6_ADDR_COMPRESSED_8_BYTE: /* IPv6 address compressed to 8 bytes */
+                                for (int i=0; i<loRHE_unitnums; i++) {
+                                    for (int j = 0; j < 8; j++){
+                                        ipv6.ip6h_src.bytes[15-7+j] = tvb_get_guint8(tvb, offset);
+                                        offset +=1;
                                     }
-                                    break;
+                                    proto_tree_add_ipv6(tree, hf_6lowpan_6lorhc_address_hop3, tvb, offset - 8, 8, &ipv6.ip6h_src);
+                                }
+                                break;
+                            case IPV6_ADDR_COMPRESSED_16_BYTE: /* IPv6 address compressed to 16 bytes */
+                                for (int i=0; i<loRHE_unitnums; i++) {
+                                    for (int j = 0; j < 16; j++){
+                                        ipv6.ip6h_src.bytes[j] = tvb_get_guint8(tvb, offset);
+                                        offset +=1;
+                                    }
+                                    proto_tree_add_ipv6(tree, hf_6lowpan_6lorhc_address_hop4, tvb, offset - 16, 16, &ipv6.ip6h_src);
+                                }
+                                break; /**/
+                            } /* switch loRHE_type */
+                        } /* else if (loRHE_type <= 4) */
+                    else {
+                        condition -= 1;
+                    }
+                    break; /* case LOWPAN_PATTERN_6LORHC */
 
-                                case IPV6_ADDR_COMPRESSED_8_BYTE: /* IPv6 address compressed to 8 bytes */
-                                    for (int i=0; i<loRHE_unitnums; i++) {
-                                        for (int j = 0; j < 8; j++){
-                                            ipv6.ip6h_src.bytes[15-7+j] = tvb_get_guint8(tvb, offset);
-                                            offset +=1;
-                                        }
-                                        proto_tree_add_ipv6(tree, hf_6lowpan_6lorhc_address_hop3, tvb, offset - 8, 8, &ipv6.ip6h_src);
-                                    }
-                                    break;
-                                case IPV6_ADDR_COMPRESSED_16_BYTE: /* IPv6 address compressed to 16 bytes */
-                                    for (int i=0; i<loRHE_unitnums; i++) {
-                                        for (int j = 0; j < 16; j++){
-                                            ipv6.ip6h_src.bytes[j] = tvb_get_guint8(tvb, offset);
-                                            offset +=1;
-                                        }
-                                        proto_tree_add_ipv6(tree, hf_6lowpan_6lorhc_address_hop4, tvb, offset - 16, 16, &ipv6.ip6h_src);
-                                    }
-                                    break; /**/
-                                } /* switch loRHE_type */
-                            } /* else if (loRHE_type <= 4) */
-                        break; /* case LOWPAN_PATTERN_6LORHC */
-
-                        default:
-                            condition -= 1 ;
-                            break;
-                    }  /* switch loRHE_class */
-                } /* if tree*/
+                    default:
+                        condition -= 1 ;
+                        break;
+                }  /* switch loRHE_class */
             loRH_flags  = tvb_get_ntohs(tvb, offset);
             loRHE_class = (loRH_flags & LOWPAN_PATTERN_6LORHE_CLASS) >> 13;
 
@@ -2406,7 +2402,7 @@ dissect_6lowpan_iphc_nhc(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gi
         guint16         udp_src_port, udp_dst_port;
 
         /* Create a tree for the UDP header. */
-        nhc_tree = proto_tree_add_subtree(tree, tvb, 0, 1, ett_6lowpan_nhc_udp, NULL, "UDP header compression");
+        nhc_tree = proto_tree_add_subtree(tree, tvb, offset, 1, ett_6lowpan_nhc_udp, NULL, "UDP header compression");
         /* Display the UDP NHC ID pattern. */
         proto_tree_add_bits_item(nhc_tree, hf_6lowpan_nhc_pattern, tvb, offset<<3, LOWPAN_NHC_PATTERN_UDP_BITS, ENC_BIG_ENDIAN);
 
@@ -2465,7 +2461,8 @@ dissect_6lowpan_iphc_nhc(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gi
             offset += 2;
         }
         else {
-            udp.checksum = 0;
+            /* Checksum must be != 0 or the UDP dissector will flag the packet with a PI_ERROR */
+            udp.checksum = 0xffff;
         }
 
         /* Compute the datagram length. */
@@ -2483,7 +2480,7 @@ dissect_6lowpan_iphc_nhc(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gi
          * disallows sending UDP datagrams without checksums. Likewise, 6LoWPAN
          * requires that we recompute the checksum.
          *
-         * If the datagram is incomplete, then leave the checksum at 0.
+         * If the datagram is incomplete, then leave the checksum at 0xffff.
          */
 #if 0
         /*
@@ -2493,7 +2490,8 @@ dissect_6lowpan_iphc_nhc(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gi
          *
          * If we want to display the checksums, they will have to be recomputed
          * after packet reassembly. Lots of work for not much gain, since we can
-         * just set the UDP checksum to 0 and Wireshark doesn't care.
+         * just set the UDP checksum to 0xffff (anything != 0) and Wireshark
+         * doesn't care.
          */
         if ((udp_flags & LOWPAN_NHC_UDP_CHECKSUM) && tvb_bytes_exist(tvb, offset, length)) {
             vec_t      cksum_vec[3];
@@ -3325,6 +3323,10 @@ proto_register_6lowpan(void)
                                    "Derive IID according to RFC 4944",
                                    "Derive IID from a short 16-bit address according to RFC 4944 (using the PAN ID).",
                                    &rfc4944_short_address_format);
+    prefs_register_bool_preference(prefs_module, "iid_has_universal_local_bit",
+                                   "IID has Universal/Local bit",
+                                   "Linux kernels before version 4.12 does toggle the Universal/Local bit.",
+                                   &iid_has_universal_local_bit);
 
     for (i = 0; i < LOWPAN_CONTEXT_MAX; i++) {
         char *pref_name, *pref_title;

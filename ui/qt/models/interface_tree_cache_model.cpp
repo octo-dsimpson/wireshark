@@ -5,20 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 
 #include <ui/qt/models/interface_tree_cache_model.h>
@@ -186,14 +173,12 @@ void InterfaceTreeCacheModel::save()
                 {
                     device->hidden = saveValue.toBool();
                 }
-#ifdef HAVE_EXTCAP
                 else if ( device->if_info.type == IF_EXTCAP )
                 {
                     /* extcap interfaces do not have the following columns.
                      * ATTENTION: all generic columns must be added, BEFORE this
                      * if-clause, or they will be ignored for extcap interfaces */
                 }
-#endif
                 else if ( col == IFTREE_COL_PROMISCUOUSMODE )
                 {
                     device->pmode = saveValue.toBool();
@@ -237,10 +222,10 @@ void InterfaceTreeCacheModel::save()
             prefStorage[&prefs.capture_devices_descr] << QString("%1(%2)").arg(device->name).arg(content.toString());
 
         bool allowExtendedColumns = true;
-#ifdef HAVE_EXTCAP
+
         if ( device->if_info.type == IF_EXTCAP )
             allowExtendedColumns = false;
-#endif
+
         if ( allowExtendedColumns )
         {
             content = getColumnContent(idx, IFTREE_COL_PROMISCUOUSMODE, Qt::CheckStateRole);
@@ -318,9 +303,7 @@ const interface_t * InterfaceTreeCacheModel::lookup(const QModelIndex &index) co
 {
     const interface_t * result = 0;
 
-    if ( ! index.isValid() )
-        return result;
-    if ( ! global_capture_opts.all_ifaces && newDevices.size() == 0 )
+    if ( ! index.isValid() || ! global_capture_opts.all_ifaces )
         return result;
 
     int idx = index.row();
@@ -352,7 +335,6 @@ bool InterfaceTreeCacheModel::isAllowedToBeEdited(const QModelIndex &index) cons
     if ( device == 0 )
         return false;
 
-#ifdef HAVE_EXTCAP
     InterfaceTreeColumns col = (InterfaceTreeColumns) index.column();
     if ( device->if_info.type == IF_EXTCAP )
     {
@@ -364,8 +346,6 @@ bool InterfaceTreeCacheModel::isAllowedToBeEdited(const QModelIndex &index) cons
             return false;
 #endif
     }
-#endif
-
 #endif
     return true;
 }

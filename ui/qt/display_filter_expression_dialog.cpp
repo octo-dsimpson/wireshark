@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include <algorithm>
 
@@ -129,7 +116,7 @@ void DisplayFilterExpressionDialog::fillTree()
                 .arg(proto_get_protocol_short_name(protocol))
                 .arg(proto_get_protocol_long_name(protocol));
         proto_ti->setText(0, label);
-        proto_ti->setData(0, Qt::UserRole, qVariantFromValue(proto_id));
+        proto_ti->setData(0, Qt::UserRole, QVariant::fromValue(proto_id));
         proto_list << proto_ti;
     }
 
@@ -348,7 +335,7 @@ void DisplayFilterExpressionDialog::on_fieldTreeWidget_itemSelectionChanged()
                     } else { // Plain old value_string / VALS
                         const value_string *vals = (const value_string *)hfinfo->strings;
                         if (hfinfo->display & BASE_EXT_STRING)
-                            vals = VALUE_STRING_EXT_VS_P((value_string_ext *)vals);
+                            vals = VALUE_STRING_EXT_VS_P((const value_string_ext *)vals);
                         fillEnumIntValues(vals, base);
                     }
                 }

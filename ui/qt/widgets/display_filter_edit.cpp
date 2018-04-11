@@ -4,19 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -33,18 +21,23 @@
 #include "filter_dialog.h"
 #include <ui/qt/widgets/stock_icon_tool_button.h>
 #include <ui/qt/widgets/syntax_line_edit.h>
+#include <ui/qt/utils/wireshark_mime_data.h>
+#include <ui/qt/models/pref_models.h>
+#include "wireshark_application.h"
 
 #include <QAction>
 #include <QAbstractItemView>
 #include <QComboBox>
 #include <QCompleter>
-#include <QEvent>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
 #include <QStringListModel>
-
-#include <wsutil/utf8_entities.h>
+#include <QWidget>
+#include <QObject>
+#include <QDrag>
+#include <QDropEvent>
+#include <QMimeData>
 
 // To do:
 // - Get rid of shortcuts and replace them with "n most recently applied filters"?
@@ -164,6 +157,7 @@ DisplayFilterEdit::DisplayFilterEdit(QWidget *parent, DisplayFilterEditType type
 
     connect(wsApp, SIGNAL(appInitialized()), this, SLOT(updateBookmarkMenu()));
     connect(wsApp, SIGNAL(displayFilterListChanged()), this, SLOT(updateBookmarkMenu()));
+
 }
 
 void DisplayFilterEdit::setDefaultPlaceholderText()
@@ -515,7 +509,7 @@ void DisplayFilterEdit::showFilters()
 
 void DisplayFilterEdit::showExpressionPrefs()
 {
-    emit showPreferencesDialog(PreferencesDialog::ppFilterExpressions);
+    emit showPreferencesDialog(PrefsModel::FILTER_BUTTONS_PREFERENCE_TREE_NAME);
 }
 
 void DisplayFilterEdit::applyOrPrepareFilter()
@@ -528,6 +522,75 @@ void DisplayFilterEdit::applyOrPrepareFilter()
     // Holding down the Shift key will only prepare filter.
     if (!(QApplication::keyboardModifiers() & Qt::ShiftModifier)) {
         applyDisplayFilter();
+    }
+}
+
+void DisplayFilterEdit::dragEnterEvent(QDragEnterEvent *event)
+{
+    if ( ! event )
+        return;
+
+    if (qobject_cast<const DisplayFilterMimeData *>(event->mimeData())) {
+        if ( event->source() != this )
+        {
+            event->setDropAction(Qt::CopyAction);
+            event->accept();
+        } else {
+            event->acceptProposedAction();
+        }
+    } else {
+        event->ignore();
+    }
+}
+
+void DisplayFilterEdit::dragMoveEvent(QDragMoveEvent *event)
+{
+    if ( ! event )
+        return;
+
+    if (qobject_cast<const DisplayFilterMimeData *>(event->mimeData())) {
+        if ( event->source() != this )
+        {
+            event->setDropAction(Qt::CopyAction);
+            event->accept();
+        } else {
+            event->acceptProposedAction();
+        }
+    } else {
+        event->ignore();
+    }
+}
+
+void DisplayFilterEdit::dropEvent(QDropEvent *event)
+{
+    if ( ! event )
+        return;
+
+    /* Moving items around */
+    if (qobject_cast<const DisplayFilterMimeData *>(event->mimeData())) {
+        const DisplayFilterMimeData * data = qobject_cast<const DisplayFilterMimeData *>(event->mimeData());
+
+        if ( event->source() != this )
+        {
+            event->setDropAction(Qt::CopyAction);
+            event->accept();
+
+            if ((QApplication::keyboardModifiers() & Qt::AltModifier))
+                setText(data->field());
+            else
+                setText(data->filter());
+
+            // Holding down the Shift key will only prepare filter.
+            if (!(QApplication::keyboardModifiers() & Qt::ShiftModifier)) {
+                applyDisplayFilter();
+            }
+
+        } else {
+            event->acceptProposedAction();
+        }
+
+    } else {
+        event->ignore();
     }
 }
 

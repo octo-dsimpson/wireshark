@@ -4,43 +4,31 @@
 # By Gerald Combs <gerald@wireshark.org>
 # Copyright 2004 Gerald Combs
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 include $(top_srcdir)/Makefile.am.inc
 
 AM_CPPFLAGS = $(INCLUDEDIRS) -I$(top_srcdir)/epan $(WS_CPPFLAGS) \
 	$(GLIB_CFLAGS) $(LIBGNUTLS_CFLAGS) $(LIBGCRYPT_CFLAGS) \
-	$(LIBGEOIP_CFLAGS) $(KRB5_CFLAGS) $(LIBXML2_CFLAGS)
+	$(KRB5_CFLAGS) $(LIBXML2_CFLAGS)
 
 include Custom.common
 
 # "BUILT_SOURCES" are built before any "make all" or "make check" targets.
 BUILT_SOURCES = \
-	register.c
+	dissectors.c
 
 # Header files generated from source files.
-NO_DIST_GENERATED_HEADER_FILES =
+NODIST_GENERATED_HEADER_FILES =
 
 # C source files generated from source files.
-NO_DIST_GENERATED_C_FILES = \
-	register.c
+NODIST_GENERATED_C_FILES = \
+	dissectors.c
 
 # All the generated files.
-NO_DIST_GENERATED_FILES = \
-	$(NO_DIST_GENERATED_HEADER_FILES)	\
-	$(NO_DIST_GENERATED_C_FILES)
+NODIST_GENERATED_FILES = \
+	$(NODIST_GENERATED_HEADER_FILES)	\
+	$(NODIST_GENERATED_C_FILES)
 
 #
 # PIDL-generated DCE RPC dissectors without warnings.
@@ -121,6 +109,7 @@ ASN1_DISSECTOR_SRC = \
 	packet-dsp.c		\
 	packet-ecp.c		\
 	packet-ess.c		\
+	packet-f1ap.c		\
 	packet-ftam.c		\
 	packet-goose.c		\
 	packet-gsm_map.c	\
@@ -157,6 +146,7 @@ ASN1_DISSECTOR_SRC = \
 	packet-mpeg-pes.c	\
 	packet-mudurl.c		\
 	packet-nbap.c		\
+	packet-nr-rrc.c		\
 	packet-novell_pkis.c	\
 	packet-ns_cert_exts.c	\
 	packet-ocsp.c		\
@@ -285,6 +275,7 @@ DISSECTOR_SRC = \
 	packet-arcnet.c		\
 	packet-armagetronad.c	\
 	packet-arp.c		\
+	packet-artemis.c        \
 	packet-artnet.c		\
 	packet-aruba-adp.c	\
 	packet-aruba-erm.c	\
@@ -302,6 +293,7 @@ DISSECTOR_SRC = \
 	packet-atm.c		\
 	packet-atmtcp.c		\
 	packet-auto_rp.c	\
+	packet-avsp.c 		\
 	packet-ax25.c		\
 	packet-ax25-kiss.c	\
 	packet-ax25-nol3.c	\
@@ -360,6 +352,7 @@ DISSECTOR_SRC = \
 	packet-btle.c		\
 	packet-btle_rf.c	\
 	packet-btmcap.c		\
+	packet-btmesh.c		\
 	packet-btrfcomm.c	\
 	packet-btsap.c		\
 	packet-btsdp.c		\
@@ -368,6 +361,7 @@ DISSECTOR_SRC = \
 	packet-bzr.c		\
 	packet-c15ch.c		\
 	packet-calcappprotocol.c	\
+	packet-caneth.c		\
 	packet-canopen.c	\
 	packet-capwap.c		\
 	packet-carp.c		\
@@ -421,6 +415,7 @@ DISSECTOR_SRC = \
 	packet-csn1.c		\
 	packet-ctdb.c		\
 	packet-cups.c		\
+	packet-cvspserver.c	\
 	packet-daap.c		\
 	packet-data.c		\
 	packet-daytime.c	\
@@ -512,6 +507,10 @@ DISSECTOR_SRC = \
 	packet-dmx.c		\
 	packet-dnp.c		\
 	packet-dns.c		\
+	packet-docsis.c		\
+	packet-docsis-macmgmt.c	\
+	packet-docsis-tlv.c	\
+	packet-docsis-vendor.c	\
 	packet-dof.c		\
 	packet-dplay.c		\
 	packet-dpnet.c		\
@@ -579,6 +578,7 @@ DISSECTOR_SRC = \
 	packet-exec.c		\
 	packet-exported_pdu.c	\
 	packet-extreme.c	\
+	packet-f5ethtrailer.c	\
 	packet-fc00.c		\
 	packet-fc.c		\
 	packet-fcct.c		\
@@ -613,6 +613,7 @@ DISSECTOR_SRC = \
 	packet-foundry.c	\
 	packet-fp_hint.c	\
 	packet-fp_mux.c	    \
+	packet-fpp.c		\
 	packet-fr.c		\
 	packet-fractalgeneratorprotocol.c	\
 	packet-frame.c		\
@@ -877,6 +878,7 @@ DISSECTOR_SRC = \
 	packet-lltd.c		\
 	packet-lmi.c		\
 	packet-lmp.c		\
+	packet-lnet.c		\
 	packet-logcat.c		\
 	packet-logcat-text.c	\
 	packet-lon.c		\
@@ -887,6 +889,7 @@ DISSECTOR_SRC = \
 	packet-lsc.c		\
 	packet-lsd.c		\
 	packet-ltp.c		\
+	packet-lustre.c		\
 	packet-lwapp.c		\
 	packet-lwm.c		\
 	packet-lwm2mtlv.c	\
@@ -898,6 +901,7 @@ DISSECTOR_SRC = \
 	packet-maap.c		\
 	packet-mac-lte-framed.c	\
 	packet-mac-lte.c	\
+	packet-mac-nr.c         \
 	packet-maccontrol.c	\
 	packet-macsec.c		\
 	packet-mactelnet.c	\
@@ -942,6 +946,7 @@ DISSECTOR_SRC = \
 	packet-mpeg-sect.c	\
 	packet-mpeg1.c		\
 	packet-mpls-echo.c	\
+	packet-mpls-mac.c	\
 	packet-mpls-pm.c	\
 	packet-mpls-psc.c	\
 	packet-mplstp-oam.c	\
@@ -972,6 +977,8 @@ DISSECTOR_SRC = \
 	packet-multipart.c	\
 	packet-mux27010.c	\
 	packet-mysql.c		\
+	packet-nano.c		\
+	packet-nas_5gs.c	\
 	packet-nas_eps.c	\
 	packet-nasdaq-itch.c	\
 	packet-nasdaq-soup.c	\
@@ -1034,6 +1041,7 @@ DISSECTOR_SRC = \
 	packet-nvme-rdma.c	\
 	packet-nwmtp.c		\
 	packet-nwp.c		\
+	packet-nxp_802154_sniffer.c		\
 	packet-nfapi.c		\
 	packet-oampdu.c		\
 	packet-obd-ii.c		\
@@ -1060,6 +1068,7 @@ DISSECTOR_SRC = \
 	packet-opsi.c		\
 	packet-optommp.c	\
 	packet-osc.c		\
+	packet-oscore.c		\
 	packet-osi-options.c	\
 	packet-osi.c		\
 	packet-ositp.c		\
@@ -1081,6 +1090,7 @@ DISSECTOR_SRC = \
 	packet-pcp.c		\
 	packet-pdc.c		\
 	packet-pdcp-lte.c	\
+	packet-pdcp-nr.c	\
 	packet-peekremote.c	\
 	packet-per.c		\
 	packet-pfcp.c		\
@@ -1154,6 +1164,7 @@ DISSECTOR_SRC = \
 	packet-rip.c		\
 	packet-ripng.c		\
 	packet-rlc-lte.c	\
+	packet-rlc-nr.c		\
 	packet-rlm.c		\
 	packet-rlogin.c		\
 	packet-rmcp.c		\
@@ -1249,6 +1260,7 @@ DISSECTOR_SRC = \
 	packet-smb2.c		\
 	packet-smcr.c		\
 	packet-sml.c		\
+	packet-smp.c		\
 	packet-smpp.c		\
 	packet-smtp.c		\
 	packet-sna.c		\
@@ -1277,6 +1289,7 @@ DISSECTOR_SRC = \
 	packet-starteam.c	\
 	packet-stat-notify.c	\
 	packet-stat.c		\
+	packet-steam-ihs-discovery.c	\
 	packet-stt.c		\
 	packet-stun.c		\
 	packet-sua.c		\
@@ -1327,6 +1340,7 @@ DISSECTOR_SRC = \
 	packet-turbocell.c	\
 	packet-turnchannel.c	\
 	packet-tuxedo.c		\
+	packet-twamp.c		\
 	packet-tzsp.c		\
 	packet-u3v.c		\
 	packet-ua.c		\
@@ -1400,6 +1414,7 @@ DISSECTOR_SRC = \
 	packet-wifi-p2p.c	\
 	packet-windows-common.c	\
 	packet-winsrepl.c	\
+	packet-wisun.c		\
 	packet-wlccp.c		\
 	packet-wol.c		\
 	packet-wow.c		\
@@ -1426,6 +1441,7 @@ DISSECTOR_SRC = \
 	packet-xmpp-utils.c	\
 	packet-xmpp.c		\
 	packet-xot.c		\
+	packet-xra.c		\
 	packet-xtp.c		\
 	packet-xyplex.c		\
 	packet-yami.c		\
@@ -1471,6 +1487,7 @@ FILE_DISSECTOR_INCLUDES = \
 #
 DISSECTOR_INCLUDES = \
 	$(PIDL_DISSECTOR_INCLUDES)	\
+	dissectors.h		\
 	packet-6lowpan.h	\
 	packet-a21.h		\
 	packet-acp133.h		\
@@ -1487,6 +1504,7 @@ DISSECTOR_INCLUDES = \
 	packet-atm.h		\
 	packet-atn-ulcs.h	\
 	packet-bacapp.h		\
+	packet-bacnet.h		\
 	packet-ber.h		\
 	packet-bfd.h		\
 	packet-bgp.h		\
@@ -1548,6 +1566,7 @@ DISSECTOR_INCLUDES = \
 	packet-diffserv-mpls-common.h	\
 	packet-disp.h		\
 	packet-dns.h		\
+	packet-docsis-tlv.h	\
 	packet-dop.h		\
 	packet-dsp.h		\
 	packet-dtls.h		\
@@ -1564,6 +1583,7 @@ DISSECTOR_INCLUDES = \
 	packet-epmd.h		\
 	packet-ess.h		\
 	packet-eth.h		\
+	packet-f5ethtrailer.h	\
 	packet-fc.h		\
 	packet-fcbls.h		\
 	packet-fcct.h		\
@@ -1648,10 +1668,12 @@ DISSECTOR_INCLUDES = \
 	packet-ldp.h		\
 	packet-link16.h		\
 	packet-llc.h		\
+	packet-lnet.h		\
 	packet-logotypecertextn.h	\
 	packet-lpp.h		\
 	packet-lte-rrc.h	\
 	packet-mac-lte.h	\
+	packet-mac-nr.h         \
 	packet-mausb.h		\
 	packet-mbim.h		\
 	packet-mbtcp.h		\
@@ -1680,12 +1702,14 @@ DISSECTOR_INCLUDES = \
 	packet-nfs.h		\
 	packet-nisplus.h	\
 	packet-nlm.h		\
+	packet-nr-rrc.h		\
 	packet-nsh.h		\
 	packet-ntlmssp.h	\
 	packet-ntp.h		\
 	packet-nvme.h		\
 	packet-ocsp.h		\
 	packet-opensafety.h	\
+	packet-oscore.h		\
 	packet-osi.h		\
 	packet-osi-options.h	\
 	packet-p1.h		\
@@ -1695,6 +1719,7 @@ DISSECTOR_INCLUDES = \
 	packet-pcap_pktdata.h	\
 	packet-pcnfsd.h		\
 	packet-pdcp-lte.h	\
+	packet-pdcp-nr.h	\
 	packet-per.h		\
 	packet-pkcs1.h		\
 	packet-pkcs12.h		\
@@ -1726,11 +1751,13 @@ DISSECTOR_INCLUDES = \
 	packet-rdt.h		\
 	packet-reload.h		\
 	packet-rlc-lte.h	\
+	packet-rlc-nr.h		\
 	packet-rmi.h		\
 	packet-rmt-common.h	\
 	packet-rohc.h		\
 	packet-ros.h		\
 	packet-rpc.h		\
+	packet-rpcrdma.h	\
 	packet-rquota.h		\
 	packet-rrc.h		\
 	packet-rsvp.h		\
@@ -1788,6 +1815,7 @@ DISSECTOR_INCLUDES = \
 	packet-tcp.h		\
 	packet-tetra.h		\
 	packet-tftp.h		\
+	packet-thrift.h		\
 	packet-tn3270.h		\
 	packet-tn5250.h		\
 	packet-tpkt.h		\
@@ -1821,6 +1849,7 @@ DISSECTOR_INCLUDES = \
 	x11-extension-errors.h	\
 	x11-glx-render-enum.h	\
 	x11-enum.h		\
+	packet-x2ap.h		\
 	packet-x509af.h		\
 	packet-x509ce.h		\
 	packet-x509if.h		\
@@ -1850,7 +1879,7 @@ DISSECTOR_INCLUDES = \
 
 # Dissector helpers.  They're included in the source files in this
 # directory, but they're not dissectors themselves, i.e. they're not
-# used to generate "register.c").
+# used to generate "dissectors.c").
 DISSECTOR_SUPPORT_SRC =	\
 	errno.c			\
 	packet-dcerpc-nt.c	\
@@ -1872,7 +1901,7 @@ libdirtydissectors_la_SOURCES = \
 	$(DIRTY_ASN1_DISSECTOR_SRC) \
 	$(DIRTY_CORBA_IDL_DISSECTOR_SRC)
 
-libdirtydissectors_la_CFLAGS = $(GENERATED_CFLAGS)
+libdirtydissectors_la_CFLAGS = $(DIRTY_CFLAGS)
 
 libfiledissectors_la_SOURCES = \
 	$(FILE_DISSECTOR_SRC)
@@ -1885,7 +1914,7 @@ libdissectors_la_SOURCES = \
 	$(DISSECTOR_SUPPORT_SRC)
 
 nodist_libdissectors_la_SOURCES = \
-	$(NO_DIST_GENERATED_C_FILES)
+	$(NODIST_GENERATED_C_FILES)
 
 subpkgincludedir = $(pkgincludedir)/epan/dissectors
 
@@ -1895,6 +1924,13 @@ subpkginclude_HEADERS = \
 # this target needed for distribution only
 noinst_HEADERS =	\
 	$(FILE_DISSECTOR_INCLUDES)
+
+noinst_PROGRAMS = make-dissectors
+
+make_dissectors_CFLAGS = $(WS_CPPFLAGS) $(GLIB_CFLAGS)
+
+make_dissectors_LDADD = $(GLIB_LIBS) \
+			${top_builddir}/wsutil/libwsutil.la
 
 # include asn1 in the source tarball. But nothing to build...
 DIST_SUBDIRS = asn1 dcerpc
@@ -1921,50 +1957,25 @@ x11-dissector: $(top_srcdir)/tools/process-x11-fields.pl $(srcdir)/x11-fields $(
 	$(PERL) $(top_srcdir)/tools/process-x11-xcb.pl $(srcdir)
 
 #
-# Build register.c, which contains a function register_all_protocols()
-# that calls the register routines for all protocols and a function
-# register_all_protocol_handoffs() that calls the handoff registration
-# routines for all protocols.
-#
-# We do this by scanning through sources. If that turns out to be too slow,
-# maybe we could just require every .o file to have an register routine
-# of a given name (packet-aarp.o -> proto_register_aarp, etc.).
-#
-# Formatting conventions: The name of the proto_register_* routines an
-# proto_reg_handoff_* routines must start in column zero, or must be
-# preceded only by "void " starting in column zero, and must not be
-# inside #if.
+# Build dissectors.c, which contains a function pointer array
+# with the register routines for all protocols and a function pointer array
+# with the handoff registration routines for all protocols.
 #
 # ALL_DISSECTORS_SRC is assumed to have all the files that need to be scanned.
 #
-# For some unknown reason, having a big "for" loop in the Makefile
-# to scan all the files doesn't work with some "make"s; they seem to
-# pass only the first few names in the list to the shell, for some
-# reason.
+# We pass the arguments to make-dissectors in a file to avoid limitations
+# with the number of arguments handled by main().
 #
-# Therefore, we use a script to generate the register.c file.
-# The first argument is the directory in which the source files live.
-# The second argument is "dissectors", to indicate that we should build
-# a register.c file for libwireshark.
-# All subsequent arguments are the files to scan.
-#
-register.c: $(plugin_src) $(ALL_DISSECTORS_SRC) Custom.common \
-	$(top_srcdir)/tools/make-dissector-reg.py
-	@echo Making register.c ; \
-	$(PYTHON) $(top_srcdir)/tools/make-dissector-reg.py $(srcdir) \
-		dissectors $(ALL_DISSECTORS_SRC) ;
+dissectors.c: make-dissectors $(ALL_DISSECTORS_SRC)
+	@echo Making dissectors.c
+	@echo $^ | tr ' ' '\n' | $(GREP) '\.c$$' > dissectors.in.txt && \
+	    $(builddir)/make-dissectors $@ @dissectors.in.txt
 
-CLEANFILES = \
-	libdissectors.a			\
-	libdissectors.la		\
-	libdirtydissectors.a		\
-	libdirtydissectors.la		\
-	register.c-tmp			\
-	register-cache.pkl		\
-	*~
+MOSTLYCLEANFILES = \
+	dissectors.in.txt
 
 DISTCLEANFILES = \
-	$(NO_DIST_GENERATED_FILES)
+	$(NODIST_GENERATED_FILES)
 
 MAINTAINERCLEANFILES = \
 	packet-ncp2222.c

@@ -4,19 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #ifndef MAINWINDOW_H
@@ -43,6 +31,7 @@
 #include <capchild/capture_session.h>
 
 #include <QMainWindow>
+#include <QPointer>
 #include <QSplitter>
 
 #ifdef _WIN32
@@ -54,10 +43,11 @@
 #include "capture_file.h"
 #include "capture_file_dialog.h"
 #include "capture_file_properties_dialog.h"
+#include <ui/qt/utils/field_information.h>
 #include <ui/qt/widgets/display_filter_combo.h>
 #include "filter_action.h"
 #include "follow_stream_dialog.h"
-#include "preferences_dialog.h"
+#include <ui/qt/models/pref_models.h>
 
 class AccordionFrame;
 class ByteViewTab;
@@ -78,9 +68,6 @@ namespace Ui {
     class MainWindow;
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_DECLARE_METATYPE(QToolBar *)
-#endif
 Q_DECLARE_METATYPE(ts_type)
 Q_DECLARE_METATYPE(ts_precision)
 
@@ -108,6 +95,9 @@ public:
 
     void addInterfaceToolbar(const iface_toolbar *toolbar_entry);
     void removeInterfaceToolbar(const gchar *menu_title);
+
+    QString getMwFileName();
+    void setMwFileName(QString fileName);
 
 protected:
     virtual bool eventFilter(QObject *obj, QEvent *event);
@@ -154,24 +144,28 @@ private:
     CaptureFile capture_file_;
     QFont mono_font_;
     WirelessFrame *wireless_frame_;
-    // XXX - packet_list_, proto_tree_, and byte_view_tab_ should
+    // XXX - packet_list_ and proto_tree_ should
     // probably be full-on values instead of pointers.
     PacketList *packet_list_;
     ProtoTree *proto_tree_;
+    ByteViewTab * byte_view_tab_;
     QWidget *previous_focus_;
     FileSetDialog *file_set_dialog_;
-    ByteViewTab *byte_view_tab_;
     QWidget empty_pane_;
     QActionGroup *show_hide_actions_;
     QActionGroup *time_display_actions_;
     QActionGroup *time_precision_actions_;
     FunnelStatistics *funnel_statistics_;
     QList<QPair<QAction *, bool> > freeze_actions_;
-    QWidget *freeze_focus_;
+    QPointer<QWidget> freeze_focus_;
     QMap<QAction *, ts_type> td_actions;
     QMap<QAction *, ts_precision> tp_actions;
     DragDropToolBar *filter_expression_toolbar_;
     bool was_maximized_;
+
+    /* the following values are maintained so that the capture file name and status
+    is available when there is no cf structure available */
+    QString mwFileName_;
 
     bool capture_stopping_;
     bool capture_filter_valid_;
@@ -194,7 +188,7 @@ private:
     QSocketNotifier *pipe_notifier_;
 #endif
 
-#if defined(Q_OS_MAC) && QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
+#if defined(Q_OS_MAC)
     QMenu *dock_menu_;
 #endif
 
@@ -240,7 +234,6 @@ private:
     void setForCaptureInProgress(bool capture_in_progress = false, GArray *ifaces = NULL);
     QMenu* findOrAddMenu(QMenu *parent_menu, QString& menu_text);
 
-    void recursiveCopyProtoTreeItems(QTreeWidgetItem *item, QString &clip, int ident_level);
     void captureFileReadStarted(const QString &action);
 
     void addMenuActions(QList<QAction *> &actions, int menu_group);
@@ -248,16 +241,23 @@ private:
     void goToConversationFrame(bool go_next);
     void colorizeWithFilter(QByteArray filter, int color_number = -1);
 
+    void createByteViewDialog();
+
 signals:
     void setCaptureFile(capture_file *cf);
     void setDissectedCaptureFile(capture_file *cf);
     void displayFilterSuccess(bool success);
-    void monospaceFontChanged(const QFont &mono_font);
     void closePacketDialogs();
     void reloadFields();
     void packetInfoChanged(struct _packet_info *pinfo);
     void fieldFilterChanged(const QByteArray field_filter);
     void filterAction(QString filter, FilterAction::Action action, FilterAction::ActionType type);
+
+    void fieldSelected(FieldInformation *);
+    void fieldHighlight(FieldInformation *);
+
+    void frameSelected(int);
+    void captureActive(int);
 
 public slots:
     // in main_window_slots.cpp
@@ -285,24 +285,13 @@ public slots:
     void captureCapturePrepared(capture_session *);
     void captureCaptureUpdateStarted(capture_session *);
     void captureCaptureUpdateFinished(capture_session *);
-    void captureCaptureFixedStarted(capture_session *);
     void captureCaptureFixedFinished(capture_session *cap_session);
-    void captureCaptureStopping(capture_session *);
     void captureCaptureFailed(capture_session *);
 
     void captureFileOpened();
-    void captureFileReadStarted() { captureFileReadStarted(tr("Loading")); }
     void captureFileReadFinished();
-    void captureFileReloadStarted() { captureFileReadStarted(tr("Reloading")); }
-    void captureFileRescanStarted() { setMenusForCaptureFile(true); captureFileReadStarted(tr("Rescanning")); }
-    void captureFileRetapStarted();
-    void captureFileRetapFinished();
-    void captureFileMergeStarted();
-    void captureFileMergeFinished();
-    void captureFileFlushTapsData();
     void captureFileClosing();
     void captureFileClosed();
-    void captureFileSaveStarted(const QString &file_path);
 
     void filterExpressionsChanged();
     static gboolean filter_expression_add_action(const void *key, void *value, void *user_data);
@@ -311,7 +300,13 @@ public slots:
                         guint16 channelType, guint16 channelId, guint8 direction);
 
     void on_actionViewFullScreen_triggered(bool checked);
+
+    int uatRowIndexForFilterExpression(QString label, QString expression);
+
 private slots:
+
+    void captureEventHandler(CaptureEvent * ev);
+
     // Manually connected slots (no "on_<object>_<signal>").
 
     void initViewColorizeMenu();
@@ -337,7 +332,7 @@ private slots:
     void updateRecentCaptures();
     void recentActionTriggered();
     void setMenusForSelectedPacket();
-    void setMenusForSelectedTreeRow(field_info *fi = NULL);
+    void setMenusForSelectedTreeRow(FieldInformation *fi = NULL);
     void interfaceSelectionChanged();
     void captureFilterSyntaxChanged(bool valid);
     void redissectPackets();
@@ -360,6 +355,7 @@ private slots:
     void filterToolbarDisableFilter();
     void filterToolbarRemoveFilter();
     void filterToolbarActionMoved(QAction * action, int oldPos, int newPos);
+    void filterDropped(QString description, QString filter);
 
     void startInterfaceCapture(bool valid, const QString capture_filter);
 
@@ -387,8 +383,6 @@ private slots:
      */
     void openTapParameterDialog(const QString cfg_str, const QString arg, void *userdata);
     void openTapParameterDialog();
-
-    void byteViewTabChanged(int tab_index);
 
 #ifdef HAVE_SOFTWARE_UPDATE
     void softwareUpdateRequested();
@@ -454,9 +448,9 @@ private slots:
     void on_actionEditPreviousTimeReference_triggered();
     void on_actionEditTimeShift_triggered();
     void on_actionEditPacketComment_triggered();
+    void on_actionDeleteAllPacketComments_triggered();
     void on_actionEditConfigurationProfiles_triggered();
-    void showPreferencesDialog(PreferencesDialog::PreferencesPane start_pane = PreferencesDialog::ppAppearance);
-    void showPreferencesDialog(QString module_name);
+    void showPreferencesDialog(QString pane_name);
     void on_actionEditPreferences_triggered();
 
     void showHideMainWidgets(QAction *action);
@@ -529,7 +523,7 @@ private slots:
     void on_actionAnalyzeDecodeAs_triggered();
     void on_actionAnalyzeReloadLuaPlugins_triggered();
 
-    void openFollowStreamDialog(follow_type_t type);
+    void openFollowStreamDialog(follow_type_t type, int stream_num = -1);
     void on_actionAnalyzeFollowTCPStream_triggered();
     void on_actionAnalyzeFollowUDPStream_triggered();
     void on_actionAnalyzeFollowSSLStream_triggered();
@@ -616,6 +610,7 @@ private slots:
     void on_actionStatisticsHTTPPacketCounter_triggered();
     void on_actionStatisticsHTTPRequests_triggered();
     void on_actionStatisticsHTTPLoadDistribution_triggered();
+    void on_actionStatisticsHTTPRequestSequences_triggered();
     void on_actionStatisticsPacketLengths_triggered();
     void statCommandIOGraph(const char *, void *);
     void on_actionStatisticsIOGraph_triggered();
@@ -652,22 +647,13 @@ private slots:
 
     void externalMenuItem_triggered();
 
-    void on_actionContextCopyBytesHexTextDump_triggered();
-    void on_actionContextCopyBytesHexDump_triggered();
-    void on_actionContextCopyBytesPrintableText_triggered();
-    void on_actionContextCopyBytesHexStream_triggered();
-    void on_actionContextCopyBytesBinary_triggered();
-    void on_actionContextCopyBytesEscapedString_triggered();
-
-    void on_actionContextShowPacketBytes_triggered();
+    void on_actionAnalyzeShowPacketBytes_triggered();
 
     void on_actionContextWikiProtocolPage_triggered();
     void on_actionContextFilterFieldReference_triggered();
 
-#ifdef HAVE_EXTCAP
     void extcap_options_finished(int result);
     void showExtcapOptionsDialog(QString & device_name);
-#endif
 };
 
 #endif // MAINWINDOW_H

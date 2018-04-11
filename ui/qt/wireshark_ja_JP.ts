@@ -36,16 +36,48 @@
         <translation>フォルダ</translation>
     </message>
     <message>
+        <source>Filter by path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Plugins</source>
         <translation>プラグイン</translation>
+    </message>
+    <message>
+        <source>No plugins found.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Search Plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Filter by type:</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Keyboard Shortcuts</source>
         <translation>キーボードショートカット</translation>
     </message>
     <message>
+        <source>Search Shortcuts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Acknowledgments</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>License</source>
         <translation>ライセンス</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation type="unfinished">コピー</translation>
+    </message>
+    <message>
+        <source>Copy Row(s)</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -70,6 +102,43 @@
     <message>
         <source>Can&apos;t assign %1 to %2</source>
         <translation>%1 を %2 に割り当てることができません</translation>
+    </message>
+</context>
+<context>
+    <name>AdvancedPrefsModel</name>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">名前</translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation type="unfinished">状態</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation type="unfinished">種別</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation type="unfinished">値</translation>
+    </message>
+</context>
+<context>
+    <name>ApplyLineEdit</name>
+    <message>
+        <source>Apply changes</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AuthorListModel</name>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">名前</translation>
+    </message>
+    <message>
+        <source>Email</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -108,7 +177,7 @@
     </message>
     <message>
         <source>Copy Rows</source>
-        <translation>列をコピー</translation>
+        <translation>行をコピー</translation>
     </message>
     <message>
         <source>Copy All</source>
@@ -247,15 +316,15 @@
     </message>
     <message>
         <source>Copy Cell</source>
-        <translation type="unfinished">セルをコピー</translation>
+        <translation>セルをコピー</translation>
     </message>
     <message>
         <source>Copy Rows</source>
-        <translation type="unfinished">列をコピー</translation>
+        <translation>行をコピー</translation>
     </message>
     <message>
         <source>Copy All</source>
-        <translation type="unfinished">すべてをコピー</translation>
+        <translation>すべてをコピー</translation>
     </message>
     <message>
         <source>Save as image</source>
@@ -362,7 +431,7 @@
     </message>
     <message>
         <source>Copy Rows</source>
-        <translation>列をコピー</translation>
+        <translation>行をコピー</translation>
     </message>
     <message>
         <source>Copy All</source>
@@ -553,7 +622,7 @@
     </message>
     <message>
         <source>Copy Rows</source>
-        <translation>列をコピー</translation>
+        <translation>行をコピー</translation>
     </message>
     <message>
         <source>Copy All</source>
@@ -611,15 +680,11 @@
     <name>ByteViewText</name>
     <message>
         <source>Show bytes as hexadecimal</source>
-        <translation>16進数でバイト列を表示</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Byte %1</source>
-        <translation>バイト %1</translation>
-    </message>
-    <message>
-        <source>Bytes %1-%2</source>
-        <translation>バイト %1-%2</translation>
+        <source>Show text based on packet</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -678,26 +743,6 @@
     <message>
         <source>Automatically detect file type</source>
         <translation type="unfinished"></translation>
-    </message>
-    <message numerus="yes">
-        <source>%1, error after %Ln packet(s)</source>
-        <oldsource>%1, error after %2 packets</oldsource>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%1, timed out at %Ln packet(s)</source>
-        <oldsource>%1, timed out at %2 packets</oldsource>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%1, %Ln packet(s)</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-        </translation>
     </message>
     <message>
         <source>Prepend packets</source>
@@ -770,6 +815,24 @@
     <message>
         <source>error opening file</source>
         <translation>ファイルオープンエラー</translation>
+    </message>
+    <message numerus="yes">
+        <source>%1, error after %Ln record(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%1, timed out at %Ln data record(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%1, %Ln data record(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+        </translation>
     </message>
     <message>
         <source>unknown</source>
@@ -966,6 +1029,53 @@
     </message>
 </context>
 <context>
+    <name>CaptureFilterCombo</name>
+    <message>
+        <source>Capture filter selector</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>CaptureFilterEdit</name>
+    <message>
+        <source>Capture filter entry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manage saved bookmarks.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Apply this filter string to the display.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Multiple filters selected. Override them here or leave this blank to preserve them.</source>
+        <extracomment>This is a very long concept that needs to fit into a short space.</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;The interfaces you have selected have different capture filters. Typing a filter here will override them. Doing nothing will preserve them.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter a capture filter %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save this filter</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove this filter</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manage Capture Filters</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>CaptureInterfacesDialog</name>
     <message>
         <source>Input</source>
@@ -996,8 +1106,8 @@
         <translation>出力形式:</translation>
     </message>
     <message>
-        <source>pcap-ng</source>
-        <translation>pcap-ng形式</translation>
+        <source>pcapng</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>pcap</source>
@@ -1291,8 +1401,8 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;次世代のキャプチャファイル形式でパケットをキャプチャします&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <source>Capture packets in pcap-ng format</source>
-        <translation>pcap-ng形式でパケットをキャプチャします</translation>
+        <source>Capture packets in pcapng format</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Update the list of packets while capture is in progress. This can result in dropped packets on high-speed networks.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
@@ -1310,20 +1420,23 @@ PLEASE NOTE: One option MUST be selected.</source>
         <source>Automatic scrolling in live capture</source>
         <translation>キャプチャ中に自動スクロール</translation>
     </message>
+    <message>
+        <source>Disable external capture interfaces</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ColoringRulesDelegate</name>
+    <message>
+        <source>the &quot;@&quot; symbol will be ignored.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ColoringRulesDialog</name>
     <message>
         <source>Dialog</source>
         <translation>ダイアログ</translation>
-    </message>
-    <message>
-        <source>Name</source>
-        <translation>名前</translation>
-    </message>
-    <message>
-        <source>Filter</source>
-        <translation>フィルタ</translation>
     </message>
     <message>
         <source>&lt;small&gt;&lt;i&gt;A hint.&lt;/i&gt;&lt;/small&gt;</source>
@@ -1358,8 +1471,12 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>背景色</translation>
     </message>
     <message>
-        <source>Coloring Rules</source>
-        <translation>色付けルール</translation>
+        <source>Set the display filter using this rule.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Apply as filter</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Import</source>
@@ -1378,8 +1495,8 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>ファイルにフィルタを保存します</translation>
     </message>
     <message>
-        <source>the &quot;@&quot; symbol will be ignored.</source>
-        <translation>この &quot;@&quot; シンボルは無視されます</translation>
+        <source>Coloring Rules %1</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Double click to edit. Drag to move. Rules are processed in order until a match is found.</source>
@@ -1401,9 +1518,20 @@ PLEASE NOTE: One option MUST be selected.</source>
         <source>Wireshark doesn&apos;t recognize one or more of your coloring rules. They have been disabled.</source>
         <translation type="unfinished"></translation>
     </message>
+</context>
+<context>
+    <name>ColoringRulesModel</name>
     <message>
-        <source>Unable to save coloring rules: %s</source>
-        <translation>色付けルール %s を保存できません</translation>
+        <source>Unable to save coloring rules: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">名前</translation>
+    </message>
+    <message>
+        <source>Filter</source>
+        <translation type="unfinished">フィルタ</translation>
     </message>
 </context>
 <context>
@@ -1522,6 +1650,37 @@ PLEASE NOTE: One option MUST be selected.</source>
     </message>
 </context>
 <context>
+    <name>DataPrinter</name>
+    <message>
+        <source>Copy Bytes as Hex + ASCII Dump</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as a hex and ASCII dump.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as a hex dump.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy only the printable text in the packet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as a stream of hex.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as application/octet-stream MIME data.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy packet bytes as an escaped string.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>DecodeAsDialog</name>
     <message>
         <source>Change the dissection behavior for a protocol.</source>
@@ -1538,6 +1697,123 @@ PLEASE NOTE: One option MUST be selected.</source>
     <message>
         <source>Decode As</source>
         <translation>としてデコード</translation>
+    </message>
+</context>
+<context>
+    <name>DecodeAsModel</name>
+    <message>
+        <source>Match using this field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Current&quot;Decode As&quot; behavior</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Default &quot;Decode As&quot; behavior</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change behavior when the protocol field matches this value</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>String</source>
+        <translation type="unfinished">文字列</translation>
+    </message>
+    <message>
+        <source>Integer, base </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>unknown</source>
+        <translation type="unfinished">不明</translation>
+    </message>
+    <message>
+        <source>&lt;none&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GUID</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation type="unfinished">値</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation type="unfinished">種別</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Current</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>DisplayFilterCombo</name>
+    <message>
+        <source>Display filter selector</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select from previously used filters.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>DisplayFilterEdit</name>
+    <message>
+        <source>Display filter entry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manage saved bookmarks.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Apply this filter string to the display.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Apply a display filter %1 &lt;%2/&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter a display filter %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Apply a read filter %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Invalid filter: </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save this filter</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove this filter</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manage Display Filters</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manage Filter Expressions</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1624,56 +1900,47 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>ダイアログ</translation>
     </message>
     <message>
-        <source>Table Name</source>
-        <translation>表の名前</translation>
-    </message>
-    <message>
-        <source>Short Name</source>
-        <translation>短い名前</translation>
+        <source>Search:</source>
+        <translation type="unfinished">検索:</translation>
     </message>
     <message>
         <source>Dissector Tables</source>
         <translation>ダイセクター表</translation>
     </message>
+</context>
+<context>
+    <name>DissectorTablesProxyModel</name>
     <message>
-        <source>String Tables</source>
-        <translation>文字列の表</translation>
-    </message>
-    <message>
-        <source>Integer Tables</source>
-        <translation>整数の表</translation>
-    </message>
-    <message>
-        <source>Custom Tables</source>
-        <translation>カスタム表</translation>
-    </message>
-    <message>
-        <source>Heuristic Tables</source>
-        <translation>ヒューリスティック表</translation>
-    </message>
-    <message>
-        <source>Selector Name</source>
-        <translation>セレクタ名</translation>
+        <source>Table Type</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>String</source>
-        <translation>文字列</translation>
+        <translation type="unfinished">文字列</translation>
     </message>
     <message>
         <source>Dissector</source>
-        <translation>ダイセクター</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Port</source>
-        <translation>ポート</translation>
+        <source>Integer</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Protocol</source>
-        <translation>プロトコル</translation>
+        <translation type="unfinished">プロトコル</translation>
     </message>
     <message>
-        <source>Table Type</source>
-        <translation>表の種別</translation>
+        <source>Short Name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Table Name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Selector Name</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1681,14 +1948,6 @@ PLEASE NOTE: One option MUST be selected.</source>
     <message>
         <source>Dialog</source>
         <translation>ダイアログ</translation>
-    </message>
-    <message>
-        <source>Protocol</source>
-        <translation>プロトコル</translation>
-    </message>
-    <message>
-        <source>Description</source>
-        <translation>記述</translation>
     </message>
     <message>
         <source>&lt;small&gt;&lt;i&gt;Disabling a protocol prevents higher layer protocols from being displayed&lt;/i&gt;&lt;/small&gt;</source>
@@ -1716,18 +1975,14 @@ PLEASE NOTE: One option MUST be selected.</source>
     </message>
 </context>
 <context>
-    <name>EndpointDialog</name>
+    <name>EnabledProtocolsModel</name>
     <message>
-        <source>Map</source>
-        <translation>マップ</translation>
+        <source>Protocol</source>
+        <translation type="unfinished">プロトコル</translation>
     </message>
     <message>
-        <source>Draw IPv4 or IPv6 endpoints on a map.</source>
-        <translation>IPv4またはIPv6の端末をマップ上に描画します</translation>
-    </message>
-    <message>
-        <source>Map file error</source>
-        <translation>マップファイルエラー</translation>
+        <source>Description</source>
+        <translation type="unfinished">記述</translation>
     </message>
 </context>
 <context>
@@ -1735,26 +1990,6 @@ PLEASE NOTE: One option MUST be selected.</source>
     <message>
         <source>Dialog</source>
         <translation>ダイアログ</translation>
-    </message>
-    <message>
-        <source>Severity</source>
-        <translation>重要度</translation>
-    </message>
-    <message>
-        <source>Summary</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Group</source>
-        <translation>グループ</translation>
-    </message>
-    <message>
-        <source>Protocol</source>
-        <translation>プロトコル</translation>
-    </message>
-    <message>
-        <source>Count</source>
-        <translation>数量</translation>
     </message>
     <message>
         <source>&lt;small&gt;&lt;i&gt;A hint.&lt;/i&gt;&lt;/small&gt;</source>
@@ -1826,8 +2061,12 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>エキスパート情報</translation>
     </message>
     <message>
-        <source>Endpoint expert failed to set filter</source>
-        <translation>フィルタを設定するのに失敗した端末のエキスパート情報</translation>
+        <source>Collapse All</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expand All</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Capture file closed.</source>
@@ -1849,9 +2088,32 @@ PLEASE NOTE: One option MUST be selected.</source>
         <source>Display filter: &quot;%1&quot;</source>
         <translation>表示フィルタ: &quot;%1&quot;</translation>
     </message>
+</context>
+<context>
+    <name>ExpertInfoProxyModel</name>
     <message>
         <source>Packet</source>
         <translation type="unfinished">パケット</translation>
+    </message>
+    <message>
+        <source>Severity</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Summary</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Group</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Protocol</source>
+        <translation type="unfinished">プロトコル</translation>
+    </message>
+    <message>
+        <source>Count</source>
+        <translation type="unfinished">カウント</translation>
     </message>
 </context>
 <context>
@@ -1898,26 +2160,6 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>ダイアログ</translation>
     </message>
     <message>
-        <source>Packet</source>
-        <translation>パケット</translation>
-    </message>
-    <message>
-        <source>Hostname</source>
-        <translation>ホスト名</translation>
-    </message>
-    <message>
-        <source>Content Type</source>
-        <translation>コンテントタイプ</translation>
-    </message>
-    <message>
-        <source>Size</source>
-        <translation>サイズ</translation>
-    </message>
-    <message>
-        <source>Filename</source>
-        <translation>ファイル名</translation>
-    </message>
-    <message>
         <source>Searching for objects</source>
         <translation>オブジェクトを探索中</translation>
     </message>
@@ -1947,6 +2189,29 @@ PLEASE NOTE: One option MUST be selected.</source>
     </message>
 </context>
 <context>
+    <name>ExportObjectModel</name>
+    <message>
+        <source>Packet</source>
+        <translation type="unfinished">パケット</translation>
+    </message>
+    <message>
+        <source>Hostname</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Content Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Filename</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>ExportPDUDialog</name>
     <message>
         <source>Dialog</source>
@@ -1955,6 +2220,13 @@ PLEASE NOTE: One option MUST be selected.</source>
     <message>
         <source>Display filter:</source>
         <translation>表示フィルタ:</translation>
+    </message>
+</context>
+<context>
+    <name>ExtArgSelector</name>
+    <message>
+        <source>Reload data</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1993,6 +2265,21 @@ PLEASE NOTE: One option MUST be selected.</source>
     </message>
 </context>
 <context>
+    <name>FieldFilterEdit</name>
+    <message>
+        <source>Display filter entry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter a field %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Invalid filter: </source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>FileSetDialog</name>
     <message>
         <source>Dialog</source>
@@ -2003,22 +2290,6 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>ディレクトリ:</translation>
     </message>
     <message>
-        <source>Filename</source>
-        <translation>ファイル名</translation>
-    </message>
-    <message>
-        <source>Created</source>
-        <translation>作成日</translation>
-    </message>
-    <message>
-        <source>Modified</source>
-        <translation>修正日</translation>
-    </message>
-    <message>
-        <source>Size</source>
-        <translation>サイズ</translation>
-    </message>
-    <message>
         <source>No files in Set</source>
         <translation>セットにファイルがありません</translation>
     </message>
@@ -2026,16 +2297,35 @@ PLEASE NOTE: One option MUST be selected.</source>
         <source>No capture loaded</source>
         <translation>何もキャプチャが読み込まれていません</translation>
     </message>
-    <message>
-        <source>Open this capture file</source>
-        <translation>このキャプチャファイルを開く</translation>
-    </message>
     <message numerus="yes">
         <source>%Ln File(s) in Set</source>
         <oldsource>%1 File%2 in Set</oldsource>
         <translation type="unfinished">
             <numerusform></numerusform>
         </translation>
+    </message>
+</context>
+<context>
+    <name>FilesetEntryModel</name>
+    <message>
+        <source>Open this capture file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Filename</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Created</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2137,6 +2427,17 @@ PLEASE NOTE: One option MUST be selected.</source>
     </message>
 </context>
 <context>
+    <name>FindLineEdit</name>
+    <message>
+        <source>Textual Find</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Regular Expression Find</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>FirewallRulesDialog</name>
     <message>
         <source>Create rules for</source>
@@ -2156,7 +2457,7 @@ PLEASE NOTE: One option MUST be selected.</source>
     </message>
     <message>
         <source>Copy</source>
-        <translation type="unfinished">コピー</translation>
+        <translation>コピー</translation>
     </message>
     <message>
         <source>IPv4 source address.</source>
@@ -2201,6 +2502,117 @@ PLEASE NOTE: One option MUST be selected.</source>
     <message>
         <source>Unable to save %1</source>
         <translation type="unfinished">%1を保存できません</translation>
+    </message>
+</context>
+<context>
+    <name>FolderListModel</name>
+    <message>
+        <source>&quot;File&quot; dialogs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>capture files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Temp</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>untitled capture files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Personal configuration</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>dfilters, preferences, ethers, </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Global configuration</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>dfilters, preferences, manuf, </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>System</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>ethers, ipxnets</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Program</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>program files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Personal Plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>binary plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Global Plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Personal Lua Plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>lua scripts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Global Lua Plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Extcap path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Extcap Plugins search path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>MaxMind DB path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>MaxMind DB database search path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>MIB/PIB path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SMI MIB/PIB search path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">名前</translation>
+    </message>
+    <message>
+        <source>Location</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Typical Files</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2294,13 +2706,12 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>クリックして選択します</translation>
     </message>
     <message>
-        <source>Save Stream Content As</source>
-        <translation>としてストリーム内容を保存</translation>
+        <source>Regex Find:</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>
-[Stream output truncated]</source>
-        <translation>[ストリーム出力が省略されました]</translation>
+        <source>Save Stream Content As</source>
+        <translation>としてストリーム内容を保存</translation>
     </message>
     <message>
         <source>No capture file.</source>
@@ -2323,12 +2734,20 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>パケット %1 を選択したか確認してください</translation>
     </message>
     <message>
+        <source>Entire conversation (%1)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Follow %1 Stream (%2)</source>
         <translation>%1 ストリーム (%2)を追跡</translation>
     </message>
     <message>
         <source>Error creating filter for this stream.</source>
         <translation>このストリームのフィルタ作成エラー</translation>
+    </message>
+    <message>
+        <source>[Stream output truncated]</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>A transport or network layer header is needed.</source>
@@ -3534,6 +3953,17 @@ PLEASE NOTE: One option MUST be selected.</source>
         <source>Show hidden interfaces</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>External capture interfaces disabled.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>InterfaceSortFilterModel</name>
+    <message>
+        <source>No interfaces to be displayed. %1 interfaces hidden.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>InterfaceToolbar</name>
@@ -3551,10 +3981,92 @@ PLEASE NOTE: One option MUST be selected.</source>
     </message>
 </context>
 <context>
+    <name>InterfaceToolbarLineEdit</name>
+    <message>
+        <source>Apply changes</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>InterfaceTreeModel</name>
+    <message>
+        <source>No Interfaces found.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show</source>
+        <translation type="unfinished">表示</translation>
+    </message>
+    <message>
+        <source>Friendly Name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Interface Name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Local Pipe Path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Comment</source>
+        <translation type="unfinished">コメント</translation>
+    </message>
+    <message>
+        <source>Link-Layer Header</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Promiscuous</source>
+        <translation type="unfinished">プロミスキャス</translation>
+    </message>
+    <message>
+        <source>Snaplen (B)</source>
+        <translation type="unfinished">キャプチャ長(バイト)</translation>
+    </message>
+    <message>
+        <source>Buffer (MB)</source>
+        <translation type="unfinished">バッファ(メガバイト)</translation>
+    </message>
+    <message>
+        <source>Monitor Mode</source>
+        <translation type="unfinished">モニタモード</translation>
+    </message>
+    <message>
+        <source>Capture Filter</source>
+        <translation type="unfinished">キャプチャフィルタ</translation>
+    </message>
+    <message>
+        <source>Addresses</source>
+        <translation type="unfinished">アドレス</translation>
+    </message>
+    <message>
+        <source>Address</source>
+        <translation type="unfinished">アドレス</translation>
+    </message>
+    <message>
+        <source>Extcap interface: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No addresses</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No capture filter</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Capture filter</source>
+        <translation type="unfinished">キャプチャフィルタ</translation>
+    </message>
+</context>
+<context>
     <name>LBMLBTRMTransportDialog</name>
     <message>
-        <source>LBTRM Transport Statistics</source>
-        <translation>LBTRM転送統計</translation>
+        <source>LBT-RM Transport Statistics</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Sources</source>
@@ -3658,10 +4170,12 @@ PLEASE NOTE: One option MUST be selected.</source>
     </message>
     <message>
         <source>NCF</source>
+        <extracomment>Nak ConFirmation</extracomment>
         <translation>NCF</translation>
     </message>
     <message>
         <source>SM</source>
+        <extracomment>Session Message</extracomment>
         <translation>SM</translation>
     </message>
     <message>
@@ -3836,8 +4350,8 @@ PLEASE NOTE: One option MUST be selected.</source>
 <context>
     <name>LBMLBTRUTransportDialog</name>
     <message>
-        <source>LBTRU Transport Statistics</source>
-        <translation>LBTRUトランスポート統計</translation>
+        <source>LBT-RU Transport Statistics</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Sources</source>
@@ -4397,8 +4911,12 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>表示部3:</translation>
     </message>
     <message>
-        <source>Show packet separator on Packet List</source>
-        <translation>パケット一覧のパケット行間仕切りを表示</translation>
+        <source>Packet List settings:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show packet separator</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Status Bar settings:</source>
@@ -4519,6 +5037,14 @@ PLEASE NOTE: One option MUST be selected.</source>
     <message>
         <source>Reset</source>
         <translation>リセット</translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Switch the direction of the connection (view the opposite flow).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;接続の向きを切り替えます (反対側のフローを表示します)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <source>Switch Direction</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Reset Graph</source>
@@ -4697,6 +5223,14 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>Shift+X</translation>
     </message>
     <message>
+        <source>Switch direction (swap between UL and DL)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>D</source>
+        <translation type="unfinished">D</translation>
+    </message>
+    <message>
         <source>Time</source>
         <translation>時間</translation>
     </message>
@@ -4711,6 +5245,10 @@ PLEASE NOTE: One option MUST be selected.</source>
     <message>
         <source>LTE RLC Graph - no channel selected</source>
         <translation>LTE RLCグラフ - チャンネルが選択されていません</translation>
+    </message>
+    <message>
+        <source>Save As</source>
+        <translation type="unfinished">として保存</translation>
     </message>
     <message>
         <source>%1 %2 (%3s seq %4 len %5)</source>
@@ -4735,6 +5273,26 @@ PLEASE NOTE: One option MUST be selected.</source>
     <message>
         <source>Click to select a portion of the graph.</source>
         <translation>クリックしてグラフの割合を選びます</translation>
+    </message>
+    <message>
+        <source>Portable Document Format (*.pdf)</source>
+        <translation type="unfinished">PDF形式 (*.pdf)</translation>
+    </message>
+    <message>
+        <source>Portable Network Graphics (*.png)</source>
+        <translation type="unfinished">PNG形式 (*.png)</translation>
+    </message>
+    <message>
+        <source>Windows Bitmap (*.bmp)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>JPEG File Interchange Format (*.jpeg *.jpg)</source>
+        <translation type="unfinished">JPEG形式 (*.jpeg *.jpg)</translation>
+    </message>
+    <message>
+        <source>Save Graph As</source>
+        <translation type="unfinished">としてグラフを保存</translation>
     </message>
 </context>
 <context>
@@ -4819,6 +5377,10 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>キャプチャファイルプロパティ画面を開く</translation>
     </message>
     <message>
+        <source>Profile: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Manage Profiles</source>
         <oldsource>Manage Profiles...</oldsource>
         <translation>プロファイルの管理</translation>
@@ -4868,8 +5430,20 @@ PLEASE NOTE: One option MUST be selected.</source>
         <translation>エキスパート情報はありません</translation>
     </message>
     <message>
-        <source>Profile: </source>
-        <translation>プロファイル:</translation>
+        <source>, 1 byte</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>, %1 bytes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Byte %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bytes %1-%2</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Selected Packet: %1 %2 </source>
@@ -5039,6 +5613,10 @@ a:hover {
         <translation type="unfinished">
             <numerusform></numerusform>
         </translation>
+    </message>
+    <message>
+        <source>You are sniffing the glue that holds the Internet together using Wireshark </source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>You are running Wireshark </source>
@@ -5569,6 +6147,14 @@ a:hover {
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Collapse Subtrees</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Collapse the current packet detail</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Go to Packet…</source>
         <translation>パケットに移動…</translation>
     </message>
@@ -5755,6 +6341,14 @@ a:hover {
     <message>
         <source>Add or change a packet comment</source>
         <translation>パケットのコメントを追加または変更します</translation>
+    </message>
+    <message>
+        <source>Delete All Packet Comments</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove all packet comments in the capture file</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Configuration profiles</source>
@@ -6205,14 +6799,6 @@ a:hover {
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>…as Escaped String</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a Escaped string</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>&amp;Full Screen</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6335,6 +6921,14 @@ a:hover {
     <message>
         <source>SSL Stream</source>
         <translation>SSLストリーム</translation>
+    </message>
+    <message>
+        <source>Request Sequences</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>HTTP Request Sequences</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Decode &amp;As…</source>
@@ -6591,46 +7185,6 @@ a:hover {
     <message>
         <source>Show or hide the packet bytes</source>
         <translation>パケットバイト列を表示または非表示にします</translation>
-    </message>
-    <message>
-        <source>Bytes as Hex + ASCII Dump</source>
-        <translation>16進数およびASCIIダンプ形式</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a hex and ASCII dump.</source>
-        <translation>16進数およびASCIIダンプ形式としてパケットバイト列をコピーします</translation>
-    </message>
-    <message>
-        <source>…as Hex Dump</source>
-        <translation>16進数ダンプ形式として…</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a hex dump.</source>
-        <translation>16進数ダンプとしてパケットバイト列をコピーします</translation>
-    </message>
-    <message>
-        <source>…as Printable Text</source>
-        <translation>印刷可能なテキストとして…</translation>
-    </message>
-    <message>
-        <source>Copy only the printable text in the packet.</source>
-        <translation>パケット内の印刷可能なテキストだけをコピー</translation>
-    </message>
-    <message>
-        <source>…as a Hex Stream</source>
-        <translation>16進数ストリームとして…</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as a stream of hex.</source>
-        <translation>16進数ストリームとしてパケットバイト列をコピーします</translation>
-    </message>
-    <message>
-        <source>…as Raw Binary</source>
-        <translation>Raw(無加工)バイナリ形式として...</translation>
-    </message>
-    <message>
-        <source>Copy packet bytes as application/octet-stream MIME data.</source>
-        <translation>MIME形式データ(application/octet-stream)としてパケットバイト列をコピーします</translation>
     </message>
     <message>
         <source>MAP Summary</source>
@@ -7041,6 +7595,10 @@ a:hover {
         <translation>テキストをコピーできません 別の項目を試してみてください</translation>
     </message>
     <message>
+        <source>Are you sure you want to remove all packet comments?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Unable to build conversation filter.</source>
         <translation>会話フィルタを作成できません</translation>
     </message>
@@ -7155,22 +7713,6 @@ a:hover {
     <message>
         <source>Confirm unsaved capture files</source>
         <translation>保存していないキャプチャファイルの確認</translation>
-    </message>
-    <message>
-        <source>If checked the packet detail items will be automatically scrolled when they are expanded.</source>
-        <translation>パケット詳細の項目にチェックをすると自動的に拡張した際にスクロールします</translation>
-    </message>
-    <message>
-        <source>Automatically scroll packet details</source>
-        <translation>パケット詳細を自動的にスクロール</translation>
-    </message>
-    <message>
-        <source>Percentage distance from the top to scroll packet details.</source>
-        <translation>パケット詳細を一番上からスクロールした割合(%)</translation>
-    </message>
-    <message>
-        <source>Packet detail scroll percentage:</source>
-        <translation>パケット詳細はスクロールした割合(%)：</translation>
     </message>
     <message>
         <source>Main toolbar style:</source>
@@ -7490,8 +8032,8 @@ a:hover {
 <context>
     <name>PacketCommentDialog</name>
     <message>
-        <source>Packet Comment</source>
-        <translation>パケットコメント</translation>
+        <source>Packet %1 Comment</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -7511,6 +8053,14 @@ a:hover {
     <message>
         <source>[%1 closed] </source>
         <translation>[%1 を綴じました] </translation>
+    </message>
+    <message>
+        <source>Byte %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bytes %1-%2</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -7624,6 +8174,17 @@ a:hover {
     </message>
 </context>
 <context>
+    <name>PacketListModel</name>
+    <message>
+        <source>Dissecting</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sorting &quot;%1&quot;</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>PacketRangeGroupBox</name>
     <message>
         <source>Form</source>
@@ -7671,6 +8232,40 @@ a:hover {
     </message>
 </context>
 <context>
+    <name>PathChooserDelegate</name>
+    <message>
+        <source>Browse</source>
+        <translation type="unfinished">参照</translation>
+    </message>
+    <message>
+        <source>Open Pipe</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>PluginListModel</name>
+    <message>
+        <source>extcap</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">名前</translation>
+    </message>
+    <message>
+        <source>Version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation type="unfinished">種別</translation>
+    </message>
+    <message>
+        <source>Path</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>PreferenceEditorFrame</name>
     <message>
         <source>Frame</source>
@@ -7696,24 +8291,40 @@ a:hover {
 <context>
     <name>PreferencesDialog</name>
     <message>
+        <source>Search:</source>
+        <translation>検索:</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation>設定</translation>
+    </message>
+</context>
+<context>
+    <name>PrefsModel</name>
+    <message>
+        <source>Advanced</source>
+        <extracomment>Names of special preferences handled by the GUI</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Appearance</source>
-        <translation>外観</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Layout</source>
-        <translation>レイアウト</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Columns</source>
-        <translation>列</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Font and Colors</source>
-        <translation>フォントと色</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Capture</source>
-        <translation>キャプチャ</translation>
+        <translation type="unfinished">キャプチャ</translation>
     </message>
     <message>
         <source>Expert</source>
@@ -7721,36 +8332,7 @@ a:hover {
     </message>
     <message>
         <source>Filter Buttons</source>
-        <oldsource>Filter Expressions</oldsource>
         <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Advanced</source>
-        <translation>高度設定</translation>
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation>検索:</translation>
-    </message>
-    <message>
-        <source>Name</source>
-        <translation>名前</translation>
-    </message>
-    <message>
-        <source>Status</source>
-        <translation>状態</translation>
-    </message>
-    <message>
-        <source>Type</source>
-        <translation>種別</translation>
-    </message>
-    <message>
-        <source>Value</source>
-        <translation>値</translation>
-    </message>
-    <message>
-        <source>Preferences</source>
-        <translation>設定</translation>
     </message>
 </context>
 <context>
@@ -7885,14 +8467,6 @@ a:hover {
         <source>Colorize with Filter</source>
         <translation>フィルタで色付け</translation>
     </message>
-    <message>
-        <source>, 1 byte</source>
-        <translation>, 1 バイト</translation>
-    </message>
-    <message>
-        <source>, %1 bytes</source>
-        <translation>, %1 バイト</translation>
-    </message>
 </context>
 <context>
     <name>ProtocolHierarchyDialog</name>
@@ -8006,22 +8580,6 @@ a:hover {
 </context>
 <context>
     <name>QObject</name>
-    <message>
-        <source>Default</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Changed</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Has this preference been changed?</source>
-        <translation>この設定を変更されましたか？</translation>
-    </message>
-    <message>
-        <source>Default value is empty</source>
-        <translation>デフォルト値は空です</translation>
-    </message>
     <message>
         <source>Average Throughput (bits/s)</source>
         <translation type="unfinished"></translation>
@@ -8372,6 +8930,38 @@ a:hover {
     </message>
     <message>
         <source>The filter expression %1 isn&apos;t a valid display filter. (%2).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation type="unfinished">エラー</translation>
+    </message>
+    <message>
+        <source>No remote interfaces found.</source>
+        <translation type="unfinished">リモートインターフェースは見つかりませんでした</translation>
+    </message>
+    <message>
+        <source>PCAP not found</source>
+        <translation type="unfinished">PCAPは見つかりません</translation>
+    </message>
+    <message>
+        <source>Unknown error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Changed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Has this preference been changed?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Default value is empty</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -10263,6 +10853,21 @@ a:hover {
     </message>
 </context>
 <context>
+    <name>ScsiServiceResponseTimeDialog</name>
+    <message>
+        <source>&lt;small&gt;&lt;i&gt;Select a command and enter a filter if desired, then press Apply.&lt;/i&gt;&lt;/small&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Command:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SCSI Service Response Times</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>SearchFrame</name>
     <message>
         <source>Frame</source>
@@ -10677,6 +11282,21 @@ a:hover {
     </message>
 </context>
 <context>
+    <name>ShortcutListModel</name>
+    <message>
+        <source>Shortcut</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">名前</translation>
+    </message>
+    <message>
+        <source>Description</source>
+        <translation type="unfinished">記述</translation>
+    </message>
+</context>
+<context>
     <name>ShowPacketBytesDialog</name>
     <message>
         <source>Show Packet Bytes</source>
@@ -10799,6 +11419,10 @@ a:hover {
         </translation>
     </message>
     <message>
+        <source>Regex Find:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Save Selected Packet Bytes As</source>
         <translation>として選択したパケットバイト列を保存</translation>
     </message>
@@ -10817,10 +11441,6 @@ a:hover {
 <context>
     <name>SplashOverlay</name>
     <message>
-        <source>Form</source>
-        <translation>フォーム</translation>
-    </message>
-    <message>
         <source>Initializing dissectors</source>
         <translation>ダイセクターを初期化中</translation>
     </message>
@@ -10829,7 +11449,7 @@ a:hover {
         <translation>タップリスナを初期化中</translation>
     </message>
     <message>
-        <source>Initializing extcap</source>
+        <source>Initializing external capture plugins</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -10888,22 +11508,6 @@ a:hover {
         <translation>ダイアログ</translation>
     </message>
     <message>
-        <source>Name</source>
-        <translation>名前</translation>
-    </message>
-    <message>
-        <source>Filter</source>
-        <translation>フィルタ</translation>
-    </message>
-    <message>
-        <source>Type</source>
-        <translation>種別</translation>
-    </message>
-    <message>
-        <source>Description</source>
-        <translation>記述</translation>
-    </message>
-    <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Search the list of field names.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;フィールド名の一覧を検索します&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
@@ -10922,6 +11526,32 @@ a:hover {
     <message>
         <source>%1 protocols, %2 fields.</source>
         <translation>%1 プロトコル, %2 フィールド</translation>
+    </message>
+</context>
+<context>
+    <name>SupportedProtocolsModel</name>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished">名前</translation>
+    </message>
+    <message>
+        <source>Filter</source>
+        <translation type="unfinished">フィルタ</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation type="unfinished">種別</translation>
+    </message>
+    <message>
+        <source>Description</source>
+        <translation type="unfinished">記述</translation>
+    </message>
+</context>
+<context>
+    <name>SyntaxLineEdit</name>
+    <message>
+        <source>&quot;%1&quot; may have unexpected results (see the User&apos;s Guide)</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -11703,6 +12333,14 @@ a:hover {
         <translation>このエントリをコピーします</translation>
     </message>
     <message>
+        <source>Move entry up.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Move entry down.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Clear all entries.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -11732,6 +12370,14 @@ a:hover {
     <message>
         <source>Copy this entry.</source>
         <translation type="unfinished">このエントリをコピーします</translation>
+    </message>
+    <message>
+        <source>Move entry up.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Move entry down.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Clear all entries.</source>
@@ -11811,6 +12457,61 @@ a:hover {
     <message>
         <source>No Audio</source>
         <translation>音声なし</translation>
+    </message>
+</context>
+<context>
+    <name>VoipCallsInfoModel</name>
+    <message>
+        <source>On</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tunneling: %1  Fast Start: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Start Time</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Stop Time</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Initial Speaker</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>From</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>To</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Protocol</source>
+        <translation type="unfinished">プロトコル</translation>
+    </message>
+    <message>
+        <source>Duration</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Packets</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>State</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Comments</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

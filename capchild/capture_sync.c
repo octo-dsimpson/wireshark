@@ -5,20 +5,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "config.h"
 
@@ -36,6 +23,7 @@
 #ifdef _WIN32
 #include <wsutil/unicode-utils.h>
 #include <wsutil/win32-utils.h>
+#include <wsutil/ws_pipe.h>
 #endif
 
 #ifdef HAVE_SYS_WAIT_H
@@ -75,7 +63,6 @@
 #include <epan/packet.h>
 #include <epan/prefs.h>
 
-#include "globals.h"
 #include "file.h"
 
 #include "ui/capture.h"
@@ -92,16 +79,14 @@
 #include <wsutil/filesystem.h>
 #include <wsutil/file_util.h>
 #include <wsutil/report_message.h>
-#ifdef HAVE_EXTCAP
 #include "extcap.h"
-#endif
 #include "log.h"
 
 #ifdef _WIN32
 #include <process.h>    /* For spawning child process */
 #endif
 
-
+#include <wsutil/ws_pipe.h>
 
 #ifdef _WIN32
 static void create_dummy_signal_pipe();
@@ -120,9 +105,16 @@ static ssize_t pipe_read_block(int pipe_fd, char *indicator, int len, char *msg,
 
 static void (*fetch_dumpcap_pid)(ws_process_id) = NULL;
 
+static void free_argv(char** argv, int argc)
+{
+    int i;
+    for (i = 0; i < argc; i++)
+        g_free(argv[i]);
+    g_free(argv);
+}
 
 void
-capture_session_init(capture_session *cap_session, struct _capture_file *cf)
+capture_session_init(capture_session *cap_session, capture_file *cf)
 {
     cap_session->cf                              = cf;
     cap_session->fork_child                      = WS_INVALID_PID;   /* invalid process handle */
@@ -228,7 +220,6 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
     HANDLE signal_pipe;                     /* named pipe used to send messages from parent to child (currently only stop) */
     GString *args = g_string_sized_new(200);
     gchar *quoted_arg;
-    gunichar2 *wcommandline;
     SECURITY_ATTRIBUTES sa;
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
@@ -253,13 +244,10 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
 
     cap_session->fork_child = WS_INVALID_PID;
 
-#ifdef HAVE_EXTCAP
     if (!extcap_init_interfaces(capture_opts)) {
         report_failure("Unable to init extcaps. (tmp fifo already exists?)");
         return FALSE;
     }
-
-#endif
 
     argv = init_pipe_args(&argc);
     if (!argv) {
@@ -339,11 +327,9 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
         interface_opts = &g_array_index(capture_opts->ifaces, interface_options, j);
 
         argv = sync_pipe_add_arg(argv, &argc, "-i");
-#ifdef HAVE_EXTCAP
         if (interface_opts->extcap_fifo != NULL)
             argv = sync_pipe_add_arg(argv, &argc, interface_opts->extcap_fifo);
         else
-#endif
             argv = sync_pipe_add_arg(argv, &argc, interface_opts->name);
 
         if (interface_opts->cfilter != NULL && strlen(interface_opts->cfilter) != 0) {
@@ -449,10 +435,7 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
         /* Couldn't create the pipe between parent and child. */
         report_failure("Couldn't create sync pipe: %s",
                        win32strerror(GetLastError()));
-        for (i = 0; i < argc; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free( (gpointer) argv);
+        free_argv(argv, argc);
         return FALSE;
     }
 
@@ -469,10 +452,7 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
         report_failure("Couldn't get C file handle for sync pipe: %s", g_strerror(errno));
         CloseHandle(sync_pipe_read);
         CloseHandle(sync_pipe_write);
-        for (i = 0; i < argc; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free(argv);
+        free_argv(argv, argc);
         return FALSE;
     }
 
@@ -488,10 +468,7 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
                        win32strerror(GetLastError()));
         ws_close(sync_pipe_read_fd);    /* Should close sync_pipe_read */
         CloseHandle(sync_pipe_write);
-        for (i = 0; i < argc; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free( (gpointer) argv);
+        free_argv(argv, argc);
         return FALSE;
     }
 
@@ -509,10 +486,7 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
         ws_close(sync_pipe_read_fd);    /* Should close sync_pipe_read */
         CloseHandle(sync_pipe_write);
         CloseHandle(signal_pipe);
-        for (i = 0; i < argc; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free(argv);
+        free_argv(argv, argc);
         return FALSE;
     }
 
@@ -526,11 +500,9 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
 #else
     si.dwFlags = STARTF_USESTDHANDLES|STARTF_USESHOWWINDOW;
     si.wShowWindow  = SW_HIDE;  /* this hides the console window */
-#ifdef HAVE_EXTCAP
     if(interface_opts->extcap_pipe_h != INVALID_HANDLE_VALUE)
         si.hStdInput = interface_opts->extcap_pipe_h;
     else
-#endif
         si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
 
     si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -547,29 +519,23 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
         g_string_append(args, quoted_arg);
         g_free(quoted_arg);
     }
-    wcommandline = g_utf8_to_utf16(args->str, (glong)args->len, NULL, NULL, NULL);
 
     /* call dumpcap */
-    if(!CreateProcess(utf_8to16(argv[0]), wcommandline, NULL, NULL, TRUE,
-                      CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
+    if(!win32_create_process(argv[0], args->str, NULL, NULL, TRUE,
+                               CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
         report_failure("Couldn't run %s in child process: %s",
                        args->str, win32strerror(GetLastError()));
         ws_close(sync_pipe_read_fd);    /* Should close sync_pipe_read */
         CloseHandle(sync_pipe_write);
         CloseHandle(signal_pipe);
-        for (i = 0; i < argc; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free( (gpointer) argv);
+        free_argv(argv, argc);
         g_string_free(args, TRUE);
-        g_free(wcommandline);
         return FALSE;
     }
     cap_session->fork_child = pi.hProcess;
     /* We may need to store this and close it later */
     CloseHandle(pi.hThread);
     g_string_free(args, TRUE);
-    g_free(wcommandline);
 
     cap_session->signal_pipe_write_fd = signal_pipe_write_fd;
 
@@ -577,10 +543,7 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
     if (pipe(sync_pipe) < 0) {
         /* Couldn't create the pipe between parent and child. */
         report_failure("Couldn't create sync pipe: %s", g_strerror(errno));
-        for (i = 0; i < argc; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free(argv);
+        free_argv(argv, argc);
         return FALSE;
     }
 
@@ -612,13 +575,9 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
     sync_pipe_read_fd = sync_pipe[PIPE_READ];
 #endif
 
-    for (i = 0; i < argc; i++) {
-        g_free( (gpointer) argv[i]);
-    }
-
     /* Parent process - read messages from the child process over the
        sync pipe. */
-    g_free( (gpointer) argv);   /* free up arg array */
+    free_argv(argv, argc);
 
     /* Close the write side of the pipe, so that only the child has it
        open, and thus it completely closes, and thus returns to us
@@ -675,7 +634,7 @@ sync_pipe_start(capture_options *capture_opts, capture_session *cap_session, inf
 /* XXX - assumes PIPE_BUF_SIZE > SP_MAX_MSG_LEN */
 #define PIPE_BUF_SIZE 5120
 static int
-sync_pipe_open_command(char** argv, int *data_read_fd,
+sync_pipe_open_command(char* const argv[], int *data_read_fd,
                        int *message_read_fd, ws_process_id *fork_child, gchar **msg, void(*update_cb)(void))
 {
     enum PIPES { PIPE_READ, PIPE_WRITE };   /* Constants 0 and 1 for PIPE_READ and PIPE_WRITE */
@@ -684,16 +643,15 @@ sync_pipe_open_command(char** argv, int *data_read_fd,
     HANDLE data_pipe[2];                    /* pipe used to send data from child to parent */
     GString *args = g_string_sized_new(200);
     gchar *quoted_arg;
-    gunichar2 *wcommandline;
     SECURITY_ATTRIBUTES sa;
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
+    int i;
 #else
     char errmsg[1024+1];
     int sync_pipe[2];                       /* pipe used to send messages from child to parent */
     int data_pipe[2];                       /* pipe used to send data from child to parent */
 #endif
-    int i;
     *fork_child = WS_INVALID_PID;
     *data_read_fd = -1;
     *message_read_fd = -1;
@@ -719,10 +677,6 @@ sync_pipe_open_command(char** argv, int *data_read_fd,
         /* Couldn't create the message pipe between parent and child. */
         *msg = g_strdup_printf("Couldn't create sync pipe: %s",
                                win32strerror(GetLastError()));
-        for (i = 0; argv[i] != NULL; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free( (gpointer) argv);
         return -1;
     }
 
@@ -738,10 +692,6 @@ sync_pipe_open_command(char** argv, int *data_read_fd,
         *msg = g_strdup_printf("Couldn't get C file handle for message read pipe: %s", g_strerror(errno));
         CloseHandle(sync_pipe[PIPE_READ]);
         CloseHandle(sync_pipe[PIPE_WRITE]);
-        for (i = 0; argv[i] != NULL; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free( (gpointer) argv);
         return -1;
     }
 
@@ -753,10 +703,6 @@ sync_pipe_open_command(char** argv, int *data_read_fd,
                                win32strerror(GetLastError()));
         ws_close(*message_read_fd);    /* Should close sync_pipe[PIPE_READ] */
         CloseHandle(sync_pipe[PIPE_WRITE]);
-        for (i = 0; argv[i] != NULL; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free( (gpointer) argv);
         return -1;
     }
 
@@ -774,10 +720,6 @@ sync_pipe_open_command(char** argv, int *data_read_fd,
         CloseHandle(data_pipe[PIPE_WRITE]);
         ws_close(*message_read_fd);    /* Should close sync_pipe[PIPE_READ] */
         CloseHandle(sync_pipe[PIPE_WRITE]);
-        for (i = 0; argv[i] != NULL; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free( (gpointer) argv);
         return -1;
     }
 
@@ -806,39 +748,28 @@ sync_pipe_open_command(char** argv, int *data_read_fd,
         g_string_append(args, quoted_arg);
         g_free(quoted_arg);
     }
-    wcommandline = g_utf8_to_utf16(args->str, (glong)args->len, NULL, NULL, NULL);
 
     /* call dumpcap */
-    if(!CreateProcess(utf_8to16(argv[0]), wcommandline, NULL, NULL, TRUE,
-                      CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
+    if(!win32_create_process(argv[0], args->str, NULL, NULL, TRUE,
+                               CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
         *msg = g_strdup_printf("Couldn't run %s in child process: %s",
                                args->str, win32strerror(GetLastError()));
         ws_close(*data_read_fd);       /* Should close data_pipe[PIPE_READ] */
         CloseHandle(data_pipe[PIPE_WRITE]);
         ws_close(*message_read_fd);    /* Should close sync_pipe[PIPE_READ] */
         CloseHandle(sync_pipe[PIPE_WRITE]);
-        for (i = 0; argv[i] != NULL; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free( (gpointer) argv);
         g_string_free(args, TRUE);
-        g_free(wcommandline);
         return -1;
     }
     *fork_child = pi.hProcess;
     /* We may need to store this and close it later */
     CloseHandle(pi.hThread);
     g_string_free(args, TRUE);
-    g_free(wcommandline);
 #else /* _WIN32 */
     /* Create a pipe for the child process to send us messages */
     if (pipe(sync_pipe) < 0) {
         /* Couldn't create the message pipe between parent and child. */
         *msg = g_strdup_printf("Couldn't create sync pipe: %s", g_strerror(errno));
-        for (i = 0; argv[i] != NULL; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free(argv);
         return -1;
     }
 
@@ -848,10 +779,6 @@ sync_pipe_open_command(char** argv, int *data_read_fd,
         *msg = g_strdup_printf("Couldn't create data pipe: %s", g_strerror(errno));
         ws_close(sync_pipe[PIPE_READ]);
         ws_close(sync_pipe[PIPE_WRITE]);
-        for (i = 0; argv[i] != NULL; i++) {
-            g_free( (gpointer) argv[i]);
-        }
-        g_free(argv);
         return -1;
     }
 
@@ -888,13 +815,8 @@ sync_pipe_open_command(char** argv, int *data_read_fd,
     *message_read_fd = sync_pipe[PIPE_READ];
 #endif
 
-    for (i = 0; argv[i] != NULL; i++) {
-        g_free( (gpointer) argv[i]);
-    }
-
     /* Parent process - read messages from the child process over the
        sync pipe. */
-    g_free( (gpointer) argv);   /* free up arg array */
 
     /* Close the write sides of the pipes, so that only the child has them
        open, and thus they completely close, and thus return to us
@@ -961,7 +883,7 @@ sync_pipe_close_command(int *data_read_fd, int *message_read_fd,
 /* XXX - assumes PIPE_BUF_SIZE > SP_MAX_MSG_LEN */
 #define PIPE_BUF_SIZE 5120
 static int
-sync_pipe_run_command_actual(char** argv, gchar **data, gchar **primary_msg,
+sync_pipe_run_command_actual(char* const argv[], gchar **data, gchar **primary_msg,
                       gchar **secondary_msg,  void(*update_cb)(void))
 {
     gchar *msg;
@@ -1138,7 +1060,7 @@ sync_pipe_run_command_actual(char** argv, gchar **data, gchar **primary_msg,
 * redirects to sync_pipe_run_command_actual()
 */
 static int
-sync_pipe_run_command(char** argv, gchar **data, gchar **primary_msg,
+sync_pipe_run_command(char* const argv[], gchar **data, gchar **primary_msg,
                       gchar **secondary_msg, void (*update_cb)(void))
 {
     int ret, i;
@@ -1206,6 +1128,7 @@ sync_interface_set_80211_chan(const gchar *iface, const char *freq, const gchar 
         *primary_msg = g_strdup("Out of mem.");
         *secondary_msg = NULL;
         *data = NULL;
+        free_argv(argv, argc);
         return -1;
     }
 
@@ -1220,6 +1143,7 @@ sync_interface_set_80211_chan(const gchar *iface, const char *freq, const gchar 
 
     ret = sync_pipe_run_command(argv, data, primary_msg, secondary_msg, update_cb);
     g_free(opt);
+    free_argv(argv, argc);
     return ret;
 }
 
@@ -1241,6 +1165,7 @@ sync_interface_list_open(gchar **data, gchar **primary_msg,
 {
     int argc;
     char **argv;
+    int ret;
 
     g_log(LOG_DOMAIN_CAPTURE, G_LOG_LEVEL_DEBUG, "sync_interface_list_open");
 
@@ -1261,7 +1186,9 @@ sync_interface_list_open(gchar **data, gchar **primary_msg,
     argv = sync_pipe_add_arg(argv, &argc, "-Z");
     argv = sync_pipe_add_arg(argv, &argc, SIGNAL_PIPE_CTRL_ID_NONE);
 #endif
-    return sync_pipe_run_command(argv, data, primary_msg, secondary_msg, update_cb);
+    ret = sync_pipe_run_command(argv, data, primary_msg, secondary_msg, update_cb);
+    free_argv(argv, argc);
+    return ret;
 }
 
 /*
@@ -1283,6 +1210,7 @@ sync_if_capabilities_open(const gchar *ifname, gboolean monitor_mode, const gcha
 {
     int argc;
     char **argv;
+    int ret;
 
     g_log(LOG_DOMAIN_CAPTURE, G_LOG_LEVEL_DEBUG, "sync_if_capabilities_open");
 
@@ -1312,7 +1240,9 @@ sync_if_capabilities_open(const gchar *ifname, gboolean monitor_mode, const gcha
     argv = sync_pipe_add_arg(argv, &argc, "-Z");
     argv = sync_pipe_add_arg(argv, &argc, SIGNAL_PIPE_CTRL_ID_NONE);
 #endif
-    return sync_pipe_run_command(argv, data, primary_msg, secondary_msg, update_cb);
+    ret = sync_pipe_run_command(argv, data, primary_msg, secondary_msg, update_cb);
+    free_argv(argv, argc);
+    return ret;
 }
 
 /*
@@ -1360,8 +1290,10 @@ sync_interface_stats_open(int *data_read_fd, ws_process_id *fork_child, gchar **
 #endif
     ret = sync_pipe_open_command(argv, data_read_fd, &message_read_fd,
                                  fork_child, msg, update_cb);
-    if (ret == -1)
+    free_argv(argv, argc);
+    if (ret == -1) {
         return -1;
+    }
 
     /*
      * We were able to set up to read dumpcap's output.  Do so.
@@ -1403,7 +1335,6 @@ sync_interface_stats_open(int *data_read_fd, ws_process_id *fork_child, gchar **
                 *msg = combined_msg;
             }
         }
-
         return -1;
     }
 
@@ -1525,37 +1456,12 @@ pipe_read_bytes(int pipe_fd, char *bytes, int required, char **msg)
     return offset;
 }
 
-static gboolean pipe_data_available(int pipe_fd) {
-#ifdef _WIN32 /* PeekNamedPipe */
-    HANDLE hPipe = (HANDLE) _get_osfhandle(pipe_fd);
-    DWORD bytes_avail;
-
-    if (hPipe == INVALID_HANDLE_VALUE)
-        return FALSE;
-
-    if (! PeekNamedPipe(hPipe, NULL, 0, NULL, &bytes_avail, NULL))
-        return FALSE;
-
-    if (bytes_avail > 0)
-        return TRUE;
-    return FALSE;
-#else /* select */
-    fd_set rfds;
-    struct timeval timeout;
-
-    FD_ZERO(&rfds);
-    FD_SET(pipe_fd, &rfds);
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
-
-    if (select(pipe_fd+1, &rfds, NULL, NULL, &timeout) > 0)
-        return TRUE;
-
-    return FALSE;
-#endif
-}
-
-/* Read a line from a pipe, similar to fgets */
+/*
+ * Read a line from a pipe; similar to fgets, but doesn't block.
+ *
+ * XXX - just stops reading if there's nothing to be read right now;
+ * that could conceivably mean that you don't get a complete line.
+ */
 int
 sync_pipe_gets_nonblock(int pipe_fd, char *bytes, int max) {
     ssize_t newly;
@@ -1563,7 +1469,7 @@ sync_pipe_gets_nonblock(int pipe_fd, char *bytes, int max) {
 
     while(offset < max - 1) {
         offset++;
-        if (! pipe_data_available(pipe_fd))
+        if (! ws_pipe_data_available(pipe_fd))
             break;
         newly = ws_read(pipe_fd, &bytes[offset], 1);
         if (newly == 0) {
@@ -1742,10 +1648,8 @@ sync_pipe_input_cb(gint source, gpointer user_data)
 #ifdef _WIN32
         ws_close(cap_session->signal_pipe_write_fd);
 #endif
-#ifdef HAVE_EXTCAP
         g_log(LOG_DOMAIN_CAPTURE, G_LOG_LEVEL_DEBUG, "sync_pipe_input_cb: cleaning extcap pipe");
         extcap_if_cleanup(cap_session->capture_opts, &primary_msg);
-#endif
         capture_input_closed(cap_session, primary_msg);
         g_free(primary_msg);
         return FALSE;

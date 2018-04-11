@@ -6,19 +6,10 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
-
 
 #include <epan/packet.h>
 #include <epan/exceptions.h>
@@ -233,6 +224,8 @@ static int hf_mac_lte_control_ue_contention_resolution_identity = -1;
 static int hf_mac_lte_control_ue_contention_resolution_msg3 = -1;
 static int hf_mac_lte_control_ue_contention_resolution_msg3_matched = -1;
 static int hf_mac_lte_control_ue_contention_resolution_time_since_msg3 = -1;
+static int hf_mac_lte_control_msg3_to_cr = -1;
+
 static int hf_mac_lte_control_power_headroom = -1;
 static int hf_mac_lte_control_power_headroom_reserved = -1;
 static int hf_mac_lte_control_power_headroom_level = -1;
@@ -508,6 +501,9 @@ static const value_string carrier_id_vals[] =
     { carrier_id_secondary_2,   "Secondary-2"},
     { carrier_id_secondary_3,   "Secondary-3"},
     { carrier_id_secondary_4,   "Secondary-4"},
+    { carrier_id_secondary_5,   "Secondary-5"},
+    { carrier_id_secondary_6,   "Secondary-6"},
+    { carrier_id_secondary_7,   "Secondary-7"},
     { 0, NULL }
 };
 
@@ -1367,12 +1363,6 @@ static const value_string bit_rate_vals[] =
 };
 static value_string_ext bit_rate_vals_ext = VALUE_STRING_EXT_INIT(bit_rate_vals);
 
-static const true_false_string activated_deactivated_vals =
-{
-    "Activated",
-    "Deactivated"
-};
-
 static const value_string header_only_vals[] =
 {
     { 0,      "MAC PDU Headers and body present"},
@@ -1584,6 +1574,10 @@ typedef struct ContentionResolutionResult {
 /* This table stores (CRFrameNum -> CRResult).  It is assigned during the first
    pass and used thereafter */
 static GHashTable *mac_lte_cr_result_hash = NULL;
+
+/* This table stores msg3 frame -> CR frame.  It is assigned during the first pass
+ * and shown in later passes */
+static GHashTable *mac_lte_msg3_cr_hash = NULL;
 
 /**************************************************************************/
 
@@ -3539,7 +3533,7 @@ static void TrackReportedDLHARQResend(packet_info *pinfo, tvbuff_t *tvb, int len
     DLHARQResult *result = NULL;
     DLHARQResult *original_result = NULL;
 
-    /* If don't have detailed DL PHy info, just give up */
+    /* If don't have detailed DL PHY info, just give up */
     if (!p_mac_lte_info->detailed_phy_info.dl_info.present) {
         return;
     }
@@ -4964,6 +4958,7 @@ static void dissect_ulsch_or_dlsch(tvbuff_t *tvb, packet_info *pinfo, proto_tree
                                 break;
 
                             case Msg3Match:
+                                /* Point back to msg3 frame */
                                 ti = proto_tree_add_uint(cr_tree, hf_mac_lte_control_ue_contention_resolution_msg3,
                                                          tvb, 0, 0, crResult->msg3FrameNum);
                                 PROTO_ITEM_SET_GENERATED(ti);
@@ -4976,6 +4971,12 @@ static void dissect_ulsch_or_dlsch(tvbuff_t *tvb, packet_info *pinfo, proto_tree
                                 PROTO_ITEM_SET_GENERATED(ti);
                                 proto_item_append_text(cr_ti, " (matches Msg3 from frame %u, %ums ago)",
                                                        crResult->msg3FrameNum, crResult->msSinceMsg3);
+
+                                if (!PINFO_FD_VISITED(pinfo)) {
+                                    /* Add reverse mapping so can link forward from Msg3 frame */
+                                    g_hash_table_insert(mac_lte_msg3_cr_hash, GUINT_TO_POINTER(crResult->msg3FrameNum),
+                                                       GUINT_TO_POINTER(pinfo->num));
+                                }
                                 break;
 
                             case Msg3NoMatch:
@@ -6023,6 +6024,21 @@ static void dissect_ulsch_or_dlsch(tvbuff_t *tvb, packet_info *pinfo, proto_tree
         tap_info->bytes_for_lcid[lcids[n]] += data_length;
     }
 
+    /* Was this a Msg3 that led to a CR answer? */
+    if (PINFO_FD_VISITED(pinfo)) {
+        if ((p_mac_lte_info->direction == DIRECTION_UPLINK) &&
+            (number_of_headers >= 1) &&
+            (lcids[0] == 0)) {
+
+            guint32 cr_frame = GPOINTER_TO_UINT (g_hash_table_lookup(mac_lte_msg3_cr_hash,
+                                                                     GUINT_TO_POINTER(pinfo->num)));
+            if (cr_frame != 0) {
+                proto_item *cr_ti = proto_tree_add_uint(tree, hf_mac_lte_control_msg3_to_cr,
+                                                        tvb, 0, 0, cr_frame);
+                PROTO_ITEM_SET_GENERATED(cr_ti);
+            }
+        }
+    }
 
     /* Now padding, if present, extends to the end of the PDU */
     if (lcids[number_of_headers-1] == PADDING_LCID) {
@@ -7376,6 +7392,7 @@ static void mac_lte_init_protocol(void)
 
     mac_lte_msg3_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
     mac_lte_cr_result_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
+    mac_lte_msg3_cr_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
     mac_lte_dl_harq_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
     mac_lte_dl_harq_result_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
     mac_lte_ul_harq_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
@@ -7395,6 +7412,7 @@ static void mac_lte_cleanup_protocol(void)
 {
     g_hash_table_destroy(mac_lte_msg3_hash);
     g_hash_table_destroy(mac_lte_cr_result_hash);
+    g_hash_table_destroy(mac_lte_msg3_cr_hash);
     g_hash_table_destroy(mac_lte_dl_harq_hash);
     g_hash_table_destroy(mac_lte_dl_harq_result_hash);
     g_hash_table_destroy(mac_lte_ul_harq_hash);
@@ -8597,7 +8615,7 @@ void proto_register_mac_lte(void)
         },
         { &hf_mac_lte_control_ue_contention_resolution_msg3,
             { "Msg3",
-              "mac-lte.control.ue-contention-resolution.msg3", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+              "mac-lte.control.ue-contention-resolution.msg3", FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_REQUEST), 0x0,
               NULL, HFILL
             }
         },
@@ -8611,6 +8629,12 @@ void proto_register_mac_lte(void)
             { "Time since Msg3",
               "mac-lte.control.ue-contention-resolution.time-since-msg3", FT_UINT32, BASE_DEC, NULL, 0x0,
               "Time in ms since corresponding Msg3", HFILL
+            }
+        },
+        { &hf_mac_lte_control_msg3_to_cr,
+            { "CR response",
+              "mac-lte.msg3-cr-response", FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_RESPONSE), 0x0,
+              NULL, HFILL
             }
         },
 
@@ -9166,56 +9190,56 @@ void proto_register_mac_lte(void)
         { &hf_mac_lte_control_activation_deactivation_csi_rs_a8,
             { "CSI-RS Resource Index 8",
               "mac-lte.control.activation-deactivation-csi-rs.a8", FT_BOOLEAN, 8,
-              TFS(&activated_deactivated_vals), 0x80, NULL, HFILL
+              TFS(&tfs_activated_deactivated), 0x80, NULL, HFILL
             }
         },
         { &hf_mac_lte_control_activation_deactivation_csi_rs_a7,
             { "CSI-RS Resource Index 7",
               "mac-lte.control.activation-deactivation-csi-rs.a7", FT_BOOLEAN, 8,
-              TFS(&activated_deactivated_vals), 0x40, NULL, HFILL
+              TFS(&tfs_activated_deactivated), 0x40, NULL, HFILL
             }
         },
         { &hf_mac_lte_control_activation_deactivation_csi_rs_a6,
             { "CSI-RS Resource Index 6",
               "mac-lte.control.activation-deactivation-csi-rs.a6", FT_BOOLEAN, 8,
-              TFS(&activated_deactivated_vals), 0x20, NULL, HFILL
+              TFS(&tfs_activated_deactivated), 0x20, NULL, HFILL
             }
         },
         { &hf_mac_lte_control_activation_deactivation_csi_rs_a5,
             { "CSI-RS Resource Index 5",
               "mac-lte.control.activation-deactivation-csi-rs.a5", FT_BOOLEAN, 8,
-              TFS(&activated_deactivated_vals), 0x10, NULL, HFILL
+              TFS(&tfs_activated_deactivated), 0x10, NULL, HFILL
             }
         },
         { &hf_mac_lte_control_activation_deactivation_csi_rs_a4,
             { "CSI-RS Resource Index 4",
               "mac-lte.control.activation-deactivation-csi-rs.a4", FT_BOOLEAN, 8,
-              TFS(&activated_deactivated_vals), 0x08, NULL, HFILL
+              TFS(&tfs_activated_deactivated), 0x08, NULL, HFILL
             }
         },
         { &hf_mac_lte_control_activation_deactivation_csi_rs_a3,
             { "CSI-RS Resource Index 3",
               "mac-lte.control.activation-deactivation-csi-rs.a3", FT_BOOLEAN, 8,
-              TFS(&activated_deactivated_vals), 0x04, NULL, HFILL
+              TFS(&tfs_activated_deactivated), 0x04, NULL, HFILL
             }
         },
         { &hf_mac_lte_control_activation_deactivation_csi_rs_a2,
             { "CSI-RS Resource Index 2",
               "mac-lte.control.activation-deactivation-csi-rs.a2", FT_BOOLEAN, 8,
-              TFS(&activated_deactivated_vals), 0x02, NULL, HFILL
+              TFS(&tfs_activated_deactivated), 0x02, NULL, HFILL
             }
         },
         { &hf_mac_lte_control_activation_deactivation_csi_rs_a1,
             { "CSI-RS Resource Index 1",
               "mac-lte.control.activation-deactivation-csi-rs.a1", FT_BOOLEAN, 8,
-              TFS(&activated_deactivated_vals), 0x01, NULL, HFILL
+              TFS(&tfs_activated_deactivated), 0x01, NULL, HFILL
             }
         },
 
         /* Generated fields */
         { &hf_mac_lte_dl_harq_resend_original_frame,
             { "Frame with previous tx",
-              "mac-lte.dlsch.retx.original-frame", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+              "mac-lte.dlsch.retx.original-frame", FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_RETRANS_PREV), 0x0,
               NULL, HFILL
             }
         },
@@ -9227,7 +9251,7 @@ void proto_register_mac_lte(void)
         },
         { &hf_mac_lte_dl_harq_resend_next_frame,
             { "Frame with next tx",
-              "mac-lte.dlsch.retx.next-frame", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+              "mac-lte.dlsch.retx.next-frame", FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_RETRANS_NEXT), 0x0,
               NULL, HFILL
             }
         },
@@ -9240,7 +9264,7 @@ void proto_register_mac_lte(void)
 
         { &hf_mac_lte_ul_harq_resend_original_frame,
             { "Frame with previous tx",
-              "mac-lte.ulsch.retx.original-frame", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+              "mac-lte.ulsch.retx.original-frame", FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_RETRANS_PREV), 0x0,
               NULL, HFILL
             }
         },
@@ -9252,7 +9276,7 @@ void proto_register_mac_lte(void)
         },
         { &hf_mac_lte_ul_harq_resend_next_frame,
             { "Frame with next tx",
-              "mac-lte.ulsch.retx.next-frame", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+              "mac-lte.ulsch.retx.next-frame", FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_RETRANS_NEXT), 0x0,
               NULL, HFILL
             }
         },
@@ -9265,25 +9289,25 @@ void proto_register_mac_lte(void)
 
         { &hf_mac_lte_grant_answering_sr,
             { "First Grant Following SR from",
-              "mac-lte.ulsch.grant-answering-sr", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+              "mac-lte.ulsch.grant-answering-sr", FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_REQUEST), 0x0,
               NULL, HFILL
             }
         },
         { &hf_mac_lte_failure_answering_sr,
             { "SR which failed",
-              "mac-lte.ulsch.failure-answering-sr", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+              "mac-lte.ulsch.failure-answering-sr", FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_RESPONSE), 0x0,
               NULL, HFILL
             }
         },
         { &hf_mac_lte_sr_leading_to_failure,
             { "This SR fails",
-              "mac-lte.ulsch.failure-answering-sr-frame", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+              "mac-lte.ulsch.failure-answering-sr-frame", FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_RESPONSE), 0x0,
               NULL, HFILL
             }
         },
         { &hf_mac_lte_sr_leading_to_grant,
             { "This SR results in a grant here",
-              "mac-lte.ulsch.grant-answering-sr-frame", FT_FRAMENUM, BASE_NONE, NULL, 0x0,
+              "mac-lte.ulsch.grant-answering-sr-frame", FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_RESPONSE), 0x0,
               NULL, HFILL
             }
         },

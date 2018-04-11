@@ -21,19 +21,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -2642,7 +2630,7 @@ static const range_string speech_version_id_rvals[] = {
     { 0x02,     0x04, "Reserved" },
     { 0x05,     0x05, "GSM speech half rate version 1" },
     { 0x06,     0x10, "Reserved" },
-    { 0x11,     0x11, "GSM speech full rate version 1" },
+    { 0x11,     0x11, "GSM speech full rate version 2 (EFR)" },
     { 0x12,     0x14, "Reserved" },
     { 0x15,     0x15, "GSM speech half rate version 2" },
     { 0x16,     0x20, "Reserved" },
@@ -2650,11 +2638,11 @@ static const range_string speech_version_id_rvals[] = {
     { 0x22,     0x24, "Reserved" },
     { 0x25,     0x25, "GSM speech half rate version 3 (AMR)" },
     { 0x26,     0x40, "Reserved" },
-    { 0x41,     0x41, "GSM speech full rate version 4" },
-    { 0x42,     0x42, "GSM speech full rate version 5" },
+    { 0x41,     0x41, "GSM speech full rate version 4 (AMR-WB)" },
+    { 0x42,     0x42, "GSM speech full rate version 5 (AMR-WB)" },
     { 0x43,     0x44, "Reserved" },
-    { 0x45,     0x45, "GSM speech half rate version 6" },
-    { 0x46,     0x46, "GSM speech half rate version 4" },
+    { 0x45,     0x45, "GSM speech half rate version 6 (AMR)" },
+    { 0x46,     0x46, "GSM speech half rate version 4 (AMR-WB)" },
     { 0x47,     0x7f, "Reserved" },
 
     { 0, 0, NULL },
@@ -2663,7 +2651,7 @@ static const range_string speech_version_id_rvals[] = {
 static const range_string speech_version_id_short_rvals[] = {
     { 0x01,     0x01, "FR1" },
     { 0x05,     0x05, "HR1" },
-    { 0x11,     0x11, "FR12" },
+    { 0x11,     0x11, "FR2 (EFR)" },
     { 0x15,     0x15, "HR2" },
     { 0x21,     0x21, "FR3 (AMR)" },
     { 0x25,     0x25, "HR3 (AMR)" },

@@ -9,19 +9,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -899,7 +887,9 @@ dissect_mip( tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_
       proto_tree_add_item(mip_tree, hf_mip_ident, tvb, offset, 8, ENC_TIME_NTP|ENC_BIG_ENDIAN);
       offset += 8;
 
-    } /* if tree */
+    } else {
+      offset += 24;
+    }
     break;
   case MIP_REGISTRATION_REPLY:
     col_add_fstr(pinfo->cinfo, COL_INFO,
@@ -936,7 +926,9 @@ dissect_mip( tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_
       /* Identifier - assumed to be an NTP time here */
       proto_tree_add_item(mip_tree, hf_mip_ident, tvb, offset, 8, ENC_TIME_NTP|ENC_BIG_ENDIAN);
       offset += 8;
-    } /* if tree */
+    } else {
+      offset += 20;
+    }
     break;
   case MIP_NATT_TUNNEL_DATA:
     col_add_fstr(pinfo->cinfo, COL_INFO, "Tunnel Data: Next Header=%u",
@@ -958,8 +950,7 @@ dissect_mip( tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_
       /* reserved */
       proto_tree_add_item(mip_tree, hf_mip_nattt_reserved, tvb, offset, 2, ENC_BIG_ENDIAN);
       offset += 2;
-    } /* if tree */
-    else {
+    } else {
       offset += 4;
     }
     /* encapsulated payload */
@@ -1012,7 +1003,9 @@ dissect_mip( tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_
       /* revocation identifier */
       proto_tree_add_item(mip_tree, hf_mip_revid, tvb, offset, 4, ENC_BIG_ENDIAN);
       offset += 4;
-    } /* if tree */
+    } else {
+      offset += 20;
+    }
     break;
   case MIP_REGISTRATION_REVOCATION_ACK:
       col_add_fstr(pinfo->cinfo, COL_INFO, "Reg Revocation Ack: HoA=%s",
@@ -1047,7 +1040,9 @@ dissect_mip( tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_
       /* revocation identifier */
       proto_tree_add_item(mip_tree, hf_mip_revid, tvb, offset, 4, ENC_BIG_ENDIAN);
       offset += 4;
-    } /* if tree */
+    } else {
+      offset += 12;
+    }
     break;
   } /* End switch */
 

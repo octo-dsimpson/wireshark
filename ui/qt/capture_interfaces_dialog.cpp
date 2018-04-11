@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "config.h"
 
@@ -132,7 +119,6 @@ public:
         }
         setText(col_link_, linkname);
 
-#ifdef HAVE_EXTCAP
         if (device->if_info.type == IF_EXTCAP) {
             /* extcap interfaces does not have this settings */
             setApplicable(col_pmode_, false);
@@ -142,7 +128,6 @@ public:
             setApplicable(col_buffer_, false);
 #endif
         } else {
-#endif
             setApplicable(col_pmode_, true);
             setCheckState(col_pmode_, device->pmode ? Qt::Checked : Qt::Unchecked);
 
@@ -151,9 +136,7 @@ public:
 #ifdef SHOW_BUFFER_COLUMN
             setText(col_buffer_, QString::number(device->buffer));
 #endif
-#ifdef HAVE_EXTCAP
         }
-#endif
         setText(col_filter_, device->cfilter);
 
 #ifdef SHOW_MONITOR_COLUMN
@@ -672,7 +655,7 @@ void CaptureInterfacesDialog::updateInterfaces()
             InterfaceTreeWidgetItem *ti = new InterfaceTreeWidgetItem(ui->interfaceTree);
             ti->setFlags(ti->flags() | Qt::ItemIsEditable);
             ti->setData(col_interface_, Qt::UserRole, QString(device->name));
-            ti->setData(col_traffic_, Qt::UserRole, qVariantFromValue(ti->points));
+            ti->setData(col_traffic_, Qt::UserRole, QVariant::fromValue(ti->points));
 
             ti->setText(col_interface_, device->display_name);
             if (device->no_addresses > 0) {
@@ -793,7 +776,7 @@ void CaptureInterfacesDialog::updateStatistics(void)
             }
             QList<int> points = ti->data(col_traffic_, Qt::UserRole).value<QList<int> >();
             points.append(device->packet_diff);
-            ti->setData(col_traffic_, Qt::UserRole, qVariantFromValue(points));
+            ti->setData(col_traffic_, Qt::UserRole, QVariant::fromValue(points));
         }
     }
     connect(ui->interfaceTree, SIGNAL(itemChanged(QTreeWidgetItem*,int)), this, SLOT(interfaceItemChanged(QTreeWidgetItem*,int)));
@@ -1145,7 +1128,7 @@ QVariant InterfaceTreeWidgetItem::data(int column, int role) const
 {
     // See setData for the special col_traffic_ treatment.
     if (column == col_traffic_ && role == Qt::UserRole) {
-        return qVariantFromValue(points);
+        return QVariant::fromValue(points);
     }
 
     return QTreeWidgetItem::data(column, role);

@@ -6,19 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  * References:
  * http://www.umatechnology.org/
@@ -1475,14 +1463,14 @@ dissect_uma_IE(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, int offset)
 
 		set_address(&dst_addr, AT_IPv4, 4, &GPRS_user_data_ipv4_address);
 
-		conversation = find_conversation(pinfo->num,&dst_addr,
-			&null_addr, PT_UDP, GPRS_user_data_transport_UDP_port,
+		conversation = find_conversation(pinfo->num, &dst_addr,
+			&null_addr, ENDPOINT_UDP, GPRS_user_data_transport_UDP_port,
 			0, NO_ADDR_B|NO_PORT_B);
 
 		if (conversation == NULL) {
 			/* It's not part of any conversation - create a new one. */
 			conversation = conversation_new(pinfo->num, &dst_addr,
-			    &null_addr, PT_UDP,GPRS_user_data_transport_UDP_port ,
+			    &null_addr, ENDPOINT_UDP, GPRS_user_data_transport_UDP_port ,
 			    0, NO_ADDR2|NO_PORT2);
 
 		/* Set dissector */
@@ -1507,14 +1495,14 @@ dissect_uma_IE(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, int offset)
 
 		set_address(&dst_addr, AT_IPv4, 4, &unc_ipv4_address);
 
-		conversation = find_conversation(pinfo->num,&dst_addr,
-			&null_addr, PT_TCP, UNC_tcp_port,
+		conversation = find_conversation(pinfo->num, &dst_addr,
+			&null_addr, ENDPOINT_TCP, UNC_tcp_port,
 			0, NO_ADDR_B|NO_PORT_B);
 
 		if (conversation == NULL) {
 			/* It's not part of any conversation - create a new one. */
 			conversation = conversation_new(pinfo->num, &dst_addr,
-			    &null_addr, PT_TCP,UNC_tcp_port ,
+			    &null_addr, ENDPOINT_TCP, UNC_tcp_port,
 			    0, NO_ADDR2|NO_PORT2);
 			/* Set dissector */
 			conversation_set_dissector(conversation, uma_tcp_handle);

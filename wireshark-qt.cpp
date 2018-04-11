@@ -4,28 +4,12 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include <config.h>
 
 #include <glib.h>
-
-#ifdef Q_OS_UNIX
-#include <signal.h>
-#endif
 
 #include <locale.h>
 
@@ -69,9 +53,7 @@
 
 #include <codecs/codecs.h>
 
-#ifdef HAVE_EXTCAP
 #include <extcap.h>
-#endif
 
 /* general (not Qt specific) */
 #include "file.h"
@@ -92,6 +74,8 @@
 #include "ui/dissect_opts.h"
 #include "ui/commandline.h"
 #include "ui/capture_ui_utils.h"
+#include "ui/preference_utils.h"
+#include "ui/taps.h"
 
 #include "ui/qt/conversation_dialog.h"
 #include "ui/qt/utils/color_utils.h"
@@ -124,11 +108,14 @@
 //#  include "airpcap_gui_utils.h"
 #endif
 
-#include "epan/crypt/airpdcap_ws.h"
+#include "epan/crypt/dot11decrypt_ws.h"
 
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
-#include <QTextCodec>
+/* Handle the addition of View menu items without request */
+#if defined(Q_OS_MAC)
+#include <ui/macosx/cocoa_bridge.h>
 #endif
+
+#include <ui/qt/utils/qt_ui_utils.h>
 
 #define INVALID_OPTION 1
 #define INIT_FAILED 2
@@ -161,7 +148,6 @@ void main_window_update(void)
 /* quit a nested main window */
 void main_window_nested_quit(void)
 {
-//    if (gtk_main_level() > 0)
     wsApp->quit();
 }
 
@@ -172,6 +158,13 @@ void main_window_quit(void)
 }
 
 #endif /* HAVE_LIBPCAP */
+
+void exit_application(int status) {
+    if (wsApp) {
+        wsApp->quit();
+    }
+    exit(status);
+}
 
 /*
  * Report an error in command-line arguments.
@@ -265,6 +258,33 @@ get_wireshark_runtime_info(GString *str)
     g_string_append(str, ", ");
     get_runtime_airpcap_version(str);
 #endif
+}
+
+static void
+g_log_message_handler(QtMsgType type, const QMessageLogContext &, const QString &msg)
+{
+    GLogLevelFlags log_level = G_LOG_LEVEL_DEBUG;
+
+    switch (type) {
+    case QtDebugMsg:
+    default:
+        break;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 5, 0))
+    case QtInfoMsg:
+        log_level = G_LOG_LEVEL_INFO;
+        break;
+#endif
+    case QtWarningMsg:
+        log_level = G_LOG_LEVEL_WARNING;
+        break;
+    case QtCriticalMsg:
+        log_level = G_LOG_LEVEL_CRITICAL;
+        break;
+    case QtFatalMsg:
+        log_level = G_LOG_FLAG_FATAL;
+        break;
+    }
+    g_log(LOG_DOMAIN_MAIN, log_level, "%s", qUtf8Printable(msg));
 }
 
 #ifdef HAVE_LIBPCAP
@@ -371,10 +391,10 @@ int main(int argc, char *qt_argv[])
 #ifdef HAVE_LIBPCAP
     int                  caps_queries = 0;
 #endif
-    /* Start time in microseconds*/
+    /* Start time in microseconds */
     guint64 start_time = g_get_monotonic_time();
 #ifdef DEBUG_STARTUP_TIME
-    /* At least on Windows there is a problem with the loging as the preferences is taken
+    /* At least on Windows there is a problem with the logging as the preferences is taken
      * into account and the preferences are loaded pretty late in the startup process.
      */
     prefs.console_log_level = DEBUG_STARTUP_TIME_LOGLEVEL;
@@ -382,14 +402,9 @@ int main(int argc, char *qt_argv[])
 #endif /* DEBUG_STARTUP_TIME */
     cmdarg_err_init(wireshark_cmdarg_err, wireshark_cmdarg_err_cont);
 
-    // In Qt 5, C strings are treated always as UTF-8 when converted to
-    // QStrings; in Qt 4, the codec must be set to make that happen
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
-    // Hopefully we won't have to use QString::fromUtf8() in as many places.
-    QTextCodec *utf8codec = QTextCodec::codecForName("UTF-8");
-    QTextCodec::setCodecForCStrings(utf8codec);
-    // XXX - QObject doesn't *have* a tr method in 5.0, as far as I can see...
-    QTextCodec::setCodecForTr(utf8codec);
+#if defined(Q_OS_MAC)
+    /* Disable automatic addition of tab menu entries in view menu */
+    CocoaBridge::cleanOSGeneratedMenuItems();
 #endif
 
     /* Set the C-language locale to the native environment. */
@@ -515,7 +530,7 @@ int main(int argc, char *qt_argv[])
     // https://bugreports.qt.io/browse/QTBUG-53022 - The device pixel ratio is pretty much bogus on Windows.
     // https://bugreports.qt.io/browse/QTBUG-55510 - Windows have wrong size
 #if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
-     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
     /* Create The Wireshark app */
@@ -525,7 +540,7 @@ int main(int argc, char *qt_argv[])
     // xxx qtshark
     //initialize_funnel_ops();
 
-    AirPDcapInitContext(&airpdcap_ctx);
+    Dot11DecryptInitContext(&dot11decrypt_ctx);
 
     QString cf_name;
     unsigned int in_file_type = WTAP_TYPE_AUTO;
@@ -587,12 +602,8 @@ int main(int argc, char *qt_argv[])
       wsApp->setLastOpenDir(get_persdatafile_dir());
     }
 
-#ifdef Q_OS_UNIX
-    // Replicates behavior in gtk_init();
-    signal(SIGPIPE, SIG_IGN);
-#endif
-
     set_console_log_handler();
+    qInstallMessageHandler(g_log_message_handler);
 #ifdef DEBUG_STARTUP_TIME
     g_log(LOG_DOMAIN_MAIN, G_LOG_LEVEL_INFO, "set_console_log_handler, elapsed time %" G_GUINT64_FORMAT " us \n", g_get_monotonic_time() - start_time);
 #endif
@@ -607,23 +618,7 @@ int main(int argc, char *qt_argv[])
                         open_failure_alert_box, read_failure_alert_box,
                         write_failure_alert_box);
 
-    wtap_init();
-
-#ifdef HAVE_PLUGINS
-    /* Register all the plugin types we have. */
-    epan_register_plugin_types(); /* Types known to libwireshark */
-    codec_register_plugin_types(); /* Types known to libwscodecs */
-
-    /* Scan for plugins.  This does *not* call their registration routines;
-       that's done later. */
-    scan_plugins(REPORT_LOAD_FAILURE);
-
-    /* Register all libwiretap plugin modules. */
-    register_all_wiretap_modules();
-#endif
-
-    /* Register all audio codec plugins. */
-    register_all_codecs();
+    wtap_init(TRUE);
 
     splash_update(RA_DISSECTORS, NULL, NULL);
 #ifdef DEBUG_STARTUP_TIME
@@ -646,6 +641,9 @@ int main(int argc, char *qt_argv[])
     g_log(LOG_DOMAIN_MAIN, G_LOG_LEVEL_INFO, "epan done, elapsed time %" G_GUINT64_FORMAT " us \n", g_get_monotonic_time() - start_time);
 #endif
 
+    /* Register all audio codecs. */
+    codecs_init();
+
     // Read the dynamic part of the recent file. This determines whether or
     // not the recent list appears in the main window so the earlier we can
     // call this the better.
@@ -655,6 +653,7 @@ int main(int argc, char *qt_argv[])
                       rf_path, g_strerror(rf_open_errno));
         g_free(rf_path);
     }
+    wsApp->refreshRecentCaptures();
 
     splash_update(RA_LISTENERS, NULL, NULL);
 #ifdef DEBUG_STARTUP_TIME
@@ -670,26 +669,29 @@ int main(int argc, char *qt_argv[])
     register_all_plugin_tap_listeners();
 #endif
 
-    register_all_tap_listeners();
+    /* Register all tap listeners. */
+    for (tap_reg_t *t = tap_reg_listener; t->cb_func != NULL; t++) {
+        t->cb_func();
+    }
     conversation_table_set_gui_info(init_conversation_table);
     hostlist_table_set_gui_info(init_endpoint_table);
     srt_table_iterate_tables(register_service_response_tables, NULL);
     rtd_table_iterate_tables(register_response_time_delay_tables, NULL);
-    new_stat_tap_iterate_tables(register_simple_stat_tables, NULL);
+    stat_tap_iterate_tables(register_simple_stat_tables, NULL);
 
     if (ex_opt_count("read_format") > 0) {
         in_file_type = open_info_name_to_type(ex_opt_get_next("read_format"));
     }
 
-#ifdef HAVE_EXTCAP
 #ifdef DEBUG_STARTUP_TIME
     g_log(LOG_DOMAIN_MAIN, G_LOG_LEVEL_INFO, "Calling extcap_register_preferences, elapsed time %" G_GUINT64_FORMAT " us \n", g_get_monotonic_time() - start_time);
 #endif
     splash_update(RA_EXTCAP, NULL, NULL);
     extcap_register_preferences();
-#endif
     splash_update(RA_PREFERENCES, NULL, NULL);
+#ifdef DEBUG_STARTUP_TIME
     g_log(LOG_DOMAIN_MAIN, G_LOG_LEVEL_INFO, "Calling module preferences, elapsed time %" G_GUINT64_FORMAT " us \n", g_get_monotonic_time() - start_time);
+#endif
 
     global_commandline_info.prefs_p = ws_app.readConfigurationFiles(false);
 
@@ -703,10 +705,6 @@ int main(int argc, char *qt_argv[])
         read_filter = QString(global_commandline_info.rfilter);
     if (global_commandline_info.dfilter != NULL)
         dfilter = QString(global_commandline_info.dfilter);
-
-    /* Removed thread code:
-     * https://code.wireshark.org/review/gitweb?p=wireshark.git;a=commit;h=9e277ae6154fd04bf6a0a34ec5655a73e5a736a3
-     */
 
     timestamp_set_type(recent.gui_time_format);
     timestamp_set_precision(recent.gui_time_precision);
@@ -783,7 +781,6 @@ int main(int argc, char *qt_argv[])
     capture_opts_trim_ring_num_files(&global_capture_opts);
 #endif /* HAVE_LIBPCAP */
 
-
     /* Notify all registered modules that have had any of their preferences
        changed either from one of the preferences file or from the command
        line that their preferences have changed. */
@@ -791,6 +788,7 @@ int main(int argc, char *qt_argv[])
     g_log(LOG_DOMAIN_MAIN, G_LOG_LEVEL_INFO, "Calling prefs_apply_all, elapsed time %" G_GUINT64_FORMAT " us \n", g_get_monotonic_time() - start_time);
 #endif
     prefs_apply_all();
+    prefs_to_capture_opts();
     wsApp->emitAppSignal(WiresharkApplication::PreferencesChanged);
 
 #ifdef HAVE_LIBPCAP
@@ -826,35 +824,16 @@ int main(int argc, char *qt_argv[])
 
     /* For update of WindowTitle (When use gui.window_title preference) */
     main_w->setWSWindowTitle();
-////////
 
     packet_list_enable_color(recent.packet_list_colorize);
 
-    g_log(NULL, G_LOG_LEVEL_DEBUG, "FIX: fetch recent color settings");
-    packet_list_enable_color(TRUE);
-
-////////
-
-
-////////
     if (!color_filters_init(&err_msg, color_filter_add_cb)) {
         simple_dialog(ESD_TYPE_ERROR, ESD_BTN_OK, "%s", err_msg);
         g_free(err_msg);
     }
 
-////////
-
-#ifdef HAVE_LIBPCAP
-    /* if the user didn't supply a capture filter, use the one to filter out remote connections like SSH */
-    if (!global_commandline_info.start_capture && !global_capture_opts.default_options.cfilter) {
-        global_capture_opts.default_options.cfilter = g_strdup(get_conn_cfilter());
-    }
-#else /* HAVE_LIBPCAP */
-    ////////
-#endif /* HAVE_LIBPCAP */
-
     wsApp->allSystemsGo();
-    g_log(LOG_DOMAIN_MAIN, G_LOG_LEVEL_INFO, "Wireshark is up and ready to go, elapsed time %" G_GUINT64_FORMAT "us \n", g_get_monotonic_time() - start_time);
+    g_log(LOG_DOMAIN_MAIN, G_LOG_LEVEL_INFO, "Wireshark is up and ready to go, elapsed time %.3fs\n", (float) (g_get_monotonic_time() - start_time) / 1000000);
     SimpleDialog::displayQueuedMessages(main_w);
 
     /* User could specify filename, or display filter, or both */
@@ -906,7 +885,6 @@ int main(int argc, char *qt_argv[])
                 g_free(s);
             }
             /* "-k" was specified; start a capture. */
-//            show_main_window(FALSE);
             check_and_warn_user_startup(cf_name);
 
             /* If no user interfaces were specified on the command line,
@@ -925,7 +903,7 @@ int main(int argc, char *qt_argv[])
                 start_requested_stats();
             }
         }
-    /* if the user didn't supply a capture filter, use the one to filter out remote connections like SSH */
+        /* if the user didn't supply a capture filter, use the one to filter out remote connections like SSH */
         if (!global_commandline_info.start_capture && !global_capture_opts.default_options.cfilter) {
             global_capture_opts.default_options.cfilter = g_strdup(get_conn_cfilter());
         }
@@ -940,16 +918,15 @@ int main(int argc, char *qt_argv[])
     profile_store_persconffiles(FALSE);
 
     ret_val = wsApp->exec();
+    wsApp = NULL;
 
     delete main_w;
     recent_cleanup();
     epan_cleanup();
 
-#ifdef HAVE_EXTCAP
     extcap_cleanup();
-#endif
 
-    AirPDcapDestroyContext(&airpdcap_ctx);
+    Dot11DecryptDestroyContext(&dot11decrypt_ctx);
 
 #ifdef _WIN32
     /* Shutdown windows sockets */
@@ -966,12 +943,10 @@ clean_exit:
     capture_opts_cleanup(&global_capture_opts);
 #endif
     col_cleanup(&CaptureFile::globalCapFile()->cinfo);
+    codecs_cleanup();
     wtap_cleanup();
     free_progdirs();
-#ifdef HAVE_PLUGINS
-    plugins_cleanup();
-#endif
-    return ret_val;
+    exit_application(ret_val);
 }
 
 /*

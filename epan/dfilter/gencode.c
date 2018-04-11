@@ -3,19 +3,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 2001 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -181,7 +169,7 @@ dfw_append_function(dfwork_t *dfw, stnode_t *node, dfvm_value_t **p_jmp)
 
 	/* Array to hold the instructions that need to jump to
 	 * an instruction if they fail. */
-	jmps = (dfvm_value_t **)g_malloc(num_params * sizeof(dfvm_value_t*));
+	jmps = (dfvm_value_t **)g_malloc0(num_params * sizeof(dfvm_value_t*));
 
 	/* Create the new DFVM instruction */
 	insn = dfvm_insn_new(CALL_FUNCTION);
@@ -197,7 +185,6 @@ dfw_append_function(dfwork_t *dfw, stnode_t *node, dfvm_value_t **p_jmp)
 
 	i = 0;
 	while (params) {
-		jmps[i] = NULL;
 		reg = gen_entity(dfw, (stnode_t *)params->data, &jmps[i]);
 
 		val = dfvm_value_new(REGISTER);

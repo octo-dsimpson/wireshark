@@ -6,19 +6,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 /* ISO14443 is a set of standards describing the communication between a
@@ -37,15 +25,17 @@
 
 
 #include "config.h"
-#include <math.h>
 #include <epan/packet.h>
 #include <epan/expert.h>
-#include <epan/circuit.h>
+#include <epan/decode_as.h>
+#include <epan/conversation.h>
 #include <epan/tfs.h>
 #include <epan/reassemble.h>
-#include <wiretap/wtap.h>
 #include <epan/crc16-tvb.h>
 
+#include <wiretap/wtap.h>
+
+#include <wsutil/pow2.h>
 
 /* Proximity Integrated Circuit Card, i.e. the smartcard */
 #define ADDR_PICC "PICC"
@@ -109,6 +99,20 @@ static const value_string iso14443_short_frame[] = {
     { 0, NULL }
 };
 
+/* the bit rate definitions in the attrib message */
+#define BITRATE_106  0x00
+#define BITRATE_212  0x01
+#define BITRATE_424  0x02
+#define BITRATE_847  0x03
+
+static const value_string iso14443_bitrates[] = {
+    { BITRATE_106, "106 kbit/s" },
+    { BITRATE_212, "212 kbit/s" },
+    { BITRATE_424, "424 kbit/s" },
+    { BITRATE_847, "827 kbit/s" },
+    { 0, NULL }
+};
+
 /* convert a length code into the length it encodes
    code_to_len[x] is the length encoded by x
    this conversion is used for type A's FSCI and FSDI and for type B's
@@ -166,6 +170,8 @@ static int proto_iso14443 = -1;
 static dissector_handle_t iso14443_handle;
 
 static dissector_table_t iso14443_cmd_type_table;
+
+static dissector_table_t iso14443_subdissector_table;
 
 static int ett_iso14443 = -1;
 static int ett_iso14443_hdr = -1;
@@ -265,6 +271,8 @@ static int hf_iso14443_min_tr1 = -1;
 static int hf_iso14443_eof = -1;
 static int hf_iso14443_sof = -1;
 static int hf_iso14443_param2 = -1;
+static int hf_iso14443_bitrate_picc_pcd = -1;
+static int hf_iso14443_bitrate_pcd_picc = -1;
 static int hf_iso14443_param3 = -1;
 static int hf_iso14443_param4 = -1;
 static int hf_iso14443_mbli = -1;
@@ -553,8 +561,8 @@ dissect_iso14443_cmd_type_wupb(tvbuff_t *tvb, packet_info *pinfo,
         col_set_str(pinfo->cinfo, COL_INFO, msg_type);
         proto_item_append_text(ti, ": %s", msg_type);
         proto_tree_add_uint_bits_format_value(tree, hf_iso14443_n,
-                tvb, offset*8+5, 3, (guint8)pow(2, param&0x07),
-                "%d", (guint8)pow(2, param&0x07));
+                tvb, offset*8+5, 3, pow2(guint32, param&0x07),
+                "%u", pow2(guint32, param&0x07));
         offset++;
 
         if (!crc_dropped) {
@@ -683,7 +691,7 @@ static int dissect_iso14443_ats(tvbuff_t *tvb, gint offset,
         packet_info *pinfo, proto_tree *tree, gboolean crc_dropped)
 {
     proto_item *ti = proto_tree_get_parent(tree);
-    circuit_t *circuit;
+    conversation_t *conv;
     guint8 tl, t0 = 0, fsci, fwi, sfgi;
     proto_item *t0_it, *tb1_it, *tc1_it, *pi;
     proto_tree *t0_tree, *tb1_tree, *tc1_tree;
@@ -693,9 +701,8 @@ static int dissect_iso14443_ats(tvbuff_t *tvb, gint offset,
     col_set_str(pinfo->cinfo, COL_INFO, "ATS");
     proto_item_append_text(ti, ": ATS");
 
-    circuit = circuit_new(CT_ISO14443, ISO14443_CIRCUIT_ID, pinfo->num);
-    circuit_add_proto_data(circuit,
-            proto_iso14443, GUINT_TO_POINTER((guint)ISO14443_A));
+    conv = conversation_new_by_id(pinfo->num, ENDPOINT_ISO14443, ISO14443_CIRCUIT_ID, 0);
+    conversation_add_proto_data(conv, proto_iso14443, GUINT_TO_POINTER((guint)ISO14443_A));
 
     offset_tl = offset;
     tl = tvb_get_guint8(tvb, offset);
@@ -859,6 +866,10 @@ static int dissect_iso14443_attrib(tvbuff_t *tvb, gint offset,
     p2_it = proto_tree_add_item(tree, hf_iso14443_param2,
             tvb, offset, 1, ENC_BIG_ENDIAN);
     p2_tree = proto_item_add_subtree( p2_it, ett_iso14443_attr_p2);
+    proto_tree_add_item(p2_tree, hf_iso14443_bitrate_picc_pcd,
+            tvb, offset, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_item(p2_tree, hf_iso14443_bitrate_pcd_picc,
+            tvb, offset, 1, ENC_BIG_ENDIAN);
     max_frame_size_code = tvb_get_guint8(tvb, offset) & 0x0F;
     proto_tree_add_uint_bits_format_value(p2_tree,
             hf_iso14443_max_frame_size_code,
@@ -910,7 +921,7 @@ dissect_iso14443_cmd_type_attrib(tvbuff_t *tvb, packet_info *pinfo,
     gint offset = 0;
     guint8 mbli, cid;
     gint hl_resp_len;
-    circuit_t *circuit;
+    conversation_t *conv;
 
     if (pinfo->p2p_dir == P2P_DIR_SENT) {
         offset = dissect_iso14443_attrib(
@@ -920,9 +931,8 @@ dissect_iso14443_cmd_type_attrib(tvbuff_t *tvb, packet_info *pinfo,
         col_set_str(pinfo->cinfo, COL_INFO, "Response to Attrib");
         proto_item_append_text(ti, ": Response to Attrib");
 
-        circuit = circuit_new(CT_ISO14443, ISO14443_CIRCUIT_ID, pinfo->num);
-        circuit_add_proto_data(circuit,
-                proto_iso14443, GUINT_TO_POINTER((guint)ISO14443_B));
+        conv = conversation_new_by_id(pinfo->num, ENDPOINT_ISO14443, ISO14443_CIRCUIT_ID, 0);
+        conversation_add_proto_data(conv, proto_iso14443, GUINT_TO_POINTER((guint)ISO14443_B));
 
         mbli = tvb_get_guint8(tvb, offset) >> 4;
         proto_tree_add_uint_bits_format_value(tree, hf_iso14443_mbli,
@@ -1081,8 +1091,10 @@ dissect_iso14443_cmd_type_block(tvbuff_t *tvb, packet_info *pinfo,
                     &i_block_frag_items, NULL, tree);
 
             if (payload_tvb) {
-                /* XXX - forward to the actual upper layer protocol */
-                call_data_dissector(payload_tvb, pinfo, tree);
+                if (!dissector_try_payload_new(iso14443_subdissector_table,
+                            payload_tvb, pinfo, tree, TRUE, NULL)) {
+                    call_data_dissector(payload_tvb, pinfo, tree);
+                }
             }
         }
 
@@ -1091,12 +1103,11 @@ dissect_iso14443_cmd_type_block(tvbuff_t *tvb, packet_info *pinfo,
 
     if (!crc_dropped) {
         iso14443_type_t t;
-        circuit_t *circuit;
+        conversation_t *conv;
 
-        circuit = find_circuit(CT_ISO14443, ISO14443_CIRCUIT_ID, pinfo->num);
-        if (circuit) {
-            t = (iso14443_type_t)GPOINTER_TO_UINT(
-                    (gpointer)circuit_get_proto_data(circuit, proto_iso14443));
+        conv = find_conversation_by_id(pinfo->num, ENDPOINT_ISO14443, ISO14443_CIRCUIT_ID, 0);
+        if (conv) {
+            t = (iso14443_type_t)GPOINTER_TO_UINT(conversation_get_proto_data(conv, proto_iso14443));
 
             proto_tree_add_checksum(tree, tvb, offset,
                     hf_iso14443_crc, hf_iso14443_crc_status, &ei_iso14443_wrong_crc, pinfo,
@@ -1324,7 +1335,7 @@ static int dissect_iso14443(tvbuff_t *tvb,
     proto_item *tree_ti;
     proto_tree *iso14443_tree, *hdr_tree;
     tvbuff_t    *payload_tvb;
-    circuit_t   *circuit;
+    conversation_t *conv;
 
     if (tvb_captured_length(tvb) < 4)
         return 0;
@@ -1377,9 +1388,9 @@ static int dissect_iso14443(tvbuff_t *tvb,
 
         /* all events that are not data transfers close the connection
            to the card (e.g. the field is switched on or off) */
-        circuit = find_circuit(CT_ISO14443, ISO14443_CIRCUIT_ID, pinfo->num);
-        if (circuit)
-                close_circuit(circuit, pinfo->num);
+        conv = find_conversation_by_id(pinfo->num, ENDPOINT_ISO14443, ISO14443_CIRCUIT_ID, 0);
+        if (conv)
+            conv->last_frame = pinfo->num;
     }
 
     return offset;
@@ -1706,6 +1717,14 @@ proto_register_iso14443(void)
             { "Param 2", "iso14443.param2",
                 FT_UINT8, BASE_HEX, NULL, 0, NULL, HFILL }
         },
+        { &hf_iso14443_bitrate_picc_pcd,
+            { "Bit rate PICC to PCD", "iso14443.bitrate_picc_pcd", FT_UINT8,
+                BASE_HEX, VALS(iso14443_bitrates), 0xC0, NULL, HFILL }
+        },
+        { &hf_iso14443_bitrate_pcd_picc,
+            { "Bit rate PCD to PICC", "iso14443.bitrate_pcd_picc", FT_UINT8,
+                BASE_HEX, VALS(iso14443_bitrates), 0x30, NULL, HFILL }
+        },
         { &hf_iso14443_param3,
             { "Param 3", "iso14443.param3",
                 FT_UINT8, BASE_HEX, NULL, 0, NULL, HFILL }
@@ -1869,6 +1888,11 @@ proto_register_iso14443(void)
         register_dissector("iso14443", dissect_iso14443, proto_iso14443);
 
     transactions = wmem_tree_new_autoreset(wmem_epan_scope(), wmem_file_scope());
+
+    iso14443_subdissector_table =
+        register_decode_as_next_proto(proto_iso14443,
+                "Payload", "iso14443.subdissector",
+                "ISO14443 payload subdissector", NULL);
 }
 
 

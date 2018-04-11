@@ -15,19 +15,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #ifndef __TVBUFF_H__
@@ -192,10 +180,10 @@ WS_DLL_PUBLIC tvbuff_t *tvb_new_subset_length_caplen(tvbuff_t *backing,
 /**
  * Similar to tvb_new_subset_length_caplen() but with captured length calculated
  * to fit within the existing captured length and the specified
- * backing length (which is used as the reported length).
+ * reported length.
  * Can throw ReportedBoundsError. */
 WS_DLL_PUBLIC tvbuff_t *tvb_new_subset_length(tvbuff_t *backing,
-    const gint backing_offset, const gint backing_length);
+    const gint backing_offset, const gint reported_length);
 
 /** Similar to tvb_new_subset_length_caplen() but with backing_length and reported_length set
  * to -1.  Can throw ReportedBoundsError. */
@@ -288,10 +276,14 @@ WS_DLL_PUBLIC struct tvbuff *tvb_get_ds_tvb(tvbuff_t *tvb);
 /* All accessors will throw an exception if appropriate */
 
 WS_DLL_PUBLIC guint8 tvb_get_guint8(tvbuff_t *tvb, const gint offset);
+WS_DLL_PUBLIC gint8 tvb_get_gint8(tvbuff_t *tvb, const gint offset);
 
 WS_DLL_PUBLIC guint16 tvb_get_ntohs(tvbuff_t *tvb, const gint offset);
+WS_DLL_PUBLIC gint16 tvb_get_ntohis(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint32 tvb_get_ntoh24(tvbuff_t *tvb, const gint offset);
+WS_DLL_PUBLIC gint32 tvb_get_ntohi24(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint32 tvb_get_ntohl(tvbuff_t *tvb, const gint offset);
+WS_DLL_PUBLIC gint32 tvb_get_ntohil(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint64 tvb_get_ntoh40(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC gint64 tvb_get_ntohi40(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint64 tvb_get_ntoh48(tvbuff_t *tvb, const gint offset);
@@ -299,13 +291,17 @@ WS_DLL_PUBLIC gint64 tvb_get_ntohi48(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint64 tvb_get_ntoh56(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC gint64 tvb_get_ntohi56(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint64 tvb_get_ntoh64(tvbuff_t *tvb, const gint offset);
+WS_DLL_PUBLIC gint64 tvb_get_ntohi64(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC gfloat tvb_get_ntohieee_float(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC gdouble tvb_get_ntohieee_double(tvbuff_t *tvb,
     const gint offset);
 
 WS_DLL_PUBLIC guint16 tvb_get_letohs(tvbuff_t *tvb, const gint offset);
+WS_DLL_PUBLIC gint16 tvb_get_letohis(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint32 tvb_get_letoh24(tvbuff_t *tvb, const gint offset);
+WS_DLL_PUBLIC gint32 tvb_get_letohi24(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint32 tvb_get_letohl(tvbuff_t *tvb, const gint offset);
+WS_DLL_PUBLIC gint32 tvb_get_letohil(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint64 tvb_get_letoh40(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC gint64 tvb_get_letohi40(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint64 tvb_get_letoh48(tvbuff_t *tvb, const gint offset);
@@ -313,13 +309,17 @@ WS_DLL_PUBLIC gint64 tvb_get_letohi48(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint64 tvb_get_letoh56(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC gint64 tvb_get_letohi56(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC guint64 tvb_get_letoh64(tvbuff_t *tvb, const gint offset);
+WS_DLL_PUBLIC gint64 tvb_get_letohi64(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC gfloat tvb_get_letohieee_float(tvbuff_t *tvb, const gint offset);
 WS_DLL_PUBLIC gdouble tvb_get_letohieee_double(tvbuff_t *tvb,
     const gint offset);
 
 WS_DLL_PUBLIC guint16 tvb_get_guint16(tvbuff_t *tvb, const gint offset, const guint encoding);
+WS_DLL_PUBLIC gint16 tvb_get_gint16(tvbuff_t *tvb, const gint offset, const guint encoding);
 WS_DLL_PUBLIC guint32 tvb_get_guint24(tvbuff_t *tvb, const gint offset, const guint encoding);
+WS_DLL_PUBLIC gint32 tvb_get_gint24(tvbuff_t *tvb, const gint offset, const guint encoding);
 WS_DLL_PUBLIC guint32 tvb_get_guint32(tvbuff_t *tvb, const gint offset, const guint encoding);
+WS_DLL_PUBLIC gint32 tvb_get_gint32(tvbuff_t *tvb, const gint offset, const guint encoding);
 WS_DLL_PUBLIC guint64 tvb_get_guint40(tvbuff_t *tvb, const gint offset, const guint encoding);
 WS_DLL_PUBLIC gint64 tvb_get_gint40(tvbuff_t *tvb, const gint offset, const guint encoding);
 WS_DLL_PUBLIC guint64 tvb_get_guint48(tvbuff_t *tvb, const gint offset, const guint encoding);
@@ -327,12 +327,13 @@ WS_DLL_PUBLIC gint64 tvb_get_gint48(tvbuff_t *tvb, const gint offset, const guin
 WS_DLL_PUBLIC guint64 tvb_get_guint56(tvbuff_t *tvb, const gint offset, const guint encoding);
 WS_DLL_PUBLIC gint64 tvb_get_gint56(tvbuff_t *tvb, const gint offset, const guint encoding);
 WS_DLL_PUBLIC guint64 tvb_get_guint64(tvbuff_t *tvb, const gint offset, const guint encoding);
+WS_DLL_PUBLIC gint64 tvb_get_gint64(tvbuff_t *tvb, const gint offset, const guint encoding);
 WS_DLL_PUBLIC gfloat tvb_get_ieee_float(tvbuff_t *tvb, const gint offset, const guint encoding);
 WS_DLL_PUBLIC gdouble tvb_get_ieee_double(tvbuff_t *tvb, const gint offset, const guint encoding);
 
 /*
  * Fetch 16-bit and 32-bit values in host byte order.
- * Used for some pseudo-headers in pcap/pcap-ng files, in which the
+ * Used for some pseudo-headers in pcap/pcapng files, in which the
  * headers are, when capturing, in the byte order of the host, and
  * are converted to the byte order of the host reading the file
  * when reading a capture file.
@@ -896,9 +897,10 @@ extern tvbuff_t* base64_to_tvb(tvbuff_t *parent, const char *base64);
  * @param offset The offset in tvb from which we begin trying to extract integer.
  * @param maxlen The maximum distance from offset that we may try to extract integer
  * @param value  if parsing succeeds, parsed varint will store here.
+ * @param encoding The ENC_* that defines the format (e.g., ENC_VARINT_PROTOBUF, ENC_VARINT_QUIC)
  * @return   the length of this varint in tvb. 0 means parsing failed.
  */
-WS_DLL_PUBLIC guint tvb_get_varint(tvbuff_t *tvb, guint offset, guint maxlen, guint64 *value);
+WS_DLL_PUBLIC guint tvb_get_varint(tvbuff_t *tvb, guint offset, guint maxlen, guint64 *value, const guint encoding);
 
 /************** END OF ACCESSORS ****************/
 

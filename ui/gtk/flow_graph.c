@@ -26,9 +26,9 @@
 #include "config.h"
 #include <string.h>
 
-
 #include <epan/packet.h>
 #include <epan/stat_tap_ui.h>
+#include <wsutil/report_message.h>
 
 #include "ui/gtk/graph_analysis.h"
 #include "ui/gtk/dlg_utils.h"
@@ -38,6 +38,8 @@
 #include "ui/gtk/gui_stat_menu.h"
 #include "ui/gtk/old-gtk-compat.h"
 #include "ui/gtk/gtkglobals.h"
+
+#include "globals.h"
 
 void register_tap_listener_flow_graph(void);
 
@@ -158,8 +160,15 @@ flow_graph_on_ok(GtkButton *button _U_, gpointer user_data)
 
 	if (analysis != NULL)
 	{
-		register_tap_listener(sequence_analysis_get_tap_listener_name(analysis), graph_analysis, display_filter, sequence_analysis_get_tap_flags(analysis),
+		GString *error_string;
+
+		error_string = register_tap_listener(sequence_analysis_get_tap_listener_name(analysis), graph_analysis, display_filter, sequence_analysis_get_tap_flags(analysis),
 								NULL, sequence_analysis_get_packet_func(analysis), NULL);
+		if (error_string) {
+			report_failure("Flow graph - tap registration failed: %s", error_string->str);
+			g_string_free(error_string, TRUE);
+			return;
+		}
 
 		cf_retap_packets(&cfile);
 		remove_tap_listener(graph_analysis);

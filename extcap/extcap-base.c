@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -183,6 +171,7 @@ uint8_t extcap_base_parse_options(extcap_parameters * extcap, int result, char *
             extcap->do_list_interfaces = 1;
             break;
         case EXTCAP_OPT_VERSION:
+            extcap->ws_version = g_strdup(optargument);
             extcap->do_version = 1;
             break;
         case EXTCAP_OPT_LIST_DLTS:
@@ -309,6 +298,7 @@ void extcap_base_cleanup(extcap_parameters ** extcap)
     g_free((*extcap)->version);
     g_free((*extcap)->helppage);
     g_free((*extcap)->help_header);
+    g_free((*extcap)->ws_version);
     g_list_foreach((*extcap)->help_options, (GFunc)extcap_help_option_free, NULL);
     g_list_free((*extcap)->help_options);
     g_free(*extcap);

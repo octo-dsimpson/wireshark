@@ -8,21 +8,9 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Ref: 3GPP TS 25.331 V14.4.0 (2017-09)
+ * Ref: 3GPP TS 25.331 V15.2.0 (2018-03)
  */
 
 /**
@@ -65,8 +53,7 @@ extern int proto_umts_rlc; /*Handler to RLC*/
 
 GTree * hsdsch_muxed_flows = NULL;
 GTree * rrc_ciph_info_tree = NULL;
-GTree * rrc_scrambling_code_urnti = NULL;
-wmem_tree_t* rrc_rach_urnti_crnti_map = NULL;
+wmem_tree_t* rrc_global_urnti_crnti_map = NULL;
 static int msg_type _U_;
 
 /*****************************************************************************/
@@ -74,13 +61,6 @@ static int msg_type _U_;
 /* For this dissector, all access to actx->private_data should be made       */
 /* through this API, which ensures that they will not overwrite each other!! */
 /*****************************************************************************/
-
-enum nas_sys_info_gsm_map {
-  RRC_NAS_SYS_UNKNOWN,
-  RRC_NAS_SYS_INFO_CS,
-  RRC_NAS_SYS_INFO_PS,
-  RRC_NAS_SYS_INFO_CN_COMMON
-};
 
 typedef struct umts_rrc_private_data_t
 {
@@ -95,6 +75,7 @@ typedef struct umts_rrc_private_data_t
   guint32 rbid;
   guint32 rlc_ciphering_sqn; /* Sequence number where ciphering starts in a given bearer */
   rrc_ciphering_info* ciphering_info;
+  enum rrc_ue_state rrc_state_indicator;
 } umts_rrc_private_data_t;
 
 
@@ -243,6 +224,18 @@ static void private_data_set_ciphering_info(asn1_ctx_t *actx, rrc_ciphering_info
   private_data->ciphering_info = ciphering_info;
 }
 
+static enum rrc_ue_state private_data_get_rrc_state_indicator(asn1_ctx_t *actx)
+{
+  umts_rrc_private_data_t *private_data = (umts_rrc_private_data_t*)umts_rrc_get_private_data(actx);
+  return private_data->rrc_state_indicator;
+}
+
+static void private_data_set_rrc_state_indicator(asn1_ctx_t *actx, enum rrc_ue_state rrc_state_indicator)
+{
+  umts_rrc_private_data_t *private_data = (umts_rrc_private_data_t*)umts_rrc_get_private_data(actx);
+  private_data->rrc_state_indicator = rrc_state_indicator;
+}
+
 /*****************************************************************************/
 
 static dissector_handle_t gsm_a_dtap_handle;
@@ -263,8 +256,6 @@ void proto_reg_handoff_rrc(void);
 static int dissect_UE_RadioAccessCapabilityInfo_PDU(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *);
 static int dissect_SysInfoTypeSB1_PDU(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *);
 static int dissect_SysInfoTypeSB2_PDU(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *);
-static int dissect_SysInfoType5_PDU(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *);
-static int dissect_SysInfoType11_PDU(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *);
 static int dissect_SysInfoType11bis_PDU(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *);
 static int dissect_SysInfoType11ter_PDU(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *);
 static int dissect_SysInfoType22_PDU(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *);
@@ -360,11 +351,6 @@ static gint rrc_key_cmp(gconstpointer b_ptr, gconstpointer a_ptr, gpointer ignor
     return GPOINTER_TO_INT(a_ptr) < GPOINTER_TO_INT(b_ptr);
 }
 
-static void rrc_free_key(gpointer key _U_){
-            /*Keys should be de allocated elsewhere.*/
-
-}
-
 static void rrc_free_value(gpointer value ){
             g_free(value);
 }
@@ -375,16 +361,19 @@ get_or_create_cipher_info(fp_info *fpinf, rlc_info *rlcinf) {
   guint32 ueid;
   int i;
 
-  ueid = rlcinf->ueid[fpinf->cur_tb];
+  if (!fpinf || !rlcinf)
+    return NULL;
 
+  ueid = rlcinf->ueid[fpinf->cur_tb];
   cipher_info = (rrc_ciphering_info *)g_tree_lookup(rrc_ciph_info_tree, GINT_TO_POINTER((gint)ueid));
+
   if( cipher_info == NULL ){
     cipher_info = g_new0(rrc_ciphering_info,1);
 
     /*Initiate tree with START_PS values.*/
     if(!cipher_info->start_ps)
       cipher_info->start_ps = g_tree_new_full(rrc_key_cmp,
-                                        NULL,rrc_free_key,rrc_free_value);
+                                        NULL,NULL,rrc_free_value);
 
     /*Clear and initialize seq_no matrix*/
     for(i = 0; i< 31; i++){
@@ -394,6 +383,23 @@ get_or_create_cipher_info(fp_info *fpinf, rlc_info *rlcinf) {
     g_tree_insert(rrc_ciph_info_tree, GINT_TO_POINTER((gint)rlcinf->ueid[fpinf->cur_tb]), cipher_info);
   }
   return cipher_info;
+}
+
+/* Try to find the NBAP C-RNC Context and, if found, pair it with a given U-RNTI */
+static void
+rrc_try_map_urnti_to_crncc(guint32 u_rnti, asn1_ctx_t *actx)
+{
+  guint32 scrambling_code, crnc_context;
+  /* Getting the user's Uplink Scrambling Code*/
+  scrambling_code = private_data_get_scrambling_code(actx);
+  if (u_rnti != 0 && scrambling_code != 0) {
+    /* Looking for the C-RNC Context mapped to this Scrambling Code */
+    crnc_context = GPOINTER_TO_UINT(wmem_tree_lookup32(nbap_scrambling_code_crncc_map,scrambling_code));
+    if (crnc_context != 0) {
+      /* Mapping the U-RNTI to the C-RNC context*/
+      wmem_tree_insert32(nbap_crncc_urnti_map,crnc_context,GUINT_TO_POINTER(u_rnti));
+    }
+  }
 }
 
 #include "packet-rrc-fn.c"
@@ -454,7 +460,7 @@ rrc_init(void) {
     /*Initialize structure for muxed flow indication*/
     hsdsch_muxed_flows = g_tree_new_full(rrc_key_cmp,
                        NULL,      /* data pointer, optional */
-                       rrc_free_key,
+                       NULL,
                        rrc_free_value);
 
     rrc_ciph_info_tree = g_tree_new_full(rrc_key_cmp,
@@ -462,14 +468,8 @@ rrc_init(void) {
                        NULL,
                        rrc_free_value);
 
-    /*Initialize Scrambling code to U-RNTI dictionary*/
-    rrc_scrambling_code_urnti = g_tree_new_full(rrc_key_cmp,
-                       NULL,
-                       NULL,
-                       NULL);
-
     /* Global U-RNTI / C-RNTI map to be used in RACH channels */
-    rrc_rach_urnti_crnti_map = wmem_tree_new_autoreset(wmem_epan_scope(), wmem_file_scope());
+    rrc_global_urnti_crnti_map = wmem_tree_new_autoreset(wmem_epan_scope(), wmem_file_scope());
 }
 
 static void
@@ -477,7 +477,6 @@ rrc_cleanup(void) {
     /*Cleanup*/
     g_tree_destroy(hsdsch_muxed_flows);
     g_tree_destroy(rrc_ciph_info_tree);
-    g_tree_destroy(rrc_scrambling_code_urnti);
 }
 
 /*--- proto_register_rrc -------------------------------------------*/

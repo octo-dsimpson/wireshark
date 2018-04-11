@@ -579,12 +579,16 @@ Port-Number TYPE = FT_UINT16 DISPLAY = BASE_DEC
     return offset;
 
   if (g_s1ap_dissect_container) {
+    dissector_handle_t handle;
     subtree = proto_item_add_subtree(actx->created_item, ett_s1ap_UERadioCapability);
     if ((s1ap_is_nbiot_ue(actx->pinfo) && (g_s1ap_dissect_lte_container_as == S1AP_LTE_CONTAINER_AUTOMATIC)) ||
         (g_s1ap_dissect_lte_container_as == S1AP_LTE_CONTAINER_NBIOT)) {
-       dissect_lte_rrc_UERadioAccessCapabilityInformation_NB_PDU(parameter_tvb, actx->pinfo, subtree, NULL);
+      handle = lte_rrc_ue_radio_access_cap_info_nb_handle;
     } else {
-      dissect_lte_rrc_UERadioAccessCapabilityInformation_PDU(parameter_tvb, actx->pinfo, subtree, NULL);
+      handle = lte_rrc_ue_radio_access_cap_info_handle;
+    }
+    if (handle) {
+      call_dissector(handle, parameter_tvb, actx->pinfo, subtree);
     }
   }
 
@@ -657,12 +661,16 @@ if (gcsna_handle) {
     return offset;
 
   if (g_s1ap_dissect_container) {
+    dissector_handle_t handle;
     subtree = proto_item_add_subtree(actx->created_item, ett_s1ap_UERadioPagingInformation);
     if ((s1ap_is_nbiot_ue(actx->pinfo) && (g_s1ap_dissect_lte_container_as == S1AP_LTE_CONTAINER_AUTOMATIC)) ||
         (g_s1ap_dissect_lte_container_as == S1AP_LTE_CONTAINER_NBIOT)) {
-       dissect_lte_rrc_UERadioPagingInformation_NB_PDU(parameter_tvb, actx->pinfo, subtree, NULL);
+      handle = lte_rrc_ue_radio_paging_info_nb_handle;
     } else {
-      dissect_lte_rrc_UERadioPagingInformation_PDU(parameter_tvb, actx->pinfo, subtree, NULL);
+      handle = lte_rrc_ue_radio_paging_info_handle;
+    }
+    if (handle) {
+      call_dissector(handle, parameter_tvb, actx->pinfo, subtree);
     }
   }
 
@@ -958,6 +966,76 @@ ExpectedActivityPeriod DISPLAY=BASE_DEC|BASE_UNIT_STRING STRINGS=&units_seconds
 #.TYPE_ATTR
 ExpectedIdlePeriod DISPLAY=BASE_DEC|BASE_UNIT_STRING STRINGS=&units_seconds
 
+#.FN_BODY E-RABUsageReportItem/startTimestamp VAL_PTR = &timestamp_tvb
+  tvbuff_t *timestamp_tvb = NULL;
+%(DEFAULT_BODY)s
+
+#.FN_FTR E-RABUsageReportItem/startTimestamp
+  if (timestamp_tvb) {
+    proto_item_append_text(actx->created_item, " (%s)", tvb_ntp_fmt_ts_sec(timestamp_tvb, 0));
+  }
+
+#.FN_BODY E-RABUsageReportItem/endTimestamp VAL_PTR = &timestamp_tvb
+  tvbuff_t *timestamp_tvb = NULL;
+%(DEFAULT_BODY)s
+
+#.FN_FTR E-RABUsageReportItem/endTimestamp
+  if (timestamp_tvb) {
+    proto_item_append_text(actx->created_item, " (%s)", tvb_ntp_fmt_ts_sec(timestamp_tvb, 0));
+  }
+
+#.TYPE_ATTR
+E-RABUsageReportItem/usageCountUL DISPLAY=BASE_DEC|BASE_UNIT_STRING STRINGS=&units_octet_octets
+
+#.TYPE_ATTR
+E-RABUsageReportItem/usageCountDL DISPLAY=BASE_DEC|BASE_UNIT_STRING STRINGS=&units_octet_octets
+
+#.TYPE_ATTR
+ExtendedBitRate DISPLAY=BASE_DEC|BASE_UNIT_STRING STRINGS=&units_bit_sec
+
+#.FN_BODY NRencryptionAlgorithms VAL_PTR = &parameter_tvb
+  tvbuff_t *parameter_tvb = NULL;
+%(DEFAULT_BODY)s
+  if (parameter_tvb) {
+    const gint *fields[] = {
+      &hf_s1ap_NRencryptionAlgorithms_NEA1,
+      &hf_s1ap_NRencryptionAlgorithms_NEA2,
+      &hf_s1ap_NRencryptionAlgorithms_NEA3,
+      &hf_s1ap_NRencryptionAlgorithms_Reserved,
+      NULL
+    };
+    proto_tree *subtree = proto_item_add_subtree(actx->created_item, ett_s1ap_NRencryptionAlgorithms);
+    proto_tree_add_bitmask_list(subtree, parameter_tvb, 0, 2, fields, ENC_BIG_ENDIAN);
+  }
+
+#.FN_BODY NRintegrityProtectionAlgorithms VAL_PTR = &parameter_tvb
+  tvbuff_t *parameter_tvb = NULL;
+%(DEFAULT_BODY)s
+  if (parameter_tvb) {
+    const gint *fields[] = {
+      &hf_s1ap_NRintegrityProtectionAlgorithms_NIA1,
+      &hf_s1ap_NRintegrityProtectionAlgorithms_NIA2,
+      &hf_s1ap_NRintegrityProtectionAlgorithms_NIA3,
+      &hf_s1ap_NRintegrityProtectionAlgorithms_Reserved,
+      NULL
+    };
+    proto_tree *subtree = proto_item_add_subtree(actx->created_item, ett_s1ap_NRintegrityProtectionAlgorithms);
+    proto_tree_add_bitmask_list(subtree, parameter_tvb, 0, 2, fields, ENC_BIG_ENDIAN);
+  }
+
+#.FN_BODY UE-Application-Layer-Measurement-Capability VAL_PTR = &parameter_tvb
+  tvbuff_t *parameter_tvb = NULL;
+%(DEFAULT_BODY)s
+  if(parameter_tvb){
+    const gint *fields[] = {
+      &hf_s1ap_UE_Application_Layer_Measurement_Capability_QoE_Measurement,
+      &hf_s1ap_UE_Application_Layer_Measurement_Capability_Reserved,
+      NULL
+    };
+    proto_tree *subtree = proto_item_add_subtree(actx->created_item, ett_s1ap_UE_Application_Layer_Measurement_Capability);
+    proto_tree_add_bitmask_list(subtree, parameter_tvb, 0, 1, fields, ENC_BIG_ENDIAN);
+  }
+
 #.TYPE_ATTR
 TAC TYPE = FT_UINT16 DISPLAY = BASE_DEC_HEX
 #.FN_BODY TAC VAL_PTR = &parameter_tvb HF_INDEX = -1
@@ -1149,6 +1227,7 @@ id-RetrieveUEInformation                ProcedureCode
 id-UEInformationTransfer                ProcedureCode
 id-eNBCPRelocationIndication            ProcedureCode
 id-MMECPRelocationIndication            ProcedureCode
+id-SecondaryRATDataUsageReport          ProcedureCode
 
 # ProtocolIE-ID
 id-MME-UE-S1AP-ID                                   ProtocolIE-ID
@@ -1240,7 +1319,6 @@ id-E-RABFailedToBeReleasedList                      ProtocolIE-ID
 id-Source-ToTarget-TransparentContainer             ProtocolIE-ID
 id-ServedGUMMEIs                                    ProtocolIE-ID
 id-SubscriberProfileIDforRFP                        ProtocolIE-ID
-
 id-UESecurityCapabilities                           ProtocolIE-ID
 id-CSFallbackIndicator                              ProtocolIE-ID
 id-CNDomain                                         ProtocolIE-ID
@@ -1388,6 +1466,23 @@ id-EnhancedCoverageRestricted                       ProtocolIE-ID
 id-UE-Level-QoS-Parameters                          ProtocolIE-ID
 id-DL-CP-SecurityInformation                        ProtocolIE-ID
 id-UL-CP-SecurityInformation                        ProtocolIE-ID
+id-extended-e-RAB-MaximumBitrateDL                  ProtocolIE-ID
+id-extended-e-RAB-MaximumBitrateUL                  ProtocolIE-ID
+id-extended-e-RAB-GuaranteedBitrateDL               ProtocolIE-ID
+id-extended-e-RAB-GuaranteedBitrateUL               ProtocolIE-ID
+id-extended-uEaggregateMaximumBitRateDL             ProtocolIE-ID
+id-extended-uEaggregateMaximumBitRateUL             ProtocolIE-ID
+id-NRrestriction                                    ProtocolIE-ID
+id-UEAppLayerMeasConfig                             ProtocolIE-ID
+id-UE-Application-Layer-Measurement-Capability      ProtocolIE-ID
+id-SecondaryRATDataUsageReportList                  ProtocolIE-ID
+id-SecondaryRATDataUsageReportItem                  ProtocolIE-ID
+id-HandoverFlag                                     ProtocolIE-ID
+id-E-RABUsageReportItem                             ProtocolIE-ID
+id-SecondaryRATDataUsageRequest                     ProtocolIE-ID
+id-NRUESecurityCapabilities                         ProtocolIE-ID
+id-UnlicensedSpectrumRestriction                    ProtocolIE-ID
+id-CE-ModeBRestricted                               ProtocolIE-ID
 #.END
 
 #.REGISTER
@@ -1593,6 +1688,15 @@ ServedDCNs                                      N s1ap.ies id-ServedDCNs
 DL-CP-SecurityInformation                       N s1ap.ies id-DL-CP-SecurityInformation
 E-RABLevelQoSParameters                         N s1ap.ies id-UE-Level-QoS-Parameters
 UL-CP-SecurityInformation                       N s1ap.ies id-UL-CP-SecurityInformation
+E-RABUsageReportItem                            N s1ap.ies id-E-RABUsageReportItem
+SecondaryRATDataUsageReportItem                 N s1ap.ies id-SecondaryRATDataUsageReportItem
+NRUESecurityCapabilities                        N s1ap.ies id-NRUESecurityCapabilities
+SecondaryRATDataUsageRequest                    N s1ap.ies id-SecondaryRATDataUsageRequest
+SecondaryRATDataUsageReportList                 N s1ap.ies id-SecondaryRATDataUsageReportList
+UE-Application-Layer-Measurement-Capability     N s1ap.ies id-UE-Application-Layer-Measurement-Capability
+HandoverFlag                                    N s1ap.ies id-HandoverFlag
+EmergencyAreaIDListForRestart                   N s1ap.ies id-EmergencyAreaIDListForRestart
+CE-ModeBRestricted                              N s1ap.ies id-CE-ModeBRestricted
 
 #S1AP-PROTOCOL-IES-PAIR
 #RAB-SetupOrModifyItemFirst             N s1ap.ies.pair.first id-RAB-SetupOrModifyItem
@@ -1620,7 +1724,6 @@ COUNTValueExtended                      N s1ap.extension id-DLCOUNTValueExtended
 ReceiveStatusOfULPDCPSDUsExtended       N s1ap.extension id-ReceiveStatusOfULPDCPSDUsExtended
 Correlation-ID                          N s1ap.extension id-SIPTO-Correlation-ID
 TransportInformation                    N s1ap.extension id-TransportInformation
-EmergencyAreaIDListForRestart           N s1ap.extension id-EmergencyAreaIDListForRestart
 ENBIndirectX2TransportLayerAddresses    N s1ap.extension id-eNBIndirectX2TransportLayerAddresses
 LoggedMBSFNMDT                          N s1ap.extension id-LoggedMBSFNMDT
 UE-HistoryInformationFromTheUE          N s1ap.extension id-uE-HistoryInformationFromTheUE
@@ -1635,6 +1738,15 @@ M6Configuration                         N s1ap.extension id-M6Configuration
 M7Configuration                         N s1ap.extension id-M7Configuration
 RAT-Type                                N s1ap.extension id-RAT-Type
 BearerType                              N s1ap.extension id-BearerType
+ExtendedBitRate                         N s1ap.extension id-extended-e-RAB-MaximumBitrateDL
+ExtendedBitRate                         N s1ap.extension id-extended-e-RAB-MaximumBitrateUL
+ExtendedBitRate                         N s1ap.extension id-extended-e-RAB-GuaranteedBitrateDL
+ExtendedBitRate                         N s1ap.extension id-extended-e-RAB-GuaranteedBitrateUL
+NRrestriction                           N s1ap.extension id-NRrestriction
+UEAppLayerMeasConfig                    N s1ap.extension id-UEAppLayerMeasConfig
+ExtendedBitRate                         N s1ap.extension id-extended-uEaggregateMaximumBitRateDL
+ExtendedBitRate                         N s1ap.extension id-extended-uEaggregateMaximumBitRateUL
+UnlicensedSpectrumRestriction           N s1ap.extension id-UnlicensedSpectrumRestriction
 
 #S1AP-ELEMENTARY-PROCEDURE
 HandoverRequired                        N s1ap.proc.imsg id-HandoverPreparation
@@ -1790,6 +1902,8 @@ UEInformationTransfer                   N s1ap.proc.imsg id-UEInformationTransfe
 ENBCPRelocationIndication               N s1ap.proc.imsg id-eNBCPRelocationIndication
 
 MMECPRelocationIndication               N s1ap.proc.imsg id-MMECPRelocationIndication
+
+SecondaryRATDataUsageReport             N s1ap.proc.imsg id-SecondaryRATDataUsageReport
 
 
 #.FN_HDR HandoverRequired
@@ -1976,6 +2090,8 @@ MMECPRelocationIndication               N s1ap.proc.imsg id-MMECPRelocationIndic
   col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "ENBCPRelocationIndication");
 #.FN_HDR MMECPRelocationIndication
   col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "MMECPRelocationIndication");
+#.FN_HDR SecondaryRATDataUsageReport
+  col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "SecondaryRATDataUsageReport");
 #.END
 
 # Whenever a Cause appears, look up the reason and show it in the Info column
@@ -2005,6 +2121,17 @@ MMECPRelocationIndication               N s1ap.proc.imsg id-MMECPRelocationIndic
 %(DEFAULT_BODY)s
   col_append_fstr(actx->pinfo->cinfo, COL_INFO, " [Misc-cause=%%s]", val_to_str_const(value, s1ap_CauseMisc_vals, "Unknown"));
 
+#.END
+
+#.FIELD_ATTR
+EUTRAN-CGI/cell-ID ABBREV=CellIdentity TYPE=FT_UINT32 DISPLAY=BASE_HEX
+#.FN_BODY CellIdentity VAL_PTR = &cell_id_tvb HF_INDEX=-1
+  tvbuff_t *cell_id_tvb = NULL;
+%(DEFAULT_BODY)s
+  if (cell_id_tvb) {
+    guint32 cell_id = tvb_get_bits32(cell_id_tvb, 0, 28, ENC_BIG_ENDIAN);
+    actx->created_item = proto_tree_add_uint(tree, hf_index, cell_id_tvb, 0, 4, cell_id);
+  }
 #.END
 
 #

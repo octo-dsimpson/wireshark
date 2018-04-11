@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include "config.h"
 
@@ -257,15 +244,7 @@ QWidget *InterfaceToolbar::createSelector(iface_toolbar_control *control)
         combobox->addItem(display, value);
         if (val->is_default)
         {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
             combobox->setCurrentText(display);
-#else
-            int new_index = combobox->findText(display);
-            if (new_index >= 0)
-            {
-                combobox->setCurrentIndex(new_index);
-            }
-#endif
             setDefaultValue(control->num, value.toUtf8());
         }
         foreach (QString ifname, interface_.keys())
@@ -740,7 +719,6 @@ void InterfaceToolbar::startCapture(GArray *ifaces)
     if (!ifaces || ifaces->len == 0)
         return;
 
-#ifdef HAVE_EXTCAP
     const QString &selected_ifname = ui->interfacesComboBox->currentText();
     QString first_capturing_ifname;
     bool selected_found = false;
@@ -778,21 +756,12 @@ void InterfaceToolbar::startCapture(GArray *ifaces)
 
     if (!selected_found && !first_capturing_ifname.isEmpty())
     {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
         ui->interfacesComboBox->setCurrentText(first_capturing_ifname);
-#else
-        int new_index = ui->interfacesComboBox->findText(first_capturing_ifname);
-        if (new_index >= 0)
-        {
-            ui->interfacesComboBox->setCurrentIndex(new_index);
-        }
-#endif
     }
     else
     {
         updateWidgets();
     }
-#endif // HAVE_EXTCAP
 }
 
 void InterfaceToolbar::stopCapture()
@@ -801,9 +770,7 @@ void InterfaceToolbar::stopCapture()
     {
         if (interface_[ifname].reader_thread)
         {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
             interface_[ifname].reader_thread->requestInterruption();
-#endif
             interface_[ifname].reader_thread = NULL;
         }
 
@@ -967,15 +934,7 @@ void InterfaceToolbar::interfaceListChanged()
             if (selected_ifname.compare(device->name) == 0)
             {
                 // Keep selected interface
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
                 ui->interfacesComboBox->setCurrentText(device->name);
-#else
-                int new_index = ui->interfacesComboBox->findText(device->name);
-                if (new_index >= 0)
-                {
-                    ui->interfacesComboBox->setCurrentIndex(new_index);
-                }
-#endif
                 keep_selected = true;
             }
         }

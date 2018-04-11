@@ -8,27 +8,15 @@
 #line 1 "./asn1/lppa/packet-lppa-template.c"
 /* packet-lppa.c
  * Routines for 3GPP LTE Positioning Protocol A (LLPa) packet dissection
- * Copyright 2011-2016, Pascal Quantin <pascal.quantin@gmail.com>
+ * Copyright 2011-2018, Pascal Quantin <pascal.quantin@gmail.com>
  *
  * Wireshark - Network traffic analyzer
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Ref 3GPP TS 36.455 version 14.2.0 Release 14
+ * Ref 3GPP TS 36.455 version 14.4.0 Release 14
  * http://www.3gpp.org
  */
 
@@ -196,6 +184,7 @@ static int hf_lppa_dL_Bandwidth = -1;             /* DL_Bandwidth */
 static int hf_lppa_pRSOccasionGroup = -1;         /* PRSOccasionGroup */
 static int hf_lppa_pRSFreqHoppingConfig = -1;     /* PRSFrequencyHoppingConfiguration */
 static int hf_lppa_repetitionNumberofSIB1_NB = -1;  /* RepetitionNumberofSIB1_NB */
+static int hf_lppa_nPRSSequenceInfo = -1;         /* NPRSSequenceInfo */
 static int hf_lppa_thirty_two = -1;               /* BIT_STRING_SIZE_32 */
 static int hf_lppa_sixty_four = -1;               /* BIT_STRING_SIZE_64 */
 static int hf_lppa_one_hundred_and_twenty_eight = -1;  /* BIT_STRING_SIZE_128 */
@@ -263,7 +252,7 @@ static int hf_lppa_oTDOA_Information_Type_Item = -1;  /* OTDOA_Information_Item 
 static int hf_lppa_privateIEs = -1;               /* PrivateIE_Container */
 
 /*--- End of included file: packet-lppa-hf.c ---*/
-#line 45 "./asn1/lppa/packet-lppa-template.c"
+#line 33 "./asn1/lppa/packet-lppa-template.c"
 
 /* Initialize the subtree pointers */
 static gint ett_lppa = -1;
@@ -351,7 +340,7 @@ static gint ett_lppa_ErrorIndication = -1;
 static gint ett_lppa_PrivateMessage = -1;
 
 /*--- End of included file: packet-lppa-ett.c ---*/
-#line 49 "./asn1/lppa/packet-lppa-template.c"
+#line 37 "./asn1/lppa/packet-lppa-template.c"
 
 /* Global variables */
 static guint32 ProcedureCode;
@@ -421,7 +410,7 @@ typedef enum _ProtocolIE_ID_enum {
 } ProtocolIE_ID_enum;
 
 /*--- End of included file: packet-lppa-val.h ---*/
-#line 62 "./asn1/lppa/packet-lppa-template.c"
+#line 50 "./asn1/lppa/packet-lppa-template.c"
 
 static int dissect_ProtocolIEFieldValue(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *);
 static int dissect_InitiatingMessageValue(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *);
@@ -1729,6 +1718,16 @@ dissect_lppa_RepetitionNumberofSIB1_NB(tvbuff_t *tvb _U_, int offset _U_, asn1_c
 }
 
 
+
+static int
+dissect_lppa_NPRSSequenceInfo(tvbuff_t *tvb _U_, int offset _U_, asn1_ctx_t *actx _U_, proto_tree *tree _U_, int hf_index _U_) {
+  offset = dissect_per_constrained_integer(tvb, offset, actx, tree, hf_index,
+                                                            0U, 174U, NULL, TRUE);
+
+  return offset;
+}
+
+
 static const value_string lppa_OTDOACell_Information_Item_vals[] = {
   {   0, "pCI" },
   {   1, "cellId" },
@@ -1756,6 +1755,7 @@ static const value_string lppa_OTDOACell_Information_Item_vals[] = {
   {  23, "pRSOccasionGroup" },
   {  24, "pRSFreqHoppingConfig" },
   {  25, "repetitionNumberofSIB1-NB" },
+  {  26, "nPRSSequenceInfo" },
   { 0, NULL }
 };
 
@@ -1786,6 +1786,7 @@ static const per_choice_t OTDOACell_Information_Item_choice[] = {
   {  23, &hf_lppa_pRSOccasionGroup, ASN1_NOT_EXTENSION_ROOT, dissect_lppa_PRSOccasionGroup },
   {  24, &hf_lppa_pRSFreqHoppingConfig, ASN1_NOT_EXTENSION_ROOT, dissect_lppa_PRSFrequencyHoppingConfiguration },
   {  25, &hf_lppa_repetitionNumberofSIB1_NB, ASN1_NOT_EXTENSION_ROOT, dissect_lppa_RepetitionNumberofSIB1_NB },
+  {  26, &hf_lppa_nPRSSequenceInfo, ASN1_NOT_EXTENSION_ROOT, dissect_lppa_NPRSSequenceInfo },
   { 0, NULL, 0, NULL }
 };
 
@@ -2580,6 +2581,7 @@ static const value_string lppa_OTDOA_Information_Item_vals[] = {
   {  23, "prsOccasionGroup" },
   {  24, "prsFrequencyHoppingConfiguration" },
   {  25, "repetitionNumberofSIB1-NB" },
+  {  26, "nPRSSequenceInfo" },
   { 0, NULL }
 };
 
@@ -2587,7 +2589,7 @@ static const value_string lppa_OTDOA_Information_Item_vals[] = {
 static int
 dissect_lppa_OTDOA_Information_Item(tvbuff_t *tvb _U_, int offset _U_, asn1_ctx_t *actx _U_, proto_tree *tree _U_, int hf_index _U_) {
   offset = dissect_per_enumerated(tvb, offset, actx, tree, hf_index,
-                                     10, NULL, TRUE, 16, NULL);
+                                     10, NULL, TRUE, 17, NULL);
 
   return offset;
 }
@@ -3594,7 +3596,7 @@ static int dissect_PrivateMessage_PDU(tvbuff_t *tvb _U_, packet_info *pinfo _U_,
 
 
 /*--- End of included file: packet-lppa-fn.c ---*/
-#line 69 "./asn1/lppa/packet-lppa-template.c"
+#line 57 "./asn1/lppa/packet-lppa-template.c"
 
 static int dissect_ProtocolIEFieldValue(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 {
@@ -4201,6 +4203,10 @@ void proto_register_lppa(void) {
       { "repetitionNumberofSIB1-NB", "lppa.repetitionNumberofSIB1_NB",
         FT_UINT32, BASE_DEC, VALS(lppa_RepetitionNumberofSIB1_NB_vals), 0,
         NULL, HFILL }},
+    { &hf_lppa_nPRSSequenceInfo,
+      { "nPRSSequenceInfo", "lppa.nPRSSequenceInfo",
+        FT_UINT32, BASE_DEC, NULL, 0,
+        NULL, HFILL }},
     { &hf_lppa_thirty_two,
       { "thirty-two", "lppa.thirty_two",
         FT_BYTES, BASE_NONE, NULL, 0,
@@ -4463,7 +4469,7 @@ void proto_register_lppa(void) {
         "PrivateIE_Container", HFILL }},
 
 /*--- End of included file: packet-lppa-hfarr.c ---*/
-#line 97 "./asn1/lppa/packet-lppa-template.c"
+#line 85 "./asn1/lppa/packet-lppa-template.c"
   };
 
   /* List of subtrees */
@@ -4553,7 +4559,7 @@ void proto_register_lppa(void) {
     &ett_lppa_PrivateMessage,
 
 /*--- End of included file: packet-lppa-ettarr.c ---*/
-#line 103 "./asn1/lppa/packet-lppa-template.c"
+#line 91 "./asn1/lppa/packet-lppa-template.c"
   };
 
   /* Register protocol */
@@ -4618,5 +4624,5 @@ proto_reg_handoff_lppa(void)
 
 
 /*--- End of included file: packet-lppa-dis-tab.c ---*/
-#line 125 "./asn1/lppa/packet-lppa-template.c"
+#line 113 "./asn1/lppa/packet-lppa-template.c"
 }

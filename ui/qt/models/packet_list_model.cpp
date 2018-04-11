@@ -4,20 +4,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+ * SPDX-License-Identifier: GPL-2.0-or-later*/
 
 #include <algorithm>
 
@@ -147,6 +134,13 @@ void PacketListModel::clear() {
     max_row_height_ = 0;
     max_line_count_ = 1;
     idle_dissection_row_ = 0;
+}
+
+void PacketListModel::invalidateAllColumnStrings()
+{
+    PacketListRecord::invalidateAllRecords();
+    dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1));
+    headerDataChanged(Qt::Horizontal, 0, columnCount() - 1);
 }
 
 void PacketListModel::resetColumns()
@@ -378,16 +372,11 @@ bool PacketListModel::isNumericColumn(int column)
         return false;
     }
 
-    gchar **fields = g_regex_split_simple(COL_CUSTOM_PRIME_REGEX,
-            sort_cap_file_->cinfo.columns[column].col_custom_fields,
-            G_REGEX_ANCHORED, G_REGEX_MATCH_ANCHORED);
+    guint num_fields = g_slist_length(sort_cap_file_->cinfo.columns[column].col_custom_fields_ids);
+    for (guint i = 0; i < num_fields; i++) {
+        guint *field_idx = (guint *) g_slist_nth_data(sort_cap_file_->cinfo.columns[column].col_custom_fields_ids, i);
+        header_field_info *hfi = proto_registrar_get_nth(*field_idx);
 
-    for (guint i = 0; i < g_strv_length(fields); i++) {
-        if (!*fields[i]) {
-            continue;
-        }
-
-        header_field_info *hfi = proto_registrar_get_byname(fields[i]);
         /*
          * Reject a field when there is no numeric field type or when:
          * - there are (value_string) "strings"
@@ -405,12 +394,10 @@ bool PacketListModel::isNumericColumn(int column)
                 (hfi->type == FT_DOUBLE) || (hfi->type == FT_FLOAT) ||
                 (hfi->type == FT_BOOLEAN) || (hfi->type == FT_FRAMENUM) ||
                 (hfi->type == FT_RELATIVE_TIME))) {
-            g_strfreev(fields);
             return false;
         }
     }
 
-    g_strfreev(fields);
     return true;
 }
 

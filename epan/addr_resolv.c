@@ -10,19 +10,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -104,6 +92,7 @@
 
 #include <epan/strutil.h>
 #include <epan/to_str-int.h>
+#include <epan/maxmind_db.h>
 #include <epan/prefs.h>
 
 #define ENAME_HOSTS     "hosts"
@@ -257,12 +246,12 @@ static void add_serv_port_cb(const guint32 port, gpointer ptr);
 /* http://eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx#existing
  * One-at-a-Time hash
  */
-static guint32
+guint
 ipv6_oat_hash(gconstpointer key)
 {
     int len = 16;
     const unsigned char *p = (const unsigned char *)key;
-    guint32 h = 0;
+    guint h = 0;
     int i;
 
     for ( i = 0; i < len; i++ ) {
@@ -278,7 +267,7 @@ ipv6_oat_hash(gconstpointer key)
     return h;
 }
 
-static gboolean
+gboolean
 ipv6_equal(gconstpointer v1, gconstpointer v2)
 {
 
@@ -786,12 +775,12 @@ fill_dummy_ip4(const guint addr, hashipv4_t* volatile tp)
     if (0 != subnet_entry.mask) {
         /* Print name, then '.' then IP address after subnet mask */
         guint32 host_addr;
-        gchar buffer[MAX_IP_STR_LEN];
+        gchar buffer[WS_INET_ADDRSTRLEN];
         gchar* paddr;
         gsize i;
 
         host_addr = addr & (~(guint32)subnet_entry.mask);
-        ip_to_str_buf((guint8 *)&host_addr, buffer, MAX_IP_STR_LEN);
+        ip_to_str_buf((guint8 *)&host_addr, buffer, WS_INET_ADDRSTRLEN);
         paddr = buffer;
 
         /* Skip to first octet that is not totally masked
@@ -2531,6 +2520,7 @@ host_name_lookup_process(void) {
     wmem_list_frame_t* head;
 
     new_resolved_objects = FALSE;
+    nro |= maxmind_db_lookup_process();
 
     if (!async_dns_initialized)
         /* c-ares not initialized. Bail out and cancel timers. */
@@ -2590,6 +2580,8 @@ host_name_lookup_process(void) {
     gboolean nro = new_resolved_objects;
 
     new_resolved_objects = FALSE;
+
+    nro |= maxmind_db_lookup_process();
 
     return nro;
 }
@@ -2822,10 +2814,14 @@ host_name_lookup_cleanup(void)
 void
 manually_resolve_cleanup(void)
 {
-    wmem_destroy_list(manually_resolved_ipv4_list);
-    manually_resolved_ipv4_list = NULL;
-    wmem_destroy_list(manually_resolved_ipv6_list);
-    manually_resolved_ipv6_list = NULL;
+    if (manually_resolved_ipv4_list) {
+        wmem_destroy_list(manually_resolved_ipv4_list);
+        manually_resolved_ipv4_list = NULL;
+    }
+    if (manually_resolved_ipv6_list) {
+        wmem_destroy_list(manually_resolved_ipv6_list);
+        manually_resolved_ipv6_list = NULL;
+    }
 }
 
 gchar *

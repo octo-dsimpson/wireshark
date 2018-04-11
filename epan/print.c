@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -32,6 +20,7 @@
 #include <epan/epan_dissect.h>
 #include <epan/to_str.h>
 #include <epan/expert.h>
+#include <epan/column.h>
 #include <epan/column-info.h>
 #include <epan/color_filters.h>
 #include <epan/prefs.h>
@@ -310,7 +299,7 @@ static gboolean check_protocolfilter(gchar **protocolfilter, const char *str)
 }
 
 void
-write_pdml_proto_tree(output_fields_t* fields, gchar **protocolfilter, pf_flags protocolfilter_flags, epan_dissect_t *edt, FILE *fh, gboolean use_color)
+write_pdml_proto_tree(output_fields_t* fields, gchar **protocolfilter, pf_flags protocolfilter_flags, epan_dissect_t *edt, column_info *cinfo, FILE *fh, gboolean use_color)
 {
     write_pdml_data data;
     const color_filter_t *cfp;
@@ -345,7 +334,7 @@ write_pdml_proto_tree(output_fields_t* fields, gchar **protocolfilter, pf_flags 
                                     &data);
     } else {
         /* Write out specified fields */
-        write_specified_fields(FORMAT_XML, fields, edt, NULL, fh);
+        write_specified_fields(FORMAT_XML, fields, edt, cinfo, fh);
     }
 
     fprintf(fh, "</packet>\n\n");
@@ -356,6 +345,7 @@ write_ek_proto_tree(output_fields_t* fields,
                     gboolean print_summary, gboolean print_hex,
                     gchar **protocolfilter,
                     pf_flags protocolfilter_flags, epan_dissect_t *edt,
+                    column_info *cinfo,
                     FILE *fh)
 {
     write_json_data data;
@@ -373,31 +363,35 @@ write_ek_proto_tree(output_fields_t* fields,
     else
         g_strlcpy(ts, "XXXX-XX-XX", sizeof ts); /* XXX - better way of saying "Not representable"? */
 
-    fprintf(fh, "{\"index\" : {\"_index\": \"packets-%s\", \"_type\": \"pcap_file\", \"_score\": null}}\n", ts);
+    fprintf(fh, "{\"index\" : {\"_index\": \"packets-%s\", \"_type\": \"pcap_file\"}}\n", ts);
     /* Timestamp added for time indexing in Elasticsearch */
     fprintf(fh, "{\"timestamp\" : \"%" G_GUINT64_FORMAT "%03d\"", (guint64)edt->pi.abs_ts.secs, edt->pi.abs_ts.nsecs/1000000);
 
     if (print_summary)
         write_ek_summary(edt->pi.cinfo, fh);
 
-    fprintf(fh, ", \"layers\" : {");
+    if (edt->tree) {
+        fprintf(fh, ", \"layers\" : {");
 
-    if (fields == NULL || fields->fields == NULL) {
-        /* Write out all fields */
-        data.level    = 0;
-        data.fh       = fh;
-        data.src_list = edt->pi.data_src;
-        data.filter   = protocolfilter;
-        data.filter_flags = protocolfilter_flags;
-        data.print_hex = print_hex;
+        if (fields == NULL || fields->fields == NULL) {
+            /* Write out all fields */
+            data.level    = 0;
+            data.fh       = fh;
+            data.src_list = edt->pi.data_src;
+            data.filter   = protocolfilter;
+            data.filter_flags = protocolfilter_flags;
+            data.print_hex = print_hex;
 
-        proto_tree_write_node_ek(edt->tree, &data);
-    } else {
-        /* Write out specified fields */
-        write_specified_fields(FORMAT_EK, fields, edt, NULL, fh);
+            proto_tree_write_node_ek(edt->tree, &data);
+        } else {
+            /* Write out specified fields */
+            write_specified_fields(FORMAT_EK, fields, edt, cinfo, fh);
+        }
+
+        fputs("}", fh);
     }
 
-    fputs("}}\n", fh);
+    fputs("}\n", fh);
 }
 
 void
@@ -448,6 +442,7 @@ proto_tree_write_node_pdml(proto_node *node, gpointer data)
     if (wrap_in_fake_protocol) {
         /* Open fake protocol wrapper */
         fputs("<proto name=\"fake-field-wrapper\">\n", pdata->fh);
+        pdata->level++;
 
         print_indent(pdata->level + 1, pdata->fh);
     }
@@ -675,6 +670,7 @@ proto_tree_write_node_pdml(proto_node *node, gpointer data)
 
     /* Close off fake wrapper protocol */
     if (wrap_in_fake_protocol) {
+        print_indent(pdata->level + 1, pdata->fh);
         fputs("</proto>\n", pdata->fh);
     }
 }
@@ -697,6 +693,7 @@ write_json_proto_tree(output_fields_t* fields,
                       print_dissections_e print_dissections,
                       gboolean print_hex, gchar **protocolfilter,
                       pf_flags protocolfilter_flags, epan_dissect_t *edt,
+                      column_info *cinfo,
                       proto_node_children_grouper_func node_children_grouper,
                       FILE *fh)
 {
@@ -741,7 +738,7 @@ write_json_proto_tree(output_fields_t* fields,
 
         write_json_proto_node_children(edt->tree, &data);
     } else {
-        write_specified_fields(FORMAT_JSON, fields, edt, NULL, fh);
+        write_specified_fields(FORMAT_JSON, fields, edt, cinfo, fh);
     }
 
     fputs("\n", fh);
@@ -1169,6 +1166,7 @@ write_ek_summary(column_info *cinfo, FILE *fh)
     gint i;
 
     for (i = 0; i < cinfo->num_cols; i++) {
+        if (!get_column_visible(i)) continue;
         fputs(", \"", fh);
         print_escaped_ek(fh, g_ascii_strdown(cinfo->columns[i].col_title, -1));
         fputs("\": \"", fh);
@@ -1332,33 +1330,67 @@ ek_write_field_value(field_info *fi, write_json_data *pdata)
 }
 
 static void
-ek_write_attr(GSList *attr_instances, write_json_data *pdata)
+ek_write_attr_hex(GSList *attr_instances, write_json_data *pdata)
 {
-    proto_node *pnode    = NULL;
-    field_info *fi       = NULL;
     GSList *current_node = attr_instances;
+    proto_node *pnode    = (proto_node *) current_node->data;
+    field_info *fi       = NULL;
 
+    // Raw name
+    fputs("\"", pdata->fh);
+    ek_write_name(pnode, pdata);
+    fputs("_raw\": ", pdata->fh);
+
+    if (g_slist_length(attr_instances) > 1) {
+        fputs("[", pdata->fh);
+    }
+
+    // Raw value(s)
     while (current_node != NULL) {
         pnode = (proto_node *) current_node->data;
         fi    = PNODE_FINFO(pnode);
 
-        // Hex dump -x
-        if (pdata->print_hex && fi->length > 0 && fi->hfinfo->id != hf_text_only) {
-            // Raw name
-            fputs("\"", pdata->fh);
-            ek_write_name(pnode, pdata);
-            fputs("_raw\": \"", pdata->fh);
-
-            // Raw value
-            ek_write_hex(fi, pdata);
-
-            fputs("\",", pdata->fh);
-        }
-
-        // Print attr name
         fputs("\"", pdata->fh);
-        ek_write_name(pnode, pdata);
-        fputs("\": ", pdata->fh);
+        ek_write_hex(fi, pdata);
+        fputs("\"", pdata->fh);
+
+        current_node = current_node->next;
+        if (current_node != NULL) {
+            fputs(",", pdata->fh);
+        }
+    }
+
+    if (g_slist_length(attr_instances) > 1) {
+        fputs("]", pdata->fh);
+    }
+}
+
+static void
+ek_write_attr(GSList *attr_instances, write_json_data *pdata)
+{
+    GSList *current_node = attr_instances;
+    proto_node *pnode    = (proto_node *) current_node->data;
+    field_info *fi       = PNODE_FINFO(pnode);
+
+    // Hex dump -x
+    if (pdata->print_hex && fi && fi->length > 0 && fi->hfinfo->id != hf_text_only) {
+        ek_write_attr_hex(attr_instances, pdata);
+
+        fputs(",", pdata->fh);
+    }
+
+    // Print attr name
+    fputs("\"", pdata->fh);
+    ek_write_name(pnode, pdata);
+    fputs("\": ", pdata->fh);
+
+    if (g_slist_length(attr_instances) > 1) {
+        fputs("[", pdata->fh);
+    }
+
+    while (current_node != NULL) {
+        pnode = (proto_node *) current_node->data;
+        fi    = PNODE_FINFO(pnode);
 
         /* Field */
         if (fi->hfinfo->type != FT_PROTOCOL) {
@@ -1375,12 +1407,6 @@ ek_write_attr(GSList *attr_instances, write_json_data *pdata)
                 ek_write_field_value(fi, pdata);
             }
 
-            fputs("\"", pdata->fh);
-        }
-        /* Protocol without children, e.g. SSL */
-        else if (pnode->first_child == NULL) {
-            fputs("\"", pdata->fh);
-            ek_write_field_value(fi, pdata);
             fputs("\"", pdata->fh);
         }
         /* Object */
@@ -1420,6 +1446,10 @@ ek_write_attr(GSList *attr_instances, write_json_data *pdata)
         if (current_node != NULL) {
             fputs(",", pdata->fh);
         }
+    }
+
+    if (g_slist_length(attr_instances) > 1) {
+        fputs("]", pdata->fh);
     }
 }
 
@@ -1531,6 +1561,7 @@ write_psml_preamble(column_info *cinfo, FILE *fh)
     fprintf(fh, "<structure>\n");
 
     for (i = 0; i < cinfo->num_cols; i++) {
+        if (!get_column_visible(i)) continue;
         fprintf(fh, "<section>");
         print_escaped_xml(fh, cinfo->columns[i].col_title);
         fprintf(fh, "</section>\n");
@@ -1555,6 +1586,7 @@ write_psml_columns(epan_dissect_t *edt, FILE *fh, gboolean use_color)
     }
 
     for (i = 0; i < edt->pi.cinfo->num_cols; i++) {
+        if (!get_column_visible(i)) continue;
         fprintf(fh, "<section>");
         print_escaped_xml(fh, edt->pi.cinfo->columns[i].col_data);
         fprintf(fh, "</section>\n");
@@ -1606,8 +1638,10 @@ write_csv_column_titles(column_info *cinfo, FILE *fh)
 {
     gint i;
 
-    for (i = 0; i < cinfo->num_cols - 1; i++)
+    for (i = 0; i < cinfo->num_cols - 1; i++) {
+        if (!get_column_visible(i)) continue;
         csv_write_str(cinfo->columns[i].col_title, ',', fh);
+    }
     csv_write_str(cinfo->columns[i].col_title, '\n', fh);
 }
 
@@ -1616,8 +1650,10 @@ write_csv_columns(epan_dissect_t *edt, FILE *fh)
 {
     gint i;
 
-    for (i = 0; i < edt->pi.cinfo->num_cols - 1; i++)
+    for (i = 0; i < edt->pi.cinfo->num_cols - 1; i++) {
+        if (!get_column_visible(i)) continue;
         csv_write_str(edt->pi.cinfo->columns[i].col_data, ',', fh);
+    }
     csv_write_str(edt->pi.cinfo->columns[i].col_data, '\n', fh);
 }
 
@@ -2283,7 +2319,7 @@ void write_fields_preamble(output_fields_t* fields, FILE *fh)
     fputc('\n', fh);
 }
 
-static void format_field_values(output_fields_t* fields, gpointer field_index, const gchar* value)
+static void format_field_values(output_fields_t* fields, gpointer field_index, gchar* value)
 {
     guint      indx;
     GPtrArray* fv_p;
@@ -2306,17 +2342,36 @@ static void format_field_values(output_fields_t* fields, gpointer field_index, c
     switch (fields->occurrence) {
     case 'f':
         /* print the value of only the first occurrence of the field */
-        if (g_ptr_array_len(fv_p) != 0)
+        if (g_ptr_array_len(fv_p) != 0) {
+            /*
+             * This isn't the first occurrence, so the value won't be used;
+             * free it.
+             */
+            g_free(value);
             return;
+        }
         break;
     case 'l':
         /* print the value of only the last occurrence of the field */
-        g_ptr_array_set_size(fv_p, 0);
+        if (g_ptr_array_len(fv_p) != 0) {
+            /*
+             * This isn't the first occurrence, so there's already a
+             * value in the array, which won't be used; free the
+             * first (only) element in the array, and then remove
+             * it - this value will replace it.
+             */
+            g_free(g_ptr_array_index(fv_p, 0));
+            g_ptr_array_set_size(fv_p, 0);
+        }
         break;
     case 'a':
         /* print the value of all accurrences of the field */
-        /* If not the first, add the 'aggregator' */
-        if (g_ptr_array_len(fv_p) > 0) {
+        if (g_ptr_array_len(fv_p) != 0) {
+            /*
+             * This isn't the first occurrence. so add the "aggregator"
+             * character as a separator between the previous element
+             * and this element.
+             */
             g_ptr_array_add(fv_p, (gpointer)g_strdup_printf("%c", fields->aggregator));
         }
         break;
@@ -2399,21 +2454,23 @@ static void write_specified_fields(fields_format format, output_fields_t *fields
     proto_tree_children_foreach(edt->tree, proto_tree_get_node_field_values,
                                 &data);
 
-    switch (format) {
-    case FORMAT_CSV:
-        if (fields->includes_col_fields) {
-            for (col = 0; col < cinfo->num_cols; col++) {
-                /* Prepend COLUMN_FIELD_FILTER as the field name */
-                col_name = g_strdup_printf("%s%s", COLUMN_FIELD_FILTER, cinfo->columns[col].col_title);
-                field_index = g_hash_table_lookup(fields->field_indicies, col_name);
-                g_free(col_name);
+    /* Add columns to fields */
+    if (fields->includes_col_fields) {
+        for (col = 0; col < cinfo->num_cols; col++) {
+            if (!get_column_visible(col)) continue;
+            /* Prepend COLUMN_FIELD_FILTER as the field name */
+            col_name = g_strdup_printf("%s%s", COLUMN_FIELD_FILTER, cinfo->columns[col].col_title);
+            field_index = g_hash_table_lookup(fields->field_indicies, col_name);
+            g_free(col_name);
 
-                if (NULL != field_index) {
-                    format_field_values(fields, field_index, g_strdup(cinfo->columns[col].col_data));
-                }
+            if (NULL != field_index) {
+                format_field_values(fields, field_index, g_strdup(cinfo->columns[col].col_data));
             }
         }
+    }
 
+    switch (format) {
+    case FORMAT_CSV:
         for(i = 0; i < fields->fields->len; ++i) {
             if (0 != i) {
                 fputc(fields->separator, fh);

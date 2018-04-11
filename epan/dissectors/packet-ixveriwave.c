@@ -7,19 +7,7 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -1087,7 +1075,7 @@ dissect_ixveriwave(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* da
             noisevalidd = tvb_get_guint8(tvb, offset+71)& 0x01;
 
             /*
-            noisea = (gint16) tvb_get_ntohs(tvb, offset);
+            noisea = tvb_get_ntohis(tvb, offset);
             //noisevalida = tvb_get_guint8(tvb, offset+65)& 0x01;
             if (noisevalida == 1)
                 rf_infot = proto_tree_add_float_format(vw_rfinfo_tree, hf_radiotap_rfinfo_noise,
@@ -2052,7 +2040,7 @@ wlantap_dissect(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     col_add_fstr(pinfo->cinfo, COL_TX_RATE, "%.1f", phyRate);
 
     /* RSSI/antenna A RSSI */
-    dbm = (gint8) tvb_get_guint8(tvb, offset);
+    dbm = tvb_get_gint8(tvb, offset);
     phdr.has_signal_dbm = TRUE;
     phdr.signal_dbm = dbm;
     col_add_fstr(pinfo->cinfo, COL_RSSI, "%d dBm", dbm);
@@ -2060,21 +2048,21 @@ wlantap_dissect(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     offset++;
 
     /* Antenna B RSSI, or 100 if absent */
-    dbm = (gint8) tvb_get_guint8(tvb, offset);
+    dbm = tvb_get_gint8(tvb, offset);
     if (dbm != 100) {
         proto_tree_add_item(tap_tree, hf_radiotap_dbm_antb, tvb, offset, 1, ENC_NA);
     }
     offset++;
 
     /* Antenna C RSSI, or 100 if absent */
-    dbm = (gint8) tvb_get_guint8(tvb, offset);
+    dbm = tvb_get_gint8(tvb, offset);
     if (dbm != 100) {
         proto_tree_add_item(tap_tree, hf_radiotap_dbm_antc, tvb, offset, 1, ENC_NA);
     }
     offset++;
 
     /* Antenna D RSSI, or 100 if absent */
-    dbm = (gint8) tvb_get_guint8(tvb, offset);
+    dbm = tvb_get_gint8(tvb, offset);
     if (dbm != 100) {
         proto_tree_add_item(tap_tree, hf_radiotap_dbm_antd, tvb, offset, 1, ENC_NA);
     }
@@ -2442,7 +2430,7 @@ wlantap_dissect_octo(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     }
     offset++;
 
-    dbm = (gint8) tvb_get_guint8(tvb, offset);
+    dbm = tvb_get_gint8(tvb, offset);
 
     phdr.has_signal_dbm = TRUE;
     phdr.signal_dbm = dbm;
@@ -2457,7 +2445,7 @@ wlantap_dissect_octo(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
                                 tvb, offset, 1, ENC_NA);
     offset++;
 
-    dbm = (gint8) tvb_get_guint8(tvb, offset);
+    dbm = tvb_get_gint8(tvb, offset);
     if (dbm != 100) {
         if (cmd_type != 1)
             proto_tree_add_item(vw_l1info_tree, hf_radiotap_dbm_antb,
@@ -2469,7 +2457,7 @@ wlantap_dissect_octo(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     }
     offset++;
 
-    dbm = (gint8) tvb_get_guint8(tvb, offset);
+    dbm = tvb_get_gint8(tvb, offset);
     if (dbm != 100) {
         if (cmd_type != 1)
             proto_tree_add_item(vw_l1info_tree, hf_radiotap_dbm_antc,
@@ -2480,7 +2468,7 @@ wlantap_dissect_octo(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     }
     offset++;
 
-    dbm = (gint8) tvb_get_guint8(tvb, offset);
+    dbm = tvb_get_gint8(tvb, offset);
     if (dbm != 100) {
         if (cmd_type != 1)
             proto_tree_add_item(vw_l1info_tree, hf_radiotap_dbm_antd,

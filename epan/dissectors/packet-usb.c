@@ -10,19 +10,7 @@
  *
  * http://desowin.org/usbpcap/captureformat.html
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 
@@ -1693,7 +1681,7 @@ get_usb_conversation(packet_info *pinfo,
      */
     conversation = find_conversation(pinfo->num,
                                src_addr, dst_addr,
-                               pinfo->ptype,
+                               conversation_pt_to_endpoint_type(pinfo->ptype),
                                src_endpoint, dst_endpoint, 0);
     if (conversation) {
         return conversation;
@@ -1702,7 +1690,7 @@ get_usb_conversation(packet_info *pinfo,
     /* We don't yet have a conversation, so create one. */
     conversation = conversation_new(pinfo->num,
                            src_addr, dst_addr,
-                           pinfo->ptype,
+                           conversation_pt_to_endpoint_type(pinfo->ptype),
                            src_endpoint, dst_endpoint, 0);
     return conversation;
 }
@@ -1745,7 +1733,7 @@ static int
 usb_conversation_packet(void *pct, packet_info *pinfo, epan_dissect_t *edt _U_, const void *vip _U_)
 {
     conv_hash_t *hash = (conv_hash_t*) pct;
-    add_conversation_table_data(hash, &pinfo->src, &pinfo->dst, 0, 0, 1, pinfo->fd->pkt_len, &pinfo->rel_ts, &pinfo->abs_ts, &usb_ct_dissector_info, PT_NONE);
+    add_conversation_table_data(hash, &pinfo->src, &pinfo->dst, 0, 0, 1, pinfo->fd->pkt_len, &pinfo->rel_ts, &pinfo->abs_ts, &usb_ct_dissector_info, ENDPOINT_NONE);
 
     return 1;
 }
@@ -1758,6 +1746,12 @@ static const char* usb_host_get_filter_type(hostlist_talker_t* host, conv_filter
     return CONV_FILTER_INVALID;
 }
 
+static const char*
+usb_col_filter_str(const address* addr _U_, gboolean is_src)
+{
+    return is_src ? "usb.src" : "usb.dst";
+}
+
 static hostlist_dissector_info_t usb_host_dissector_info = {&usb_host_get_filter_type};
 
 static int
@@ -1768,8 +1762,8 @@ usb_hostlist_packet(void *pit, packet_info *pinfo, epan_dissect_t *edt _U_, cons
     /* Take two "add" passes per packet, adding for each direction, ensures that all
        packets are counted properly (even if address is sending to itself)
        XXX - this could probably be done more efficiently inside hostlist_table */
-    add_hostlist_table_data(hash, &pinfo->src, 0, TRUE, 1, pinfo->fd->pkt_len, &usb_host_dissector_info, PT_NONE);
-    add_hostlist_table_data(hash, &pinfo->dst, 0, FALSE, 1, pinfo->fd->pkt_len, &usb_host_dissector_info, PT_NONE);
+    add_hostlist_table_data(hash, &pinfo->src, 0, TRUE, 1, pinfo->fd->pkt_len, &usb_host_dissector_info, ENDPOINT_NONE);
+    add_hostlist_table_data(hash, &pinfo->dst, 0, FALSE, 1, pinfo->fd->pkt_len, &usb_host_dissector_info, ENDPOINT_NONE);
 
     return 1;
 }
@@ -4265,7 +4259,7 @@ dissect_darwin_usb_iso_transfer(packet_info *pinfo _U_, proto_tree *tree, usb_he
         frame_header_length = tvb_get_guint32(tvb, offset, ENC_LITTLE_ENDIAN);
         frame_length        = tvb_get_guint32(tvb, offset + 4, ENC_LITTLE_ENDIAN);
 
-        if (len < frame_header_length) {
+        if ((len < frame_header_length) || (frame_header_length < 20)) {
             break;
         }
 
@@ -6352,7 +6346,7 @@ proto_register_usb(void)
     register_decode_as(&usb_product_da);
     register_decode_as(&usb_device_da);
 
-    usb_address_type = address_type_dissector_register("AT_USB", "USB Address", usb_addr_to_str, usb_addr_str_len, NULL, NULL, NULL, NULL, NULL);
+    usb_address_type = address_type_dissector_register("AT_USB", "USB Address", usb_addr_to_str, usb_addr_str_len, NULL, usb_col_filter_str, NULL, NULL, NULL);
 
     register_conversation_table(proto_usb, TRUE, usb_conversation_packet, usb_hostlist_packet);
 }

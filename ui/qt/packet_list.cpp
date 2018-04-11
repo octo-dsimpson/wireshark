@@ -4,22 +4,10 @@
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-#include "packet_list.h"
+#include <ui/qt/packet_list.h>
 
 #include "config.h"
 
@@ -56,6 +44,10 @@
 #include "proto_tree.h"
 #include <ui/qt/utils/qt_ui_utils.h>
 #include "wireshark_application.h"
+#include <ui/qt/utils/data_printer.h>
+#include <ui/qt/utils/frame_information.h>
+#include <ui/qt/utils/variant_pointer.h>
+#include <ui/qt/models/pref_models.h>
 
 #include <QAction>
 #include <QActionGroup>
@@ -77,6 +69,7 @@
 #ifdef Q_OS_WIN
 #include "wsutil/file_util.h"
 #include <QSysInfo>
+#include <Uxtheme.h>
 #endif
 
 // To do:
@@ -120,7 +113,7 @@ packet_list_select_first_row(void)
 {
     if (!gbl_cur_packet_list)
         return;
-    gbl_cur_packet_list->goFirstPacket();
+    gbl_cur_packet_list->goFirstPacket(false);
 }
 
 /*
@@ -235,7 +228,6 @@ enum copy_summary_type {
 PacketList::PacketList(QWidget *parent) :
     QTreeView(parent),
     proto_tree_(NULL),
-    byte_view_tab_(NULL),
     cap_file_(NULL),
     decode_as_(NULL),
     ctx_column_(-1),
@@ -251,14 +243,15 @@ PacketList::PacketList(QWidget *parent) :
     cur_history_(-1),
     in_history_(false)
 {
-    QMenu *main_menu_item, *submenu;
-    QAction *action;
-
     setItemsExpandable(false);
     setRootIsDecorated(false);
     setSortingEnabled(true);
     setUniformRowHeights(true);
     setAccessibleName("Packet list");
+
+    // Shrink down to a small but nonzero size in the main splitter.
+    int one_em = fontMetrics().height();
+    setMinimumSize(one_em, one_em);
 
     overlay_sb_ = new OverlayScrollBar(Qt::Vertical, this);
     setVerticalScrollBar(overlay_sb_);
@@ -267,6 +260,198 @@ PacketList::PacketList(QWidget *parent) :
     setModel(packet_list_model_);
     sortByColumn(-1, Qt::AscendingOrder);
 
+    initHeaderContextMenu();
+
+    g_assert(gbl_cur_packet_list == NULL);
+    gbl_cur_packet_list = this;
+
+    bool style_inactive_selected = true;
+
+#ifdef Q_OS_WIN // && Qt version >= 4.8.6
+    if (QSysInfo::windowsVersion() < QSysInfo::WV_WINDOWS8) {
+        if (IsAppThemed() && IsThemeActive()) {
+            style_inactive_selected = false;
+        }
+    }
+#endif
+
+    if (style_inactive_selected) {
+        // XXX Style the protocol tree as well?
+        QPalette inactive_pal = palette();
+        inactive_pal.setCurrentColorGroup(QPalette::Inactive);
+        QColor border = QColor::fromRgb(ColorUtils::alphaBlend(
+                                                inactive_pal.highlightedText(),
+                                                inactive_pal.highlight(),
+                                                0.25));
+        QColor shadow = QColor::fromRgb(ColorUtils::alphaBlend(
+                                                inactive_pal.highlightedText(),
+                                                inactive_pal.highlight(),
+                                                0.07));
+        setStyleSheet(QString(
+                          "QTreeView::item:selected:first:!active {"
+                          "  border-left: 1px solid %1;"
+                          "}"
+                          "QTreeView::item:selected:last:!active {"
+                          "  border-right: 1px solid %1;"
+                          "}"
+                          "QTreeView::item:selected:!active {"
+                          "  border-top: 1px solid %1;"
+                          "  border-bottom: 1px solid %1;"
+                          "  color: %2;"
+                          // Try to approximate a subtle box shadow.
+                          "  background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1"
+                          "    stop: 0 %4, stop: 0.2 %3, stop: 0.8 %3, stop: 1 %4);"
+                          "}")
+                      .arg(border.name())
+                      .arg(inactive_pal.highlightedText().color().name())
+                      .arg(inactive_pal.highlight().color().name())
+                      .arg(shadow.name())
+                      );
+    }
+
+    connect(packet_list_model_, SIGNAL(goToPacket(int)), this, SLOT(goToPacket(int)));
+    connect(packet_list_model_, SIGNAL(itemHeightChanged(const QModelIndex&)), this, SLOT(updateRowHeights(const QModelIndex&)));
+    connect(wsApp, SIGNAL(addressResolutionChanged()), this, SLOT(redrawVisiblePacketsDontSelectCurrent()));
+    connect(wsApp, SIGNAL(columnDataChanged()), this, SLOT(redrawVisiblePacketsDontSelectCurrent()));
+
+    header()->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(header(), SIGNAL(customContextMenuRequested(QPoint)),
+            this, SLOT(showHeaderMenu(QPoint)));
+    connect(header(), SIGNAL(sectionResized(int,int,int)),
+            this, SLOT(sectionResized(int,int,int)));
+    connect(header(), SIGNAL(sectionMoved(int,int,int)),
+            this, SLOT(sectionMoved(int,int,int)));
+
+    connect(verticalScrollBar(), SIGNAL(actionTriggered(int)), this, SLOT(vScrollBarActionTriggered(int)));
+
+    connect(&proto_prefs_menu_, SIGNAL(showProtocolPreferences(QString)),
+            this, SIGNAL(showProtocolPreferences(QString)));
+    connect(&proto_prefs_menu_, SIGNAL(editProtocolPreference(preference*,pref_module*)),
+            this, SIGNAL(editProtocolPreference(preference*,pref_module*)));
+}
+
+void PacketList::drawRow (QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+    QTreeView::drawRow(painter, option, index);
+
+    if (prefs.gui_qt_packet_list_separator) {
+        QRect rect = visualRect(index);
+
+        painter->setPen(QColor(Qt::white));
+        painter->drawLine(0, rect.y() + rect.height() - 1, width(), rect.y() + rect.height() - 1);
+    }
+}
+
+void PacketList::setProtoTree (ProtoTree *proto_tree) {
+    proto_tree_ = proto_tree;
+
+    connect(proto_tree_, SIGNAL(goToPacket(int)), this, SLOT(goToPacket(int)));
+    connect(proto_tree_, SIGNAL(relatedFrame(int,ft_framenum_type_t)),
+            &related_packet_delegate_, SLOT(addRelatedFrame(int,ft_framenum_type_t)));
+}
+
+PacketListModel *PacketList::packetListModel() const {
+    return packet_list_model_;
+}
+
+void PacketList::selectionChanged (const QItemSelection & selected, const QItemSelection & deselected) {
+    QTreeView::selectionChanged(selected, deselected);
+
+    if (!cap_file_) return;
+
+    int row = -1;
+
+    if (selected.isEmpty()) {
+        cf_unselect_packet(cap_file_);
+    } else {
+        row = selected.first().top();
+        cf_select_packet(cap_file_, row);
+    }
+
+    if (!in_history_ && cap_file_->current_frame) {
+        cur_history_++;
+        selection_history_.resize(cur_history_);
+        selection_history_.append(cap_file_->current_frame->num);
+    }
+    in_history_ = false;
+
+    related_packet_delegate_.clear();
+    if (proto_tree_) proto_tree_->clear();
+
+    emit frameSelected(row);
+
+    if (!cap_file_->edt) {
+        viewport()->update();
+        return;
+    }
+
+    if (proto_tree_ && cap_file_->edt->tree) {
+        packet_info *pi = &cap_file_->edt->pi;
+        related_packet_delegate_.setCurrentFrame(pi->num);
+        proto_tree_->setRootNode(cap_file_->edt->tree);
+        conversation_t *conv = find_conversation_pinfo(pi, 0);
+        if (conv) {
+            related_packet_delegate_.setConversation(conv);
+        }
+        viewport()->update();
+    }
+
+    if (cap_file_->search_in_progress &&
+        (cap_file_->search_pos != 0 || (cap_file_->string && cap_file_->decode_data)))
+    {
+        match_data  mdata;
+        field_info *fi = NULL;
+
+        if (cap_file_->string && cap_file_->decode_data) {
+            // The tree where the target string matched one of the labels was discarded in
+            // match_protocol_tree() so we have to search again in the latest tree.
+            if (cf_find_string_protocol_tree(cap_file_, cap_file_->edt->tree, &mdata)) {
+                fi = mdata.finfo;
+            }
+        } else {
+            // Find the finfo that corresponds to our byte.
+            fi = proto_find_field_from_offset(cap_file_->edt->tree, cap_file_->search_pos,
+                                              cap_file_->edt->tvb);
+        }
+
+        if (fi) {
+            emit fieldSelected(new FieldInformation(fi, this));
+        }
+    } else if (!cap_file_->search_in_progress && proto_tree_) {
+        proto_tree_->restoreSelectedField();
+    }
+}
+
+void PacketList::contextMenuEvent(QContextMenuEvent *event)
+{
+    const char *module_name = NULL;
+    if (cap_file_ && cap_file_->edt && cap_file_->edt->tree) {
+        GPtrArray          *finfo_array = proto_all_finfos(cap_file_->edt->tree);
+
+        for (guint i = finfo_array->len - 1; i > 0 ; i --) {
+            field_info *fi = (field_info *)g_ptr_array_index (finfo_array, i);
+            header_field_info *hfinfo =  fi->hfinfo;
+
+            if (!g_str_has_prefix(hfinfo->abbrev, "text") &&
+                !g_str_has_prefix(hfinfo->abbrev, "_ws.expert") &&
+                !g_str_has_prefix(hfinfo->abbrev, "_ws.malformed")) {
+
+                if (hfinfo->parent == -1) {
+                    module_name = hfinfo->abbrev;
+                } else {
+                    module_name = proto_registrar_get_abbrev(hfinfo->parent);
+                }
+                break;
+            }
+        }
+    }
+    proto_prefs_menu_.setModule(module_name);
+
+    QModelIndex ctxIndex = indexAt(event->pos());
+    FrameInformation * frameData =
+            new FrameInformation(new CaptureFile(this, cap_file_), packet_list_model_->getRowFdata(ctxIndex.row()));
+
+    ctx_menu_.clear();
     // XXX We might want to reimplement setParent() and fill in the context
     // menu there.
     ctx_menu_.addAction(window()->findChild<QAction *>("actionEditMarkPacket"));
@@ -280,8 +465,8 @@ PacketList::PacketList(QWidget *parent) :
     ctx_menu_.addAction(window()->findChild<QAction *>("actionViewEditResolvedName"));
     ctx_menu_.addSeparator();
 
-    main_menu_item = window()->findChild<QMenu *>("menuApplyAsFilter");
-    submenu = new QMenu(main_menu_item->title(), &ctx_menu_);
+    QMenu *main_menu_item = window()->findChild<QMenu *>("menuApplyAsFilter");
+    QMenu *submenu = new QMenu(main_menu_item->title(), &ctx_menu_);
     ctx_menu_.addMenu(submenu);
     submenu->addAction(window()->findChild<QAction *>("actionAnalyzeAAFSelected"));
     submenu->addAction(window()->findChild<QAction *>("actionAnalyzeAAFNotSelected"));
@@ -333,7 +518,7 @@ PacketList::PacketList(QWidget *parent) :
     submenu = new QMenu(main_menu_item->title(), &ctx_menu_);
     ctx_menu_.addMenu(submenu);
 
-    action = submenu->addAction(tr("Summary as Text"));
+    QAction * action = submenu->addAction(tr("Summary as Text"));
     action->setData(copy_summary_text_);
     connect(action, SIGNAL(triggered()), this, SLOT(copySummary()));
     action = submenu->addAction(tr(UTF8_HORIZONTAL_ELLIPSIS "as CSV"));
@@ -347,24 +532,8 @@ PacketList::PacketList(QWidget *parent) :
     submenu->addAction(window()->findChild<QAction *>("actionEditCopyAsFilter"));
     submenu->addSeparator();
 
-    action = window()->findChild<QAction *>("actionContextCopyBytesHexTextDump");
-    submenu->addAction(action);
-    copy_actions_ << action;
-    action = window()->findChild<QAction *>("actionContextCopyBytesHexDump");
-    submenu->addAction(action);
-    copy_actions_ << action;
-    action = window()->findChild<QAction *>("actionContextCopyBytesPrintableText");
-    submenu->addAction(action);
-    copy_actions_ << action;
-    action = window()->findChild<QAction *>("actionContextCopyBytesHexStream");
-    submenu->addAction(action);
-    copy_actions_ << action;
-    action = window()->findChild<QAction *>("actionContextCopyBytesBinary");
-    submenu->addAction(action);
-    copy_actions_ << action;
-    action = window()->findChild<QAction *>("actionContextCopyBytesEscapedString");
-    submenu->addAction(action);
-    copy_actions_ << action;
+    QActionGroup * copyEntries = DataPrinter::copyActions(this, frameData);
+    submenu->addActions(copyEntries->actions());
 
     ctx_menu_.addSeparator();
     ctx_menu_.addMenu(&proto_prefs_menu_);
@@ -374,232 +543,14 @@ PacketList::PacketList(QWidget *parent) :
     action = window()->findChild<QAction *>("actionViewShowPacketInNewWindow");
     ctx_menu_.addAction(action);
 
-    initHeaderContextMenu();
-
-    g_assert(gbl_cur_packet_list == NULL);
-    gbl_cur_packet_list = this;
-
-    bool style_inactive_selected = true;
-
-#ifdef Q_OS_WIN // && Qt version >= 4.8.6
-    if (QSysInfo::windowsVersion() < QSysInfo::WV_WINDOWS8) {
-        // See if we're running Vista or 7 and we have a theme applied.
-        HMODULE uxtheme_lib = (HMODULE) ws_load_library("uxtheme.dll");
-
-        if (uxtheme_lib) {
-            typedef BOOL (WINAPI *IsAppThemedHandler)(void);
-            typedef BOOL (WINAPI *IsThemeActiveHandler)(void);
-
-            IsAppThemedHandler PIsAppThemed = (IsAppThemedHandler) GetProcAddress(uxtheme_lib, "IsAppThemed");
-            IsThemeActiveHandler PIsThemeActive = (IsThemeActiveHandler) GetProcAddress(uxtheme_lib, "IsThemeActive");
-            if (PIsAppThemed && PIsAppThemed() && PIsThemeActive && PIsThemeActive()) {
-                style_inactive_selected = false;
-            }
-        }
-    }
-#endif
-
-    if (style_inactive_selected) {
-        // XXX Style the protocol tree as well?
-        QPalette inactive_pal = palette();
-        inactive_pal.setCurrentColorGroup(QPalette::Inactive);
-        QColor border = QColor::fromRgb(ColorUtils::alphaBlend(
-                                                inactive_pal.highlightedText(),
-                                                inactive_pal.highlight(),
-                                                0.25));
-        QColor shadow = QColor::fromRgb(ColorUtils::alphaBlend(
-                                                inactive_pal.highlightedText(),
-                                                inactive_pal.highlight(),
-                                                0.07));
-        setStyleSheet(QString(
-                          "QTreeView::item:selected:first:!active {"
-                          "  border-left: 1px solid %1;"
-                          "}"
-                          "QTreeView::item:selected:last:!active {"
-                          "  border-right: 1px solid %1;"
-                          "}"
-                          "QTreeView::item:selected:!active {"
-                          "  border-top: 1px solid %1;"
-                          "  border-bottom: 1px solid %1;"
-                          "  color: %2;"
-                          // Try to approximate a subtle box shadow.
-                          "  background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1"
-                          "    stop: 0 %4, stop: 0.2 %3, stop: 0.8 %3, stop: 1 %4);"
-                          "}")
-                      .arg(border.name())
-                      .arg(inactive_pal.highlightedText().color().name())
-                      .arg(inactive_pal.highlight().color().name())
-                      .arg(shadow.name())
-                      );
-    }
-
-    connect(packet_list_model_, SIGNAL(goToPacket(int)), this, SLOT(goToPacket(int)));
-    connect(packet_list_model_, SIGNAL(itemHeightChanged(const QModelIndex&)), this, SLOT(updateRowHeights(const QModelIndex&)));
-    connect(wsApp, SIGNAL(addressResolutionChanged()), this, SLOT(redrawVisiblePacketsDontSelectCurrent()));
-
-    header()->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(header(), SIGNAL(customContextMenuRequested(QPoint)),
-            this, SLOT(showHeaderMenu(QPoint)));
-    connect(header(), SIGNAL(sectionResized(int,int,int)),
-            this, SLOT(sectionResized(int,int,int)));
-    connect(header(), SIGNAL(sectionMoved(int,int,int)),
-            this, SLOT(sectionMoved(int,int,int)));
-
-    connect(verticalScrollBar(), SIGNAL(actionTriggered(int)), this, SLOT(vScrollBarActionTriggered(int)));
-
-    connect(&proto_prefs_menu_, SIGNAL(showProtocolPreferences(QString)),
-            this, SIGNAL(showProtocolPreferences(QString)));
-    connect(&proto_prefs_menu_, SIGNAL(editProtocolPreference(preference*,pref_module*)),
-            this, SIGNAL(editProtocolPreference(preference*,pref_module*)));
-}
-
-void PacketList::drawRow (QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
-{
-    QTreeView::drawRow(painter, option, index);
-
-    if (prefs.gui_qt_packet_list_separator) {
-        QRect rect = visualRect(index);
-
-        painter->setPen(QColor(Qt::white));
-        painter->drawLine(0, rect.y() + rect.height() - 1, width(), rect.y() + rect.height() - 1);
-    }
-}
-
-void PacketList::setProtoTree (ProtoTree *proto_tree) {
-    proto_tree_ = proto_tree;
-
-    connect(proto_tree_, SIGNAL(goToPacket(int)), this, SLOT(goToPacket(int)));
-    connect(proto_tree_, SIGNAL(relatedFrame(int,ft_framenum_type_t)),
-            &related_packet_delegate_, SLOT(addRelatedFrame(int,ft_framenum_type_t)));
-}
-
-void PacketList::setByteViewTab (ByteViewTab *byte_view_tab) {
-    byte_view_tab_ = byte_view_tab;
-
-    connect(proto_tree_, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),
-            byte_view_tab_, SLOT(protoTreeItemChanged(QTreeWidgetItem*)));
-}
-
-PacketListModel *PacketList::packetListModel() const {
-    return packet_list_model_;
-}
-
-void PacketList::selectionChanged (const QItemSelection & selected, const QItemSelection & deselected) {
-    QTreeView::selectionChanged(selected, deselected);
-
-    if (!cap_file_) return;
-
-    if (selected.isEmpty()) {
-        cf_unselect_packet(cap_file_);
-    } else {
-        int row = selected.first().top();
-        cf_select_packet(cap_file_, row);
-    }
-
-    if (!in_history_ && cap_file_->current_frame) {
-        cur_history_++;
-        selection_history_.resize(cur_history_);
-        selection_history_.append(cap_file_->current_frame->num);
-    }
-    in_history_ = false;
-
-    related_packet_delegate_.clear();
-    if (proto_tree_) proto_tree_->clear();
-    if (byte_view_tab_) byte_view_tab_->clear();
-
-    emit packetSelectionChanged();
-
-    if (!cap_file_->edt) {
-        viewport()->update();
-        return;
-    }
-
-    if (proto_tree_ && cap_file_->edt->tree) {
-        packet_info *pi = &cap_file_->edt->pi;
-        related_packet_delegate_.setCurrentFrame(pi->num);
-        proto_tree_->fillProtocolTree(cap_file_->edt->tree);
-        conversation_t *conv = find_conversation(pi->num, &pi->src, &pi->dst, pi->ptype,
-                                                pi->srcport, pi->destport, 0);
-        if (conv) {
-            related_packet_delegate_.setConversation(conv);
-        }
-        viewport()->update();
-    }
-
-    if (byte_view_tab_) {
-        GSList *src_le;
-        struct data_source *source;
-        char* source_name;
-
-        for (src_le = cap_file_->edt->pi.data_src; src_le != NULL; src_le = src_le->next) {
-            source = (struct data_source *)src_le->data;
-            source_name = get_data_source_name(source);
-            byte_view_tab_->addTab(source_name, get_data_source_tvb(source), cap_file_->edt->tree, proto_tree_, (packet_char_enc)cap_file_->current_frame->flags.encoding);
-            wmem_free(NULL, source_name);
-        }
-        byte_view_tab_->setCurrentIndex(0);
-    }
-
-    if (cap_file_->search_in_progress &&
-        (cap_file_->search_pos != 0 || (cap_file_->string && cap_file_->decode_data)))
-    {
-        match_data  mdata;
-        field_info *fi = NULL;
-
-        if (cap_file_->string && cap_file_->decode_data) {
-            // The tree where the target string matched one of the labels was discarded in
-            // match_protocol_tree() so we have to search again in the latest tree.
-            if (cf_find_string_protocol_tree(cap_file_, cap_file_->edt->tree, &mdata)) {
-                fi = mdata.finfo;
-            }
-        } else {
-            // Find the finfo that corresponds to our byte.
-            fi = proto_find_field_from_offset(cap_file_->edt->tree, cap_file_->search_pos,
-                                              cap_file_->edt->tvb);
-        }
-
-        if (fi && proto_tree_) {
-            proto_tree_->selectField(fi);
-        }
-    } else if (!cap_file_->search_in_progress && proto_tree_) {
-        proto_tree_->restoreSelectedField();
-    }
-}
-
-void PacketList::contextMenuEvent(QContextMenuEvent *event)
-{
-    const char *module_name = NULL;
-    if (cap_file_ && cap_file_->edt && cap_file_->edt->tree) {
-        GPtrArray          *finfo_array = proto_all_finfos(cap_file_->edt->tree);
-
-        for (guint i = finfo_array->len - 1; i > 0 ; i --) {
-            field_info *fi = (field_info *)g_ptr_array_index (finfo_array, i);
-            header_field_info *hfinfo =  fi->hfinfo;
-
-            if (!g_str_has_prefix(hfinfo->abbrev, "text") &&
-                !g_str_has_prefix(hfinfo->abbrev, "_ws.expert") &&
-                !g_str_has_prefix(hfinfo->abbrev, "_ws.malformed")) {
-
-                if (hfinfo->parent == -1) {
-                    module_name = hfinfo->abbrev;
-                } else {
-                    module_name = proto_registrar_get_abbrev(hfinfo->parent);
-                }
-                break;
-            }
-        }
-    }
-    proto_prefs_menu_.setModule(module_name);
-
-    foreach (QAction *action, copy_actions_) {
-        action->setData(QVariant());
-    }
-
-    decode_as_->setData(qVariantFromValue(true));
+    decode_as_->setData(QVariant::fromValue(true));
     ctx_column_ = columnAt(event->x());
 
     // Set menu sensitivity for the current column and set action data.
-    emit packetSelectionChanged();
+    if ( frameData )
+        emit frameSelected(frameData->frameNum());
+    else
+        emit frameSelected(-1);
 
     ctx_menu_.exec(event->globalPos());
     ctx_column_ = -1;
@@ -730,7 +681,7 @@ void PacketList::initHeaderContextMenu()
     header_actions_[caRemoveColumn] = header_ctx_menu_.addAction(tr("Remove This Column"));
 
     foreach (ColumnActions ca, header_actions_.keys()) {
-        header_actions_[ca]->setData(qVariantFromValue(ca));
+        header_actions_[ca]->setData(QVariant::fromValue(ca));
         connect(header_actions_[ca], SIGNAL(triggered()), this, SLOT(headerMenuTriggered()));
     }
 
@@ -753,16 +704,14 @@ void PacketList::drawCurrentPacket()
 // the UI to scroll to that packet).
 // Called from many places.
 void PacketList::redrawVisiblePackets() {
-    update();
-    header()->update();
+    redrawVisiblePacketsDontSelectCurrent();
     drawCurrentPacket();
 }
 
 // Redraw the packet list and detail.
 // Does not scroll back to the selected packet.
 void PacketList::redrawVisiblePacketsDontSelectCurrent() {
-    update();
-    header()->update();
+    packet_list_model_->invalidateAllColumnStrings();
 }
 
 void PacketList::resetColumns()
@@ -928,6 +877,9 @@ void PacketList::captureFileReadFinished()
 {
     packet_list_model_->flushVisibleRows();
     packet_list_model_->dissectIdle(true);
+    // Invalidating the column strings picks up and request/response
+    // tracking changes. We might just want to call it from flushVisibleRows.
+    packet_list_model_->invalidateAllColumnStrings();
 }
 
 void PacketList::freeze()
@@ -945,7 +897,6 @@ void PacketList::freeze()
     // call selectionChanged.
     related_packet_delegate_.clear();
     proto_tree_->clear();
-    byte_view_tab_->clear();
 }
 
 void PacketList::thaw(bool restore_selection)
@@ -971,7 +922,6 @@ void PacketList::clear() {
     selectionModel()->clear();
     packet_list_model_->clear();
     proto_tree_->clear();
-    byte_view_tab_->clear();
     selection_history_.clear();
     cur_history_ = -1;
     in_history_ = false;
@@ -1032,7 +982,9 @@ QString PacketList::getFilterFromRowAndColumn()
         epan_dissect_init(&edt, cap_file_->epan, have_custom_cols(&cap_file_->cinfo), FALSE);
         col_custom_prime_edt(&edt, &cap_file_->cinfo);
 
-        epan_dissect_run(&edt, cap_file_->cd_t, &cap_file_->phdr, frame_tvbuff_new_buffer(fdata, &cap_file_->buf), fdata, &cap_file_->cinfo);
+        epan_dissect_run(&edt, cap_file_->cd_t, &cap_file_->rec,
+                         frame_tvbuff_new_buffer(&cap_file_->provider, fdata, &cap_file_->buf),
+                         fdata, &cap_file_->cinfo);
         epan_dissect_fill_in_columns(&edt, TRUE, TRUE);
 
         if ((cap_file_->cinfo.columns[ctx_column_].col_custom_occurrence) ||
@@ -1047,6 +999,7 @@ QString PacketList::getFilterFromRowAndColumn()
              */
             if (strlen(cap_file_->cinfo.col_expr.col_expr[ctx_column_]) != 0 &&
                 strlen(cap_file_->cinfo.col_expr.col_expr_val[ctx_column_]) != 0) {
+                gboolean is_string_value = FALSE;
                 if (cap_file_->cinfo.columns[ctx_column_].col_fmt == COL_CUSTOM) {
                     header_field_info *hfi = proto_registrar_get_byname(cap_file_->cinfo.columns[ctx_column_].col_custom_fields);
                     if (hfi && hfi->parent == -1) {
@@ -1054,15 +1007,26 @@ QString PacketList::getFilterFromRowAndColumn()
                         filter.append(cap_file_->cinfo.col_expr.col_expr[ctx_column_]);
                     } else if (hfi && hfi->type == FT_STRING) {
                         /* Custom string, add quotes */
+                        is_string_value = TRUE;
+                    }
+                } else {
+                    header_field_info *hfi = proto_registrar_get_byname(cap_file_->cinfo.col_expr.col_expr[ctx_column_]);
+                    if (hfi && hfi->type == FT_STRING) {
+                        /* Could be an address type such as usb.src which must be quoted. */
+                        is_string_value = TRUE;
+                    }
+                }
+
+                if (filter.isEmpty()) {
+                    if (is_string_value) {
                         filter.append(QString("%1 == \"%2\"")
                                       .arg(cap_file_->cinfo.col_expr.col_expr[ctx_column_])
                                       .arg(cap_file_->cinfo.col_expr.col_expr_val[ctx_column_]));
+                    } else {
+                        filter.append(QString("%1 == %2")
+                                      .arg(cap_file_->cinfo.col_expr.col_expr[ctx_column_])
+                                      .arg(cap_file_->cinfo.col_expr.col_expr_val[ctx_column_]));
                     }
-                }
-                if (filter.isEmpty()) {
-                    filter.append(QString("%1 == %2")
-                                  .arg(cap_file_->cinfo.col_expr.col_expr[ctx_column_])
-                                  .arg(cap_file_->cinfo.col_expr.col_expr_val[ctx_column_]));
                 }
             }
         }
@@ -1132,7 +1096,7 @@ QString PacketList::allPacketComments()
     if (!cap_file_) return buf_str;
 
     for (framenum = 1; framenum <= cap_file_->count ; framenum++) {
-        fdata = frame_data_sequence_find(cap_file_->frames, framenum);
+        fdata = frame_data_sequence_find(cap_file_->provider.frames, framenum);
 
         char *pkt_comment = cf_get_packet_comment(cap_file_, fdata);
 
@@ -1148,6 +1112,25 @@ QString PacketList::allPacketComments()
     }
     return buf_str;
 }
+
+void PacketList::deleteAllPacketComments()
+{
+    guint32 framenum;
+    frame_data *fdata;
+    QString buf_str;
+
+    if (!cap_file_)
+        return;
+
+    for (framenum = 1; framenum <= cap_file_->count ; framenum++) {
+        fdata = frame_data_sequence_find(cap_file_->provider.frames, framenum);
+
+        cf_set_user_packet_comment(cap_file_, fdata, NULL);
+    }
+
+    redrawVisiblePackets();
+}
+
 
 // Slots
 
@@ -1213,12 +1196,14 @@ void PacketList::goPreviousPacket(void)
     scrollViewChanged(false);
 }
 
-void PacketList::goFirstPacket(void) {
+void PacketList::goFirstPacket(bool user_selected) {
     if (packet_list_model_->rowCount() < 1) return;
     setCurrentIndex(packet_list_model_->index(0, 0));
     scrollTo(currentIndex());
 
-    scrollViewChanged(false);
+    if (user_selected) {
+        scrollViewChanged(false);
+    }
 }
 
 void PacketList::goLastPacket(void) {
@@ -1243,7 +1228,7 @@ void PacketList::goToPacket(int packet) {
 void PacketList::goToPacket(int packet, int hf_id)
 {
     goToPacket(packet);
-    proto_tree_->goToField(hf_id);
+    proto_tree_->goToHfid(hf_id);
 }
 
 void PacketList::goNextHistoryPacket()
@@ -1361,7 +1346,7 @@ void PacketList::showHeaderMenu(QPoint pos)
         QAction *action = new QAction(get_column_title(i), &header_ctx_menu_);
         action->setCheckable(true);
         action->setChecked(get_column_visible(i));
-        action->setData(qVariantFromValue(i));
+        action->setData(QVariant::fromValue(i));
         connect(action, SIGNAL(triggered()), this, SLOT(columnVisibilityTriggered()));
         header_ctx_menu_.insertAction(show_hide_separator_, action);
         show_hide_actions_ << action;
@@ -1389,7 +1374,7 @@ void PacketList::headerMenuTriggered()
         recent_set_column_xalign(header_ctx_column_, checked ? COLUMN_XALIGN_RIGHT : COLUMN_XALIGN_DEFAULT);
         break;
     case caColumnPreferences:
-        emit showColumnPreferences(PreferencesDialog::ppColumn);
+        emit showColumnPreferences(PrefsModel::COLUMNS_PREFERENCE_TREE_NAME);
         break;
     case caEditColumn:
         emit editColumn(header_ctx_column_);
@@ -1643,9 +1628,7 @@ void PacketList::drawNearOverlay()
     if (!prefs.gui_packet_list_show_minimap) return;
 
     qreal dp_ratio = 1.0;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
     dp_ratio = overlay_sb_->devicePixelRatio();
-#endif
     int o_height = overlay_sb_->height() * dp_ratio;
     int o_rows = qMin(packet_list_model_->rowCount(), o_height);
     int o_width = (wsApp->fontMetrics().height() * 2 * dp_ratio) + 2; // 2ems + 1-pixel border on either side.
@@ -1714,11 +1697,9 @@ void PacketList::drawFarOverlay()
     if (!prefs.gui_packet_list_show_minimap) return;
 
     QSize groove_size = overlay_sb_->grooveRect().size();
-#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
     qreal dp_ratio = 1.0;
     dp_ratio = overlay_sb_->devicePixelRatio();
     groove_size *= dp_ratio;
-#endif
     int o_width = groove_size.width();
     int o_height = groove_size.height();
     int pl_rows = packet_list_model_->rowCount();

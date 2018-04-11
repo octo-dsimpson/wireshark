@@ -21,11 +21,9 @@
         <Component Id="cmpWiretap_dll" Guid="*">
           <File Id="filWiretap_dll" KeyPath="yes" Source="$(var.Staging.Dir)\libwiretap.dll" />
         </Component>
-        <?ifdef ENABLE_LIBWIRESHARK?>
-          <Component Id="cmpLibwireshark_dll" Guid="*">
-            <File Id="filLibwireshark_dll" KeyPath="yes" Source="$(var.Staging.Dir)\libwireshark.dll" />
-          </Component>
-        <?endif?>
+        <Component Id="cmpLibwireshark_dll" Guid="*">
+          <File Id="filLibwireshark_dll" KeyPath="yes" Source="$(var.Staging.Dir)\libwireshark.dll" />
+        </Component>
         <Component Id="cmpLibwscodecs_dll" Guid="*">
           <File Id="filLibwscodecs_dll" KeyPath="yes" Source="$(var.Staging.Dir)\libwscodecs.dll" />
         </Component>
@@ -77,17 +75,12 @@
         <Component Id="cmpExtcap_html" Guid="*">
           <File Id="filExtcap_html" KeyPath="yes" Source="$(var.Staging.Dir)\extcap.html" />
         </Component>
-        <Component Id="cmpIpmap_html" Guid="*">
-          <File Id="filIpmap_html" KeyPath="yes" Source="$(var.Staging.Dir)\ipmap.html" />
-        </Component>
       </DirectoryRef>
     </Fragment>
     <Fragment>
       <ComponentGroup Id="CG.WiresharkRequired">
         <ComponentRef Id="cmpWiretap_dll" />
-        <?ifdef ENABLE_LIBWIRESHARK?>
-          <ComponentRef Id="cmpLibwireshark_dll" />
-        <?endif?>
+        <ComponentRef Id="cmpLibwireshark_dll" />
         <ComponentRef Id="cmpLibwscodecs_dll" />
         <ComponentRef Id="cmpLibwsutil_dll" />
         <ComponentRef Id="cmpCOPYING_txt" />
@@ -105,7 +98,6 @@
         <ComponentRef Id="cmpDumpcap_exe" />
         <ComponentRef Id="cmpDumpcap_html" />
         <ComponentRef Id="cmpExtcap_html" />
-        <ComponentRef Id="cmpIpmap_html" />
       </ComponentGroup>
     </Fragment>
 
@@ -440,6 +432,26 @@
       <ComponentRef Id="cmpRawshark_html" />
     </ComponentGroup>
   </Fragment>
+
+  <!-- MMDBResolve -->
+  <?ifdef MMDBRESOLVE_EXE?>
+  <Fragment>
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="cmpMmdbresolve_exe" Guid="*">
+        <File Id="filMmdbresolve_exe" KeyPath="yes" Source="$(var.Staging.Dir)\mmdbresolve.exe" />
+      </Component>
+      <Component Id="cmpMmdbresolve_html" Guid="*">
+        <File Id="filMmdbresolve_html" KeyPath="yes" Source="$(var.Staging.Dir)\mmdbresolve.html" />
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <ComponentGroup Id="CG.Tools.MMDBResolve">
+      <ComponentRef Id="cmpMmdbresolve_exe" />
+      <ComponentRef Id="cmpMmdbresolve_html" />
+    </ComponentGroup>
+  </Fragment>
+  <?endif?>
 
   <!-- Androiddump -->
   <Fragment>

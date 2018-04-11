@@ -6,19 +6,7 @@
 # By Gerald Combs <gerald@wireshark.org>
 # Copyright 2005 Ulf Lamping
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
 
 # The files we want to test are in the build directory.
@@ -53,18 +41,14 @@ SKIP_CAPTURE=${SKIP_CAPTURE:-1}
 
 # Override the last two items if we're running Windows
 if [ "$WS_SYSTEM" = "Windows" ] ; then
-	WS_BIN_PATH=${WS_BIN_PATH:-$SOURCE_DIR/wireshark-gtk2}
-	WS_QT_BIN_PATH=${WS_QT_BIN_PATH:-$SOURCE_DIR/wireshark-qt-release}
 	SKIP_CAPTURE=0
 fi
 
 # Path to the Wireshark binaries, default to source dir if unset
 WS_BIN_PATH=${WS_BIN_PATH:-$SOURCE_DIR}
-WS_QT_BIN_PATH=${WS_QT_BIN_PATH:-$WS_BIN_PATH}
 
 # Tweak the following to your liking.
-WIRESHARK=$WS_QT_BIN_PATH/wireshark
-WIRESHARK_GTK=$WS_BIN_PATH/wireshark-gtk
+WIRESHARK=$WS_BIN_PATH/wireshark
 TSHARK=$WS_BIN_PATH/tshark
 RAWSHARK=$WS_BIN_PATH/rawshark
 CAPINFOS=$WS_BIN_PATH/capinfos

@@ -4,19 +4,7 @@
 # By Gerald Combs <gerald@wireshark.org>
 # Copyright 1998 Gerald Combs
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
 
 ADD_CUSTOM_CMAKE_INCLUDE()
@@ -24,14 +12,19 @@ ADD_CUSTOM_CMAKE_INCLUDE()
 set(WIRESHARK_WIDGET_HEADERS
 	widgets/additional_toolbar.h
 	widgets/apply_line_edit.h
+	widgets/byte_view_text.h
 	widgets/capture_filter_combo.h
 	widgets/capture_filter_edit.h
 	widgets/clickable_label.h
 	widgets/display_filter_combo.h
 	widgets/display_filter_edit.h
+	widgets/dissector_tables_view.h
 	widgets/drag_drop_toolbar.h
+	widgets/drag_label.h
 	widgets/editor_color_dialog.h
 	widgets/editor_file_dialog.h
+	widgets/expert_info_view.h
+	widgets/export_objects_view.h
 	widgets/elided_label.h
 	widgets/field_filter_edit.h
 	widgets/find_line_edit.h
@@ -39,24 +32,47 @@ set(WIRESHARK_WIDGET_HEADERS
 	widgets/interface_toolbar_lineedit.h
 	widgets/label_stack.h
 	widgets/overlay_scroll_bar.h
+	widgets/pref_module_view.h
 	widgets/qcustomplot.h
+	widgets/range_syntax_lineedit.h
 	widgets/stock_icon_tool_button.h
 	widgets/syntax_line_edit.h
 	widgets/tabnav_tree_view.h
 )
 
+set(WIRESHARK_MANAGER_HEADERS
+	manager/preference_manager.h
+	manager/wireshark_preference.h
+)
+
 set(WIRESHARK_UTILS_HEADERS
 	utils/color_utils.h
-	utils/stock_icon.h
+	utils/data_printer.h
+	utils/field_information.h
+	utils/frame_information.h
+	utils/idata_printable.h
+	utils/proto_node.h
 	utils/qt_ui_utils.h
+	utils/stock_icon.h
 	utils/tango_colors.h
 	utils/variant_pointer.h
+	utils/wireshark_mime_data.h
 )
 
 set(WIRESHARK_MODEL_HEADERS
+	models/astringlist_list_model.h
 	models/cache_proxy_model.h
+	models/coloring_rules_delegate.h
+	models/coloring_rules_model.h
 	models/decode_as_delegate.h
 	models/decode_as_model.h
+	models/dissector_tables_model.h
+	models/enabled_protocols_model.h
+	models/expert_info_model.h
+	models/expert_info_proxy_model.h
+	models/export_objects_model.h
+	models/fileset_entry_model.h
+	models/info_proxy_model.h
 	models/interface_sort_filter_model.h
 	models/interface_tree_cache_model.h
 	models/interface_tree_model.h
@@ -65,11 +81,17 @@ set(WIRESHARK_MODEL_HEADERS
 	models/packet_list_record.h
 	models/path_chooser_delegate.h
 	models/percent_bar_delegate.h
+	models/pref_delegate.h
+	models/pref_models.h
+	models/proto_tree_model.h
 	models/related_packet_delegate.h
-	models/timeline_delegate.h
 	models/sparkline_delegate.h
+	models/supported_protocols_model.h
+	models/timeline_delegate.h
+	models/tree_model_helpers.h
 	models/uat_delegate.h
 	models/uat_model.h
+	models/url_link_delegate.h
 	models/voip_calls_info_model.h
 )
 
@@ -85,7 +107,6 @@ set(WIRESHARK_QT_HEADERS
 	bluetooth_hci_summary_dialog.h
 	accordion_frame.h
 	byte_view_tab.h
-	byte_view_text.h
 	capture_file.h
 	capture_file_dialog.h
 	capture_file_properties_dialog.h
@@ -110,6 +131,10 @@ set(WIRESHARK_QT_HEADERS
 	export_object_action.h
 	export_object_dialog.h
 	export_pdu_dialog.h
+	extcap_argument.h
+	extcap_argument_file.h
+	extcap_argument_multiselect.h
+	extcap_options_dialog.h
 	file_set_dialog.h
 	filter_action.h
 	filter_dialog.h
@@ -165,6 +190,7 @@ set(WIRESHARK_QT_HEADERS
 	rtp_audio_stream.h
 	rtp_player_dialog.h
 	rtp_stream_dialog.h
+	scsi_service_response_time_dialog.h
 	sctp_all_assocs_dialog.h
 	sctp_assoc_analyse_dialog.h
 	sctp_chunk_statistics_dialog.h
@@ -204,16 +230,6 @@ if(HAVE_PCAP_REMOTE)
 	)
 endif()
 
-if(ENABLE_EXTCAP)
-	set(WIRESHARK_QT_HEADERS
-		${WIRESHARK_QT_HEADERS}
-		extcap_argument.h
-		extcap_argument_file.h
-		extcap_argument_multiselect.h
-		extcap_options_dialog.h
-	)
-endif()
-
 file(GLOB EXTRA_QT_HEADERS
 	packet_list_record.h
 	models/sparkline_delegate.h
@@ -224,37 +240,64 @@ file(GLOB EXTRA_QT_HEADERS
 set(WIRESHARK_WIDGET_SRCS
 	widgets/additional_toolbar.cpp
 	widgets/apply_line_edit.cpp
+	widgets/byte_view_text.cpp
 	widgets/capture_filter_combo.cpp
 	widgets/capture_filter_edit.cpp
 	widgets/clickable_label.cpp
 	widgets/display_filter_combo.cpp
 	widgets/display_filter_edit.cpp
+	widgets/dissector_tables_view.cpp
 	widgets/drag_drop_toolbar.cpp
+	widgets/drag_label.cpp
 	widgets/editor_color_dialog.cpp
 	widgets/editor_file_dialog.cpp
 	widgets/elided_label.cpp
+	widgets/expert_info_view.cpp
+	widgets/export_objects_view.cpp
 	widgets/field_filter_edit.cpp
 	widgets/find_line_edit.cpp
 	widgets/follow_stream_text.cpp
 	widgets/interface_toolbar_lineedit.cpp
 	widgets/label_stack.cpp
 	widgets/overlay_scroll_bar.cpp
+	widgets/pref_module_view.cpp
 	widgets/qcustomplot.cpp
+	widgets/range_syntax_lineedit.cpp
 	widgets/stock_icon_tool_button.cpp
 	widgets/syntax_line_edit.cpp
 	widgets/tabnav_tree_view.cpp
 )
 
+set(WIRESHARK_MANAGER_SRCS
+	manager/preference_manager.cpp
+	manager/wireshark_preference.cpp
+)
+
 set(WIRESHARK_UTILS_SRCS
 	utils/color_utils.cpp
-	utils/stock_icon.cpp
+	utils/data_printer.cpp
+	utils/field_information.cpp
+	utils/frame_information.cpp
+	utils/proto_node.cpp
 	utils/qt_ui_utils.cpp
+	utils/stock_icon.cpp
+	utils/wireshark_mime_data.cpp
 )
 
 set(WIRESHARK_MODEL_SRCS
+	models/astringlist_list_model.cpp
 	models/cache_proxy_model.cpp
+	models/coloring_rules_delegate.cpp
+	models/coloring_rules_model.cpp
 	models/decode_as_delegate.cpp
 	models/decode_as_model.cpp
+	models/dissector_tables_model.cpp
+	models/enabled_protocols_model.cpp
+	models/expert_info_model.cpp
+	models/expert_info_proxy_model.cpp
+	models/export_objects_model.cpp
+	models/fileset_entry_model.cpp
+	models/info_proxy_model.cpp
 	models/interface_sort_filter_model.cpp
 	models/interface_tree_cache_model.cpp
 	models/interface_tree_model.cpp
@@ -263,12 +306,16 @@ set(WIRESHARK_MODEL_SRCS
 	models/packet_list_record.cpp
 	models/path_chooser_delegate.cpp
 	models/percent_bar_delegate.cpp
+	models/pref_delegate.cpp
+	models/pref_models.cpp
+	models/proto_tree_model.cpp
 	models/related_packet_delegate.cpp
 	models/sparkline_delegate.cpp
-	models/sparkline_delegate.cpp
+	models/supported_protocols_model.cpp
 	models/timeline_delegate.cpp
 	models/uat_delegate.cpp
 	models/uat_model.cpp
+	models/url_link_delegate.cpp
 	models/voip_calls_info_model.cpp
 )
 
@@ -281,7 +328,6 @@ set(WIRESHARK_QT_SRC
 	bluetooth_devices_dialog.cpp
 	bluetooth_hci_summary_dialog.cpp
 	byte_view_tab.cpp
-	byte_view_text.cpp
 	capture_file.cpp
 	capture_file_dialog.cpp
 	capture_file_properties_dialog.cpp
@@ -305,6 +351,10 @@ set(WIRESHARK_QT_SRC
 	export_object_action.cpp
 	export_object_dialog.cpp
 	export_pdu_dialog.cpp
+	extcap_argument.cpp
+	extcap_argument_file.cpp
+	extcap_argument_multiselect.cpp
+	extcap_options_dialog.cpp
 	file_set_dialog.cpp
 	filter_action.cpp
 	filter_dialog.cpp
@@ -355,6 +405,7 @@ set(WIRESHARK_QT_SRC
 	rtp_audio_stream.cpp
 	rtp_player_dialog.cpp
 	rtp_stream_dialog.cpp
+	scsi_service_response_time_dialog.cpp
 	sctp_all_assocs_dialog.cpp
 	sctp_assoc_analyse_dialog.cpp
 	sctp_chunk_statistics_dialog.cpp
@@ -393,30 +444,20 @@ if(HAVE_PCAP_REMOTE)
 	)
 endif()
 
-if(ENABLE_EXTCAP)
-	set(WIRESHARK_QT_SRC
-		${WIRESHARK_QT_SRC}
-		extcap_argument.cpp
-		extcap_argument_file.cpp
-		extcap_argument_multiselect.cpp
-		extcap_options_dialog.cpp
-	)
-endif()
-
 set(WIRESHARK_QT_TAP_SRC
-	expert_info_dialog.cpp
-	funnel_statistics.cpp
-	gsm_map_summary_dialog.cpp
-	io_graph_dialog.cpp
-	lte_mac_statistics_dialog.cpp
-	lte_rlc_statistics_dialog.cpp
-	mtp3_summary_dialog.cpp
-	multicast_statistics_dialog.cpp
-	rtp_stream_dialog.cpp
-	sctp_all_assocs_dialog.cpp
-	sctp_assoc_analyse_dialog.cpp
-	stats_tree_dialog.cpp
-	wlan_statistics_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/expert_info_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/funnel_statistics.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/gsm_map_summary_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/io_graph_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/lte_mac_statistics_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/lte_rlc_statistics_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/mtp3_summary_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/multicast_statistics_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/rtp_stream_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/sctp_all_assocs_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/sctp_assoc_analyse_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/stats_tree_dialog.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/wlan_statistics_dialog.cpp
 	${WIRESHARK_CUSTOM_TAP_SRC}
 )
 
@@ -447,6 +488,7 @@ set(WIRESHARK_QT_UI
 	expert_info_dialog.ui
 	export_object_dialog.ui
 	export_pdu_dialog.ui
+	extcap_options_dialog.ui
 	file_set_dialog.ui
 	filter_dialog.ui
 	filter_expression_frame.ui
@@ -515,13 +557,6 @@ if(HAVE_PCAP_REMOTE)
 	)
 endif()
 
-if(ENABLE_EXTCAP)
-	set(WIRESHARK_QT_UI
-		${WIRESHARK_QT_UI}
-		extcap_options_dialog.ui
-	)
-endif()
-
 set(WIRESHARK_QT_TS
 	wireshark_de.ts
 	wireshark_en.ts # lupdate -pluralonly
@@ -544,7 +579,7 @@ set(WIRESHARK_QT_QRC
 	../../image/about.qrc
 	../../image/languages/languages.qrc
 	../../image/layout.qrc
-	../../image/toolbar.qrc
+	../../image/stock_icons.qrc
 	../../image/wsicon.qrc
 	${CMAKE_CURRENT_BINARY_DIR}/i18n.qrc
 )
@@ -558,25 +593,19 @@ SET(CMAKE_AUTOMOC TRUE)
 
 if(CMAKE_VERSION VERSION_LESS "3.0.2")
 	# AUTOUIC and AUTORCC are not supported in CMAKE 2.8.x
-	if (QT_VERSION EQUAL 5)
-		QT5_ADD_TRANSLATION(WIRESHARK_QT_QM ${WIRESHARK_QT_TS})
-		QT5_ADD_RESOURCES(WIRESHARK_QT_QRC_SRC ${WIRESHARK_QT_QRC})
-		QT5_WRAP_UI(WIRESHARK_QT_UI_SRC ${WIRESHARK_QT_UI})
-	else()
-		QT4_ADD_TRANSLATION(WIRESHARK_QT_QM ${WIRESHARK_QT_TS})
-		QT4_ADD_RESOURCES(WIRESHARK_QT_QRC_SRC ${WIRESHARK_QT_QRC})
-		QT4_WRAP_UI(WIRESHARK_QT_UI_SRC ${WIRESHARK_QT_UI})
-	endif()
+	QT5_ADD_TRANSLATION(WIRESHARK_QT_QM ${WIRESHARK_QT_TS})
+	QT5_ADD_RESOURCES(WIRESHARK_QT_QRC_SRC ${WIRESHARK_QT_QRC})
+	QT5_WRAP_UI(WIRESHARK_QT_UI_SRC ${WIRESHARK_QT_UI})
 else()
 	SET(CMAKE_AUTOUIC TRUE)
 	SET(CMAKE_AUTORCC TRUE)
+
+	set(WIRESHARK_QT_QRC_SRC ${WIRESHARK_QT_QRC})
+	set(WIRESHARK_QT_UI_SRC ${WIRESHARK_QT_UI})
+
 	# Add .qrc files to library dependencies for AUTORCC.
 	set(WIRESHARK_QT_QRC_SRC ${WIRESHARK_QT_QRC})
-	if (QT_VERSION EQUAL 5)
-		QT5_ADD_TRANSLATION(WIRESHARK_QT_QM ${WIRESHARK_QT_TS})
-	else()
-		QT4_ADD_TRANSLATION(WIRESHARK_QT_QM ${WIRESHARK_QT_TS})
-	endif()
+	QT5_ADD_TRANSLATION(WIRESHARK_QT_QM ${WIRESHARK_QT_TS})
 endif()
 
 add_custom_target(
@@ -595,7 +624,6 @@ set_source_files_properties(
 add_definitions(${QT_DEFINITIONS})
 
 register_tap_files(wireshark-tap-register.c
-	taps
 	${WIRESHARK_QT_TAP_SRC}
 )
 
@@ -608,16 +636,20 @@ source_group("ui\\Utils Headers Files" FILES ${WIRESHARK_UTILS_HEADERS})
 source_group("ui\\Utils Source" FILES ${WIRESHARK_UTILS_SRCS})
 source_group("ui\\Models Headers" FILES ${WIRESHARK_MODEL_HEADERS})
 source_group("ui\\Models Source" FILES ${WIRESHARK_MODEL_SRCS})
+source_group("ui\\Manager Headers" FILES ${WIRESHARK_MANAGER_HEADERS})
+source_group("ui\\Manager Source" FILES ${WIRESHARK_MANAGER_SRCS})
 
 add_library(qtui STATIC
 	#Included so that Visual Studio can properly put header files in solution
 	${WIRESHARK_QT_HEADERS}
 	${WIRESHARK_WIDGET_HEADERS}
+	${WIRESHARK_MANAGER_HEADERS}
 	${WIRESHARK_UTILS_HEADERS}
 	${WIRESHARK_MODEL_HEADERS}
 
 	${WIRESHARK_QT_SRC}
 	${WIRESHARK_WIDGET_SRCS}
+	${WIRESHARK_MANAGER_SRCS}
 	${WIRESHARK_UTILS_SRCS}
 	${WIRESHARK_MODEL_SRCS}
 
@@ -636,6 +668,10 @@ if(NOT CMAKE_VERSION VERSION_LESS "3.0.2")
 	set_target_properties(qtui PROPERTIES
 		AUTOGEN_TARGET_DEPENDS "${WIRESHARK_QT_QM}"
 	)
+endif()
+
+if (WIN32)
+	target_link_libraries(qtui "UxTheme.lib")
 endif()
 
 #

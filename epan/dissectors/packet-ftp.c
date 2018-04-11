@@ -9,19 +9,7 @@
  *
  * Copied from packet-pop.c
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "config.h"
@@ -62,10 +50,14 @@ static int hf_ftp_epsv_ip = -1;
 static int hf_ftp_epsv_ipv6 = -1;
 static int hf_ftp_epsv_port = -1;
 static int hf_ftp_command_response_frames = -1;
+static int hf_ftp_command_response_bytes = -1;
 static int hf_ftp_command_response_first_frame_num = -1;
 static int hf_ftp_command_response_last_frame_num = -1;
 static int hf_ftp_command_response_duration = -1;
-
+static int hf_ftp_command_response_kbps = -1;
+static int hf_ftp_command_setup_frame = -1;
+static int hf_ftp_command_command_frame = -1;
+static int hf_ftp_command_command = -1;
 
 static int hf_ftp_data_setup_frame = -1;
 static int hf_ftp_data_setup_method = -1;
@@ -166,6 +158,7 @@ typedef struct ftp_data_conversation_t
     const gchar   *command;      /* Command that this data answers */
     guint32       command_frame; /* Frame command was seen */
     const gchar   *setup_method; /* Type of command used to set up data conversation */
+    guint32       setup_frame;   /* Frame where this happened */
     wmem_strbuf_t *current_working_directory;
 
     /* Summary details of stream to show in command frame. */
@@ -174,6 +167,7 @@ typedef struct ftp_data_conversation_t
     guint         last_frame_num;
     nstime_t      last_frame_time;
     guint         frames_seen;
+    guint         bytes_seen;
 } ftp_data_conversation_t;
 
 /* Data to associate with individual FTP frame */
@@ -189,6 +183,7 @@ typedef struct ftp_conversation_t
     guint32     last_command_frame;  /* When request was seen */
     wmem_strbuf_t *current_working_directory;
     ftp_data_conversation_t *current_data_conv;  /* Current data conversation (during first pass) */
+    guint32     current_data_setup_frame;
 } ftp_conversation_t;
 
 /* For a given packet, retrieve or initialise a new conversation, and return it */
@@ -236,13 +231,14 @@ static void create_and_link_data_conversation(packet_info *pinfo,
     ftp_data_conversation_t *p_ftp_data_conv;
     conversation_t *data_conversation = conversation_new(pinfo->num,
                                                          addr_a, addr_b,
-                                                         PT_TCP,
+                                                         ENDPOINT_TCP,
                                                          port_a, port_b,
                                                          NO_PORT2);
     conversation_set_dissector(data_conversation, ftpdata_handle);
 
     /* Allocate data for data conversation. Note that control conversation will update it with commands. */
     p_ftp_data_conv = wmem_new0(wmem_file_scope(), ftp_data_conversation_t);
+    /* Set method */
     p_ftp_data_conv->setup_method = method;
     /* Copy snapshot of what cwd is at this point */
     p_ftp_data_conv->current_working_directory = p_ftp_conv->current_working_directory;
@@ -251,6 +247,7 @@ static void create_and_link_data_conversation(packet_info *pinfo,
     conversation_add_proto_data(data_conversation, proto_ftp_data,
                                 p_ftp_data_conv);
     p_ftp_conv->current_data_conv = p_ftp_data_conv;
+    p_ftp_conv->current_data_setup_frame = pinfo->num;
 }
 
 /********************************************************************/
@@ -950,11 +947,15 @@ dissect_ftp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_)
         }
         /* And make sure set for FTP data conversation */
         if (p_ftp_conv && p_ftp_conv->current_data_conv && !p_ftp_conv->current_data_conv->command) {
+            /* Store command and frame where it happened */
             p_ftp_conv->current_data_conv->command = wmem_strndup(wmem_file_scope(), line, linelen);
             p_ftp_conv->current_data_conv->command_frame = pinfo->num;
 
             /* Add to table to ftp-data response can be shown with this frame on later passes */
-            g_hash_table_insert(ftp_command_to_data_hash, GUINT_TO_POINTER(pinfo->num), p_ftp_conv->current_data_conv);
+            g_hash_table_insert(ftp_command_to_data_hash, GUINT_TO_POINTER(pinfo->num),
+                                p_ftp_conv->current_data_conv);
+            g_hash_table_insert(ftp_command_to_data_hash, GUINT_TO_POINTER(p_ftp_conv->current_data_setup_frame),
+                                p_ftp_conv->current_data_conv);
         }
     } else {
         /*
@@ -1250,36 +1251,66 @@ dissect_ftp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data _U_)
 
     /* If this is a command resulting in an ftp-data stream, show details */
     if (pinfo->fd->flags.visited) {
+        /* Look up what has been stored for this frame */
         ftp_data_conversation_t *ftp_data =
                 (ftp_data_conversation_t *)g_hash_table_lookup(ftp_command_to_data_hash, GUINT_TO_POINTER(pinfo->num));
         if (ftp_data) {
-            /* Number of frames */
-            ti = proto_tree_add_uint(tree, hf_ftp_command_response_frames,
-                                     tvb, 0, 0, ftp_data->frames_seen);
-            PROTO_ITEM_SET_GENERATED(ti);
+            /* Show these for the command frame only */
+            if (pinfo->num == ftp_data->command_frame) {
+                /* Number of frames */
+                ti = proto_tree_add_uint(tree, hf_ftp_command_response_frames,
+                                         tvb, 0, 0, ftp_data->frames_seen);
+                PROTO_ITEM_SET_GENERATED(ti);
 
-            /* First frame */
-            ti = proto_tree_add_uint(tree, hf_ftp_command_response_first_frame_num,
-                                     tvb, 0, 0, ftp_data->first_frame_num);
-            PROTO_ITEM_SET_GENERATED(ti);
+                /* Number of bytes */
+                ti = proto_tree_add_uint(tree, hf_ftp_command_response_bytes,
+                                         tvb, 0, 0, ftp_data->bytes_seen);
+                PROTO_ITEM_SET_GENERATED(ti);
 
-            /* Last frame */
-            ti = proto_tree_add_uint(tree, hf_ftp_command_response_last_frame_num,
-                                     tvb, 0, 0, ftp_data->last_frame_num);
-            PROTO_ITEM_SET_GENERATED(ti);
+                /* First frame */
+                ti = proto_tree_add_uint(tree, hf_ftp_command_response_first_frame_num,
+                                         tvb, 0, 0, ftp_data->first_frame_num);
+                PROTO_ITEM_SET_GENERATED(ti);
 
-            /* Length of stream */
-            if (ftp_data->frames_seen > 1) {
-                /* Work out gap between frames */
-                gint seconds = (gint)
-                          (ftp_data->last_frame_time.secs - ftp_data->first_frame_time.secs);
-                gint nseconds =
-                          ftp_data->last_frame_time.nsecs - ftp_data->first_frame_time.nsecs;
+                /* Last frame */
+                ti = proto_tree_add_uint(tree, hf_ftp_command_response_last_frame_num,
+                                         tvb, 0, 0, ftp_data->last_frame_num);
+                PROTO_ITEM_SET_GENERATED(ti);
 
-                /* Round gap to nearest ms. */
-                gint gap_ms = (seconds*1000) + ((nseconds+500000) / 1000000);
-                ti = proto_tree_add_uint(tree, hf_ftp_command_response_duration,
+                /* Length of stream */
+                if (ftp_data->frames_seen > 1) {
+                    /* Work out gap between frames */
+                    gint seconds = (gint)
+                              (ftp_data->last_frame_time.secs - ftp_data->first_frame_time.secs);
+                    gint nseconds =
+                              ftp_data->last_frame_time.nsecs - ftp_data->first_frame_time.nsecs;
+
+                    /* Round gap to nearest ms. */
+                    gint gap_ms = (seconds*1000) + ((nseconds+500000) / 1000000);
+                    ti = proto_tree_add_uint(tree, hf_ftp_command_response_duration,
                                          tvb, 0, 0, gap_ms);
+                    PROTO_ITEM_SET_GENERATED(ti);
+
+                    /* Bitrate (kbps)*/
+                    guint bitrate = (guint)(((ftp_data->bytes_seen*8.0)/(gap_ms/1000.0))/1000);
+                    ti = proto_tree_add_uint(tree, hf_ftp_command_response_kbps,
+                                             tvb, offset, 0, bitrate);
+                    PROTO_ITEM_SET_GENERATED(ti);
+                }
+
+                ti = proto_tree_add_uint(tree, hf_ftp_command_setup_frame,
+                                         tvb, 0, 0, ftp_data->setup_frame);
+                PROTO_ITEM_SET_GENERATED(ti);
+            }
+
+            /* Show this only under the setup frame */
+            if (pinfo->num == ftp_data->setup_frame) {
+                ti = proto_tree_add_string(tree, hf_ftp_command_command,
+                                           tvb, 0, 0, ftp_data->command);
+                PROTO_ITEM_SET_GENERATED(ti);
+
+                ti = proto_tree_add_uint(tree, hf_ftp_command_command_frame,
+                                         tvb, 0, 0, ftp_data->command_frame);
                 PROTO_ITEM_SET_GENERATED(ti);
             }
         }
@@ -1306,10 +1337,7 @@ dissect_ftpdata(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data 
     data_ti = proto_tree_add_item(tree, proto_ftp_data, tvb, 0, -1, ENC_NA);
 
     /* Link back to setup of this stream */
-    p_conv = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst,
-                               PT_TCP,
-                               pinfo->srcport, pinfo->destport,
-                               0);
+    p_conv = find_conversation_pinfo(pinfo, 0);
 
     if (p_conv) {
         /* Link back to FTP frame where this conversation was created */
@@ -1331,6 +1359,10 @@ dissect_ftpdata(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void* data 
                     p_ftp_data_conv->last_frame_time = pinfo->abs_ts;
                 }
                 p_ftp_data_conv->frames_seen++;
+                p_ftp_data_conv->bytes_seen += tvb_reported_length(tvb);
+
+                /* Also store setup_frame here for benefit of ftp (control) */
+                p_ftp_data_conv->setup_frame = p_conv->setup_frame;
             }
 
             /* Show setup method as field and in info column */
@@ -1499,12 +1531,12 @@ proto_register_ftp(void)
 
         { &hf_ftp_command_response_first_frame_num,
           { "Command response first frame", "ftp.command-response.first-frame-num",
-            FT_FRAMENUM, BASE_NONE, NULL, 0,
+            FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_RESPONSE), 0,
             "First frame seen in resulting ftp-data stream", HFILL }},
 
         { &hf_ftp_command_response_last_frame_num,
           { "Command response last frame", "ftp.command-response.last-frame-num",
-            FT_FRAMENUM, BASE_NONE, NULL, 0,
+            FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_RESPONSE), 0,
             "Last frame seen in resulting ftp-data stream", HFILL }},
 
         { &hf_ftp_command_response_duration,
@@ -1512,10 +1544,35 @@ proto_register_ftp(void)
             FT_UINT32, BASE_DEC|BASE_UNIT_STRING, &units_milliseconds, 0,
             "Duration of command response in ms", HFILL }},
 
+        { &hf_ftp_command_response_kbps,
+          { "Response bitrate", "ftp.command-response.bitrate",
+            FT_UINT32, BASE_DEC|BASE_UNIT_STRING, &units_kbps, 0,
+            "Bitrate of command response", HFILL }},
+
         { &hf_ftp_command_response_frames,
           { "Command response frames", "ftp.command-response.frames",
             FT_UINT32, BASE_DEC, NULL, 0,
-            "Number of frames seen in resulting ftp-data stream", HFILL }}
+            "Number of frames seen in resulting ftp-data stream", HFILL }},
+
+        { &hf_ftp_command_response_bytes,
+          { "Command response bytes", "ftp.command-response.bytes",
+            FT_UINT32, BASE_DEC, NULL, 0,
+            "Number of bytes seen in resulting ftp-data stream", HFILL }},
+
+        { &hf_ftp_command_setup_frame,
+          { "Setup frame", "ftp.setup-frame",
+            FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_REQUEST), 0,
+            "Where ftp-data conversation for this command was signalled", HFILL }},
+
+        { &hf_ftp_command_command_frame,
+          { "Command frame", "ftp.command-frame",
+            FT_FRAMENUM, BASE_NONE, FRAMENUM_TYPE(FT_FRAMENUM_REQUEST), 0,
+            "Where command for setup was seen", HFILL }},
+
+        { &hf_ftp_command_command,
+          { "Command", "ftp.command",
+            FT_STRING, BASE_NONE, NULL, 0,
+            "Command corresponding to this setup frame", HFILL }},
     };
     static gint *ett[] = {
         &ett_ftp,

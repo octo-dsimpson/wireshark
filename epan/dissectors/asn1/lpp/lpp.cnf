@@ -1,6 +1,6 @@
 # lpp.cnf
 # lpp conformation file
-# Copyright 2011-2017 Pascal Quantin
+# Copyright 2011-2018 Pascal Quantin
 
 #.OPT
 PER
@@ -33,12 +33,8 @@ EllipsoidPointWithAltitudeAndUncertaintyEllipsoid
 NetworkTime
 GNSS-ID-Bitmap
 ARFCN-ValueUTRA
-GNSS-ReferenceTime
-LPP-Message
-Ellipsoid-PointWithUncertaintyCircle
-EllipsoidPointWithUncertaintyEllipse
-EllipsoidArc
-Polygon
+ARFCN-ValueEUTRA-v9a0
+Velocity
 #.END
 
 #.PDU
@@ -264,6 +260,30 @@ PolygonPoints/degreesLongitude DISPLAY=BASE_CUSTOM STRINGS=CF_FUNC(lpp_degreesLo
     if (len >= 3) {
       proto_tree_add_item(subtree, hf_lpp_T_posModes_ue_assisted, posModes_tvb, 0, 1, ENC_BIG_ENDIAN);
     }
+  }
+
+#.FN_BODY CommonIEsRequestCapabilities/eag_1/lpp-message-segmentation-req-r14 VAL_PTR = &segmentation_req_tvb
+  tvbuff_t *segmentation_req_tvb = NULL;
+
+%(DEFAULT_BODY)s
+  if(segmentation_req_tvb){
+    proto_tree *subtree;
+
+    subtree = proto_item_add_subtree(actx->created_item, ett_lpp_bitmap);
+    proto_tree_add_item(subtree, hf_lpp_T_lpp_message_segmentation_req_r14_serverToTarget, segmentation_req_tvb, 0, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_item(subtree, hf_lpp_T_lpp_message_segmentation_req_r14_targetToServer, segmentation_req_tvb, 0, 1, ENC_BIG_ENDIAN);
+  }
+
+#.FN_BODY CommonIEsProvideCapabilities/eag_1/lpp-message-segmentation-r14 VAL_PTR = &segmentation_tvb
+  tvbuff_t *segmentation_tvb = NULL;
+
+%(DEFAULT_BODY)s
+  if(segmentation_tvb){
+    proto_tree *subtree;
+
+    subtree = proto_item_add_subtree(actx->created_item, ett_lpp_bitmap);
+    proto_tree_add_item(subtree, hf_lpp_T_lpp_message_segmentation_r14_serverToTarget, segmentation_tvb, 0, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_item(subtree, hf_lpp_T_lpp_message_segmentation_r14_targetToServer, segmentation_tvb, 0, 1, ENC_BIG_ENDIAN);
   }
 
 #.FN_BODY PeriodicalReportingCriteria/reportingInterval VAL_PTR=&idx

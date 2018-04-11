@@ -35,19 +35,7 @@
  * Copyright (C) 1998 Gregory McLean & Jochen Friedrich
  * Beholder RMON ethernet network monitor,Copyright (C) 1993 DNPAP group
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #if 0
@@ -315,7 +303,7 @@ static int hf_snmp_priority = -1;                 /* INTEGER_M1_2147483647 */
 static int hf_snmp_operation = -1;                /* T_operation */
 
 /*--- End of included file: packet-snmp-hf.c ---*/
-#line 241 "./asn1/snmp/packet-snmp-template.c"
+#line 229 "./asn1/snmp/packet-snmp-template.c"
 
 /* Initialize the subtree pointers */
 static gint ett_smux = -1;
@@ -355,7 +343,7 @@ static gint ett_snmp_SimpleOpen_U = -1;
 static gint ett_snmp_RReqPDU_U = -1;
 
 /*--- End of included file: packet-snmp-ett.c ---*/
-#line 257 "./asn1/snmp/packet-snmp-template.c"
+#line 245 "./asn1/snmp/packet-snmp-template.c"
 
 static expert_field ei_snmp_failed_decrypted_data_pdu = EI_INIT;
 static expert_field ei_snmp_decrypted_data_bad_formatted = EI_INIT;
@@ -1590,12 +1578,16 @@ localize_ue( snmp_ue_assoc_t* o, const guint8* engine, guint engine_len )
 	snmp_ue_assoc_t* n = (snmp_ue_assoc_t*)g_memdup(o,sizeof(snmp_ue_assoc_t));
 
 	n->user.userName.data = (guint8*)g_memdup(o->user.userName.data,o->user.userName.len);
+	n->user.authModel = o->user.authModel;
 	n->user.authPassword.data = (guint8*)g_memdup(o->user.authPassword.data,o->user.authPassword.len);
+	n->user.authPassword.len = o->user.authPassword.len;
 	n->user.privPassword.data = (guint8*)g_memdup(o->user.privPassword.data,o->user.privPassword.len);
+	n->user.privPassword.len = o->user.privPassword.len;
 	n->user.authKey.data = (guint8*)g_memdup(o->user.authKey.data,o->user.authKey.len);
 	n->user.privKey.data = (guint8*)g_memdup(o->user.privKey.data,o->user.privKey.len);
 	n->engine.data = (guint8*)g_memdup(engine,engine_len);
 	n->engine.len = engine_len;
+	n->priv_proto = o->priv_proto;
 
 	set_ue_keys(n);
 
@@ -1618,8 +1610,8 @@ get_user_assoc(tvbuff_t* engine_tvb, tvbuff_t* user_tvb)
 	static snmp_ue_assoc_t* a;
 	guint given_username_len;
 	guint8* given_username;
-	guint given_engine_len;
-	guint8* given_engine;
+	guint given_engine_len = 0;
+	guint8* given_engine = NULL;
 
 	if ( ! (localized_ues || unlocalized_ues ) ) return NULL;
 
@@ -1776,7 +1768,7 @@ snmp_usm_priv_des(snmp_usm_params_t* p, tvbuff_t* encryptedData, packet_info *pi
 	return clear_tvb;
 
 on_gcry_error:
-	*error = (const gchar *)gpg_strerror(err);
+	*error = (const gchar *)gcry_strerror(err);
 	if (hd) gcry_cipher_close(hd);
 	return NULL;
 }
@@ -1841,7 +1833,7 @@ snmp_usm_priv_aes_common(snmp_usm_params_t* p, tvbuff_t* encryptedData, packet_i
 	return clear_tvb;
 
 on_gcry_error:
-	*error = (const gchar *)gpg_strerror(err);
+	*error = (const gchar *)gcry_strerror(err);
 	if (hd) gcry_cipher_close(hd);
 	return NULL;
 }
@@ -3008,7 +3000,7 @@ static int dissect_SMUX_PDUs_PDU(tvbuff_t *tvb _U_, packet_info *pinfo _U_, prot
 
 
 /*--- End of included file: packet-snmp-fn.c ---*/
-#line 1803 "./asn1/snmp/packet-snmp-template.c"
+#line 1795 "./asn1/snmp/packet-snmp-template.c"
 
 
 guint
@@ -3242,10 +3234,10 @@ dissect_snmp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_
 	 * wildcarded, and give it the SNMP dissector as a dissector.
 	 */
 	if (pinfo->destport == UDP_PORT_SNMP) {
-		conversation = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, PT_UDP,
+		conversation = find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, ENDPOINT_UDP,
 					   pinfo->srcport, 0, NO_PORT_B);
 		if( (conversation == NULL) || (conversation_get_dissector(conversation, pinfo->num)!=snmp_handle) ) {
-			conversation = conversation_new(pinfo->num, &pinfo->src, &pinfo->dst, PT_UDP,
+			conversation = conversation_new(pinfo->num, &pinfo->src, &pinfo->dst, ENDPOINT_UDP,
 					    pinfo->srcport, 0, NO_PORT2);
 			conversation_set_dissector(conversation, snmp_handle);
 		}
@@ -3775,7 +3767,7 @@ void proto_register_snmp(void) {
         NULL, HFILL }},
 
 /*--- End of included file: packet-snmp-hfarr.c ---*/
-#line 2305 "./asn1/snmp/packet-snmp-template.c"
+#line 2297 "./asn1/snmp/packet-snmp-template.c"
 	};
 
 	/* List of subtrees */
@@ -3815,7 +3807,7 @@ void proto_register_snmp(void) {
     &ett_snmp_RReqPDU_U,
 
 /*--- End of included file: packet-snmp-ettarr.c ---*/
-#line 2321 "./asn1/snmp/packet-snmp-template.c"
+#line 2313 "./asn1/snmp/packet-snmp-template.c"
 	};
 	static ei_register_info ei[] = {
 		{ &ei_snmp_failed_decrypted_data_pdu, { "snmp.failed_decrypted_data_pdu", PI_MALFORMED, PI_WARN, "Failed to decrypt encryptedPDU", EXPFILL }},

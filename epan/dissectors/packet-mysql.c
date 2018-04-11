@@ -11,19 +11,7 @@
  *
  * Copied from packet-tftp.c
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  *
  * the protocol spec at
@@ -129,7 +117,7 @@ void proto_reg_handoff_mysql(void);
 #define MYSQL_RFSH_SLAVE   64  /* Reset master info and restart slave thread */
 #define MYSQL_RFSH_MASTER  128 /* Remove all bin logs in the index and truncate the index */
 
-/* MySQL command codes */
+/* MySQL command codes (enum_server_command in mysql-server.git:include/my_command.h) */
 #define MYSQL_SLEEP               0  /* not from client */
 #define MYSQL_QUIT                1
 #define MYSQL_INIT_DB             2
@@ -159,6 +147,10 @@ void proto_reg_handoff_mysql(void);
 #define MYSQL_STMT_RESET          26
 #define MYSQL_SET_OPTION          27
 #define MYSQL_STMT_FETCH          28
+#define MYSQL_DAEMON              29
+#define MYSQL_BINLOG_DUMP_GTID    30 /* replication */
+#define MYSQL_RESET_CONNECTION    31
+
 
 /* MySQL cursor types */
 
@@ -207,6 +199,7 @@ static const value_string mysql_command_vals[] = {
 	{MYSQL_STMT_RESET, "Reset Statement"},
 	{MYSQL_SET_OPTION, "Set Option"},
 	{MYSQL_STMT_FETCH, "Fetch Data"},
+	{MYSQL_BINLOG_DUMP_GTID, "Send Binlog GTID"},
 	{0, NULL}
 };
 static value_string_ext mysql_command_vals_ext = VALUE_STRING_EXT_INIT(mysql_command_vals);
@@ -1560,6 +1553,7 @@ mysql_dissect_request(tvbuff_t *tvb,packet_info *pinfo, int offset,
 		mysql_set_conn_state(pinfo, conn_data, RESPONSE_TABULAR);
 		break;
 
+	case MYSQL_BINLOG_DUMP_GTID:
 	case MYSQL_BINLOG_DUMP:
 		proto_tree_add_item(req_tree, hf_mysql_binlog_position, tvb, offset, 4, ENC_LITTLE_ENDIAN);
 		offset += 4;

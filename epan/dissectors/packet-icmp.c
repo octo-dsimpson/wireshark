@@ -12,19 +12,7 @@
  * by   Maria-Luiza Crivat <luizacri@gmail.com>
  * &    Brice Augustin <bricecotte@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  * Added support for ICMP extensions RFC 4884 and RFC 5837
  * (c) 2011 Gaurav Tungatkar <gstungat@ncsu.edu>
@@ -45,6 +33,8 @@
 #include <epan/ipproto.h>
 #include <epan/capture_dissectors.h>
 #include <epan/proto_data.h>
+
+#include <wsutil/pint.h>
 
 #include "packet-ip.h"
 #include "packet-icmp.h"
@@ -330,6 +320,12 @@ static const value_string mip_extensions[] = {
 	{0, NULL}
 };
 
+static const value_string icmp_ext_class_str[] = {
+	{1, "MPLS Label Stack Class"},
+	{2, "Interface Information Object"},
+	{0, NULL}
+};
+
 /* RFC 5837 ICMP extension - Interface Information Object
  * Interface Role
  */
@@ -357,18 +353,19 @@ static const value_string interface_role_str[] = {
 #define MPLS_EXTENDED_PAYLOAD_C_TYPE             1
 
 /* Return true if the address is in the 224.0.0.0/4 network block */
-#define is_a_multicast_addr(a) \
-	((g_ntohl(a) & 0xf0000000) == 0xe0000000)
+#define is_a_multicast_addr(a)	in4_addr_is_multicast(a)
 
 /* Return true if the address is the 255.255.255.255 broadcast address */
-#define is_a_broadcast_addr(a) \
-	(g_ntohl(a) == 0xffffffff)
+#define is_a_broadcast_addr(a)	((a) == 0xffffffffU)
 
+/*
+ * XXX - should these be checking the address *type*, instead?
+ */
 #define ADDR_IS_MULTICAST(addr) \
-	(((addr)->len == 4) && is_a_multicast_addr(*(const guint32 *)((addr)->data)))
+	(((addr)->len == 4) && is_a_multicast_addr(pntoh32((addr)->data)))
 
 #define ADDR_IS_BROADCAST(addr) \
-	(((addr)->len == 4) && is_a_broadcast_addr(*(const guint32 *)((addr)->data)))
+	(((addr)->len == 4) && is_a_broadcast_addr(pntoh32((addr)->data)))
 
 #define ADDR_IS_NOT_UNICAST(addr) \
 	(ADDR_IS_MULTICAST(addr) || ADDR_IS_BROADCAST(addr))
@@ -418,13 +415,13 @@ static conversation_t *_find_or_create_conversation(packet_info * pinfo)
 
 	/* Have we seen this conversation before? */
 	conv =
-	    find_conversation(pinfo->num, &pinfo->src, &pinfo->dst,
-			      pinfo->ptype, 0, 0, 0);
+	    find_conversation(pinfo->num, &pinfo->src, &pinfo->dst, conversation_pt_to_endpoint_type(pinfo->ptype),
+			      0, 0, 0);
 	if (conv == NULL) {
 		/* No, this is a new conversation. */
 		conv =
 		    conversation_new(pinfo->num, &pinfo->src,
-				     &pinfo->dst, pinfo->ptype, 0, 0, 0);
+				     &pinfo->dst, conversation_pt_to_endpoint_type(pinfo->ptype), 0, 0, 0);
 	}
 	return conv;
 }
@@ -892,8 +889,8 @@ dissect_extensions(tvbuff_t * tvb, packet_info *pinfo, gint offset, proto_tree *
 
 		/* Class */
 		class_num = tvb_get_guint8(tvb, offset + 2);
-		proto_tree_add_uint(ext_object_tree, hf_icmp_ext_class,
-				    tvb, offset + 2, 1, class_num);
+		proto_tree_add_item(ext_object_tree, hf_icmp_ext_class,
+				    tvb, offset + 2, 1, ENC_BIG_ENDIAN);
 
 		/* C-Type */
 		c_type = tvb_get_guint8(tvb, offset + 3);
@@ -1059,7 +1056,7 @@ static icmp_transaction_t *transaction_start(packet_info * pinfo,
 					 icmp_trans->resp_frame);
 		PROTO_ITEM_SET_GENERATED(it);
 
-		col_append_fstr(pinfo->cinfo, COL_INFO, " (reply in %d)",
+		col_append_frame_number(pinfo, COL_INFO, " (reply in %u)",
 				icmp_trans->resp_frame);
 	}
 
@@ -1082,7 +1079,7 @@ static icmp_transaction_t *transaction_end(packet_info * pinfo,
 
 	conversation =
 	    find_conversation(pinfo->num, &pinfo->src, &pinfo->dst,
-			      pinfo->ptype, 0, 0, 0);
+			      conversation_pt_to_endpoint_type(pinfo->ptype), 0, 0, 0);
 	if (conversation == NULL) {
 		return NULL;
 	}
@@ -1162,7 +1159,7 @@ static icmp_transaction_t *transaction_end(packet_info * pinfo,
 						"%.3f ms", resp_time);
 	PROTO_ITEM_SET_GENERATED(it);
 
-	col_append_fstr(pinfo->cinfo, COL_INFO, " (request in %d)",
+	col_append_frame_number(pinfo, COL_INFO, " (request in %d)",
 			icmp_trans->rqst_frame);
 
 	return icmp_trans;
@@ -1900,8 +1897,8 @@ void proto_register_icmp(void)
 		  NULL, HFILL}},
 
 		{&hf_icmp_ext_class,
-		 {"Class", "icmp.ext.class", FT_UINT8, BASE_DEC, NULL, 0x0,
-		  NULL, HFILL}},
+		 {"Class", "icmp.ext.class", FT_UINT8, BASE_DEC,
+		 VALS(icmp_ext_class_str), 0x0, NULL, HFILL}},
 
 		{&hf_icmp_ext_c_type,
 		 {"C-Type", "icmp.ext.ctype", FT_UINT8, BASE_DEC, NULL,

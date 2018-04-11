@@ -1,26 +1,14 @@
 /* packet-lpp.c
  * Routines for 3GPP LTE Positioning Protocol (LPP) packet dissection
- * Copyright 2011-2017 Pascal Quantin <pascal.quantin@gmail.com>
+ * Copyright 2011-2018 Pascal Quantin <pascal.quantin@gmail.com>
  *
  * Wireshark - Network traffic analyzer
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Ref 3GPP TS 36.355 version 14.3.0 Release 14
+ * Ref 3GPP TS 36.355 version 14.5.1 Release 14
  * http://www.3gpp.org
  */
 
@@ -1654,7 +1642,7 @@ lpp_rsrp_Result_fmt(gchar *s, guint32 v)
   if (v == 0) {
     g_snprintf(s, ITEM_LABEL_LENGTH, "RSRP < -140dBm (0)");
   } else if (v < 97) {
-    g_snprintf(s, ITEM_LABEL_LENGTH, "%ddBm < RSRP <= %ddBm (%u)", v-141, v-140, v);
+    g_snprintf(s, ITEM_LABEL_LENGTH, "%ddBm <= RSRP < %ddBm (%u)", v-141, v-140, v);
   } else {
     g_snprintf(s, ITEM_LABEL_LENGTH, "-44dBm <= RSRP (97)");
   }
@@ -1678,7 +1666,7 @@ lpp_nrsrp_Result_fmt(gchar *s, guint32 v)
   if (v == 0) {
     g_snprintf(s, ITEM_LABEL_LENGTH, "NRSRP < -156dBm (0)");
   } else if (v < 113) {
-    g_snprintf(s, ITEM_LABEL_LENGTH, "%ddBm < NRSRP <= %ddBm (%u)", v-157, v-156, v);
+    g_snprintf(s, ITEM_LABEL_LENGTH, "%ddBm <= NRSRP < %ddBm (%u)", v-157, v-156, v);
   } else {
     g_snprintf(s, ITEM_LABEL_LENGTH, "-44dBm <= NRSRP (97)");
   }
@@ -1688,9 +1676,9 @@ static void
 lpp_nrsrq_Result_fmt(gchar *s, guint32 v)
 {
   if (v == 0) {
-    g_snprintf(s, ITEM_LABEL_LENGTH, "NRSRQ < -19.5dB (0)");
-  } else if (v < 46) {
-    g_snprintf(s, ITEM_LABEL_LENGTH, "%.1fdB < NRSRQ <= %.1fdB (%u)", ((float)v/2)-20, (((float)v+1)/2)-20, v);
+    g_snprintf(s, ITEM_LABEL_LENGTH, "NRSRQ < -34dB (0)");
+  } else if (v < 74) {
+    g_snprintf(s, ITEM_LABEL_LENGTH, "%.1fdB <= NRSRQ < %.1fdB (%u)", (((float)v-1)/2)-34, ((float)v/2)-34, v);
   } else {
     g_snprintf(s, ITEM_LABEL_LENGTH, "2.5dB <= NRSRQ (%u)", v);
   }
