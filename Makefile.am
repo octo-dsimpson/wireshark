@@ -59,7 +59,7 @@ EXTRA_PROGRAMS = wireshark-gtk wireshark tshark tfshark capinfos captype \
 # Wireshark configuration files are put in $(pkgdatadir).
 #
 dist_pkgdata_DATA = COPYING manuf services cfilters colorfilters dfilters \
-	smi_modules pdml2html.xsl enterprises.tsv wka
+	smi_modules pdml2html.xsl preferences enterprises.tsv wka
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = wireshark.pc
@@ -794,6 +794,7 @@ EXTRA_DIST = \
 	manuf			\
 	manuf.tmpl		\
 	pdml2html.xsl		\
+	preferences		\
 	smi_modules		\
 	text2pcap-scanner.l	\
 	text2pcap.h		\

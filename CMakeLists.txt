@@ -1615,6 +1615,7 @@ set(INSTALL_FILES
 	enterprises.tsv
 	manuf
 	pdml2html.xsl
+	preferences
 	services
 	smi_modules
 	wka
