@@ -1614,6 +1614,7 @@ set(INSTALL_FILES
 	dfilters
 	enterprises.tsv
 	manuf
+	octoScope.bat
 	pdml2html.xsl
 	preferences
 	services

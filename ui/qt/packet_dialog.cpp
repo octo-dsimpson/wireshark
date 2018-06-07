@@ -103,13 +103,11 @@ PacketDialog::PacketDialog(QWidget &parent, CaptureFile &cf, frame_data *fdata) 
 
     STARTUPINFOA startup_info={sizeof(startup_info)};
     PROCESS_INFORMATION process_information;
-    int base_frame_num;
+    gchar *base_frame_num = "0";
     if(this->rec_.opt_comment != NULL){
-        base_frame_num = atoi(this->rec_.opt_comment);
-    }else{
-        base_frame_num = 0;
+        base_frame_num = this->rec_.opt_comment;
     }
-    QString process = QString("C:\\Python27\\python.exe C:\\octoScope\\oct.py %1 %2").arg(fdata->num).arg(base_frame_num);
+    QString process = QString("\"C:\\Program Files\\Wireshark-octoScope\\octoScope.bat\" \"%1\" \"%2\"").arg(fdata->num).arg(base_frame_num);
     //LPSTR s = (LPSTR)process.toLocal8Bit().constData();
     //QString params = QString("C:\\Development\\octoScopeNI.py 3");
     //QString params = QString("C:\\o.py 3");
