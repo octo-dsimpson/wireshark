@@ -43,5 +43,5 @@ py -3.6 "C:\Users\Andrew.McGarry\workspace\Triathlon_Litepoint_Project_Trunk\ana
 if %found%==1 (
 ECHO Invalid filetype indicated
 )
-cmd /k
+
 exit /b %found%
