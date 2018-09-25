@@ -38,7 +38,7 @@ SET found=0
 if %file_ext%==iqvsa (
 ECHO IQVSA File type indicated
 SET found=0
-py -3.6 "C:\Users\Andrew.McGarry\workspace\Triathlon_Litepoint_Project_Trunk\analyzePacketLitepoint.py" %packetnum% --address 10.100.100.130
+py -3.6 "C:\Users\Andrew.McGarry\workspace\Triathlon_Litepoint_Project_Trunk\analyzePacketLitepoint.py" %system% %equipment% %filename% %packetnum% --address 10.100.100.130
 )
 if %found%==1 (
 ECHO Invalid filetype indicated
