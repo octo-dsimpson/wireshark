@@ -312,19 +312,13 @@ add_library(epan
 
 add_dependencies(epan version)
 
-set(FULL_SO_VERSION "11.1.3")
+set(FULL_SO_VERSION "11.1.6")
 
 set_target_properties(epan PROPERTIES
 	COMPILE_DEFINITIONS "WS_BUILD_DLL"
 	LINK_FLAGS "${WS_LINK_FLAGS}"
 	VERSION ${FULL_SO_VERSION} SOVERSION 11
 )
-
-if(ENABLE_APPLICATION_BUNDLE)
-	set_target_properties(epan PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/run/Wireshark.app/Contents/Frameworks
-	)
-endif()
 
 ABICHECK(libwireshark)
 

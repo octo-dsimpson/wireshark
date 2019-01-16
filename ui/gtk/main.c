@@ -1996,7 +1996,6 @@ main(int argc, char *argv[])
      * This also sets the C-language locale to the native environment. */
     setlocale(LC_ALL, "");
 #ifdef _WIN32
-    arg_list_utf_16to8(argc, argv);
     create_app_running_mutex();
 #endif /* _WIN32 */
 
@@ -2012,7 +2011,7 @@ main(int argc, char *argv[])
      * Attempt to get the pathname of the directory containing the
      * executable file.
      */
-    init_progfile_dir_error = init_progfile_dir(argv[0], main);
+    init_progfile_dir_error = init_progfile_dir(argv[0], NULL);
 
     /* initialize the funnel mini-api */
     initialize_funnel_ops();
@@ -2681,6 +2680,9 @@ WinMain (struct HINSTANCE__ *hInstance,
          int                 nCmdShow)
 {
     INITCOMMONCONTROLSEX comm_ctrl;
+    LPWSTR *wc_argv;
+    int argc;
+    char **argv;
 
     /*
      * Initialize our DLL search path. MUST be called before LoadLibrary
@@ -2703,7 +2705,14 @@ WinMain (struct HINSTANCE__ *hInstance,
 
     set_has_console(FALSE);
     set_console_wait(FALSE);
-    return main (__argc, __argv);
+
+    /* Get the arguments as UTF-16 strings and convert them to UTF-8. */
+    wc_argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (wc_argv) {
+        argv = arg_list_utf_16to8(argc, wc_argv);
+        LocalFree(wc_argv);
+    } /* XXX else bail because something is horribly, horribly wrong? */
+    return main (argc, argv);
 }
 
 #endif /* _WIN32 */

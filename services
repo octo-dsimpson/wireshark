@@ -690,8 +690,10 @@ gdoi		848/tcp/udp	# GDOI
 domain-s	853/tcp/udp	# DNS query-response protocol run over TLS/DTLS
 dlep		854/tcp/udp	# Dynamic Link Exchange Protocol (DLEP)
 iscsi		860/tcp/udp	# iSCSI
-owamp-control	861/tcp/udp	# OWAMP-Control
-twamp-control	862/tcp/udp	# Two-way Active Measurement Protocol (TWAMP) Control
+owamp-control	861/tcp		# OWAMP-Control
+owamp-test	861/udp		# OWAMP-Test
+twamp-control	862/tcp		# TWAMP-Control
+twamp-test	862/udp		# TWAMP-Test Receiver Port
 rsync		873/tcp/udp
 iclcnet-locate	886/tcp/udp	# ICL coNETion locate server
 iclcnet-svinfo	887/tcp/udp	# ICL coNETion server info
@@ -2080,7 +2082,7 @@ qip-login	2366/tcp/udp
 service-ctrl	2367/tcp/udp	# Service Control
 opentable	2368/tcp/udp	# OpenTable
 l3-hbmon	2370/tcp/udp	# L3-HBMon
-hp-rda		2371/tcp	# HP Remote Device Access
+rda		2371/tcp	# Remote Device Access
 lanmessenger	2372/tcp/udp	# LanMessenger
 remographlm	2373/tcp	# Remograph License Manager
 hydra		2374/tcp	# Hydra RPC
@@ -3925,8 +3927,7 @@ netconf-ch-ssh	4334/tcp	# NETCONF Call Home (SSH)
 netconf-ch-tls	4335/tcp	# NETCONF Call Home (TLS)
 restconf-ch-tls	4336/tcp	# RESTCONF Call Home (TLS)
 gaia		4340/tcp/udp	# Gaia Connector Protocol
-lisp-data	4341/tcp/udp	# LISP Data Packets
-lisp-cons	4342/tcp	# LISP-CONS Control
+lisp-data	4341/udp	# LISP Data Packets
 lisp-control	4342/udp	# LISP Control Packets
 unicall		4343/tcp/udp	# UNICALL
 vinainstall	4344/tcp/udp	# VinaInstall
@@ -5224,10 +5225,12 @@ lm-instmgr	8205/tcp/udp	# LM Instmgr
 lm-dta		8206/tcp/udp	# LM Dta
 lm-sserver	8207/tcp/udp	# LM SServer
 lm-webwatcher	8208/tcp/udp	# LM Webwatcher
+aruba-papi	8211/udp	# Aruba Networks AP management
 rexecj		8230/tcp/udp	# RexecJ Server
 hncp-udp-port	8231/udp	# HNCP
 hncp-dtls-port	8232/udp	# HNCP over DTLS
 synapse-nhttps	8243/tcp/udp	# Synapse Non Blocking HTTPS
+espeasy-p2p	8266/udp	# ESPeasy peer-2-peer communication
 robot-remote	8270/tcp	# Robot Framework Remote Library Interface
 pando-sec	8276/tcp/udp	# Pando Media Controlled Distribution
 synapse-nhttp	8280/tcp/udp	# Synapse Non Blocking HTTP
@@ -5311,6 +5314,7 @@ acd-pm		8793/tcp/udp	# Accedian Performance Measurement
 sunwebadmin	8800/tcp/udp	# Sun Web Server Admin Service
 truecm		8804/tcp/udp
 pfcp		8805/udp	# Destination Port number for PFCP
+hes-clip	8807/udp	# HES-CLIP Interoperability protocol
 ssports-bcast	8808/udp	# STATSports Broadcast Service
 dxspider	8873/tcp/udp	# dxspider linking protocol
 cddbp-alt	8880/tcp/udp	# CDDBP
@@ -6062,6 +6066,7 @@ fairview	38202/tcp/udp	# Fairview Message Service
 agpolicy	38203/tcp/udp	# AppGate Policy Server
 ng-control	38412/sctp	# NG Control Plane (3GPP)
 xn-control	38422/sctp	# Xn Control Plane (3GPP)
+e1-interface	38462/sctp	# E1 signalling transport (3GPP)
 f1-control	38472/sctp	# F1 Control Plane (3GPP)
 sruth		38800/tcp	# Sruth is a service for the distribution of routinely- generated but arbitrary files based on a publish/subscribe distribution model and implemented using a peer-to-peer transport mechanism
 secrmmsafecopya	38865/tcp	# Security approval process for use of the secRMM SafeCopy program

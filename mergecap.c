@@ -67,7 +67,11 @@ print_usage(FILE *output)
   fprintf(output, "                    default is to merge based on frame timestamps.\n");
   fprintf(output, "  -s <snaplen>      truncate packets to <snaplen> bytes of data.\n");
   fprintf(output, "  -w <outfile>|-    set the output filename to <outfile> or '-' for stdout.\n");
+#ifdef PCAP_NG_DEFAULT
   fprintf(output, "  -F <capture type> set the output file type; default is pcapng.\n");
+#else
+  fprintf(output, "  -F <capture type> set the output file type; default is pcap.\n");
+#endif
   fprintf(output, "                    an empty \"-F\" option will list the file types.\n");
   fprintf(output, "  -I <IDB merge mode> set the merge mode for Interface Description Blocks; default is 'all'.\n");
   fprintf(output, "                    an empty \"-I\" option will list the merge modes.\n");
@@ -225,9 +229,8 @@ merge_callback(merge_event event, int num,
   return FALSE;
 }
 
-
-int
-main(int argc, char *argv[])
+static int
+real_main(int argc, char *argv[])
 {
   GString            *comp_info_str;
   GString            *runtime_info_str;
@@ -243,9 +246,9 @@ main(int argc, char *argv[])
   int                 in_file_count      = 0;
   guint32             snaplen            = 0;
 #ifdef PCAP_NG_DEFAULT
-  int                 file_type          = WTAP_FILE_TYPE_SUBTYPE_PCAPNG; /* default to pcap format */
+  int                 file_type          = WTAP_FILE_TYPE_SUBTYPE_PCAPNG; /* default to pcapng format */
 #else
-  int                 file_type          = WTAP_FILE_TYPE_SUBTYPE_PCAP; /* default to pcapng format */
+  int                 file_type          = WTAP_FILE_TYPE_SUBTYPE_PCAP; /* default to pcap format */
 #endif
   int                 err                = 0;
   gchar              *err_info           = NULL;
@@ -259,7 +262,6 @@ main(int argc, char *argv[])
   cmdarg_err_init(mergecap_cmdarg_err, mergecap_cmdarg_err_cont);
 
 #ifdef _WIN32
-  arg_list_utf_16to8(argc, argv);
   create_app_running_mutex();
 #endif /* _WIN32 */
 
@@ -288,7 +290,7 @@ main(int argc, char *argv[])
    * Attempt to get the pathname of the directory containing the
    * executable file.
    */
-  init_progfile_dir_error = init_progfile_dir(argv[0], main);
+  init_progfile_dir_error = init_progfile_dir(argv[0], NULL);
   if (init_progfile_dir_error != NULL) {
     fprintf(stderr,
             "mergecap: Can't get pathname of directory containing the mergecap program: %s.\n",
@@ -473,6 +475,23 @@ clean_exit:
   return (status == MERGE_OK) ? 0 : 2;
 }
 
+#ifdef _WIN32
+int
+wmain(int argc, wchar_t *wc_argv[])
+{
+  char **argv;
+
+  argv = arg_list_utf_16to8(argc, wc_argv);
+  return real_main(argc, argv);
+}
+#else
+int
+main(int argc, char *argv[])
+{
+  return real_main(argc, argv);
+}
+#endif
+
 /*
  * Editor modelines  -  http://www.wireshark.org/tools/modelines.html
  *
@@ -485,4 +504,3 @@ clean_exit:
  * vi: set shiftwidth=2 tabstop=8 expandtab:
  * :indentSize=2:tabSize=8:noTabs=true:
  */
-

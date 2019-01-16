@@ -11,6 +11,23 @@
 # that way.
 #
 
+if [ "$1" = "--help" ]
+then
+	echo "\nUtility to setup a rpm-based system for Wireshark Development.\n"
+	echo "The basic usage installs the needed software\n\n"
+	echo "Usage: $0 [--install-optional] [...other options...]\n"
+	echo "\t--install-optional: install optional software as well"
+	echo "\t[other]: other options are passed as-is to the packet manager\n"
+	exit 1
+fi
+
+# Check if the user is root
+if [ $(id -u) -ne 0 ]
+then
+	echo "You must be root."
+	exit 1
+fi
+
 for op
 do
 	if [ "$op" = "--install-optional" ]
@@ -21,13 +38,40 @@ do
 	fi
 done
 
-BASIC_LIST="autoconf automake libtool gcc flex bison python perl lua-devel lua \
-desktop-file-utils fop asciidoc git git-review gtk2-devel gtk3-devel glib2-devel \
-libpcap-devel zlib-devel"
+BASIC_LIST="gcc \
+	gcc-c++ \
+	flex \
+	bison \
+	python \
+	perl \
+	lua-devel \
+	lua \
+	desktop-file-utils \
+	fop \
+	asciidoc \
+	git \
+	git-review \
+	glib2-devel \
+	libpcap-devel \
+	zlib-devel"
 
-ADDITIONAL_LIST="libnl3-devel libnghttp2-devel libcap libcap-devel \
-libgcrypt-devel libssh-devel krb5-devel perl-Parse-Yapp sbc-devel libsmi-devel \
-snappy-devel lz4"
+ADDITIONAL_LIST="libnl3-devel \
+	libnghttp2-devel \
+	libcap \
+	libcap-devel \
+	libgcrypt-devel \
+	libssh-devel \
+	krb5-devel \
+	perl-Parse-Yapp \
+	sbc-devel \
+	libsmi-devel \
+	snappy-devel \
+	lz4 \
+	json-glib-devel \
+	doxygen \
+	libxml2-devel \
+	spandsp-devel \
+	rpm-build"
 
 # Guess which package manager we will use
 PM=`which zypper 2> /dev/null ||
@@ -42,6 +86,7 @@ fi
 
 case $PM in
 	*/zypper)
+		PM_OPT="--non-interactive"
 		PM_SEARCH="search -x --provides"
 		;;
 	*/dnf)
@@ -64,6 +109,9 @@ add_package() {
 	# package is found, append it to list
 	eval "${list}=\"\${${list}} \${pkgname}\""
 }
+
+add_package BASIC_LIST cmake3 || add_package BASIC_LIST cmake ||
+echo "cmake is unavailable" >&2
 
 add_package BASIC_LIST glib2 || add_package BASIC_LIST libglib-2_0-0 ||
 echo "glib2 is unavailable" >&2
@@ -121,15 +169,24 @@ echo "Gettext devel is unavailable" >&2
 add_package ADDITIONAL_LIST perl-Pod-Html ||
 echo "perl-Pod-Html is unavailable" >&2
 
-add_package ADDITIONAL_LIST asciidoctor ||
+add_package ADDITIONAL_LIST asciidoctor || add_package ADDITIONAL_LIST rubygem-asciidoctor.noarch ||
 echo "asciidoctor is unavailable" >&2
 
-$PM install $BASIC_LIST
+add_package ADDITIONAL_LIST ninja || add_package ADDITIONAL_LIST ninja-build ||
+echo "ninja is unavailable" >&2
+
+ACTUAL_LIST=$BASIC_LIST
+
+# Now arrange for optional support libraries
+if [ $ADDITIONAL ]
+then
+	ACTUAL_LIST="$ACTUAL_LIST $ADDITIONAL_LIST"
+fi
+
+$PM $PM_OPT install $ACTUAL_LIST $OPTIONS
 
 # Now arrange for optional support libraries
 if [ ! $ADDITIONAL ]
 then
 	echo -e "\n*** Optional packages not installed. Rerun with --install-optional to have them.\n"
-else
-	$PM install $ADDITIONAL_LIST $OPTIONS
 fi

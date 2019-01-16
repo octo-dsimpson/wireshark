@@ -3005,7 +3005,7 @@ decode_mcast_vpn_nlri(proto_tree *tree, tvbuff_t *tvb, gint offset, guint16 afi)
                                1, ENC_BIG_ENDIAN);
     offset++;
 
-    if (length < tvb_reported_length_remaining(tvb, offset))
+    if (length > tvb_reported_length_remaining(tvb, offset))
         return -1;
 
     item = proto_tree_add_item(tree, hf_bgp_mcast_vpn_nlri_t, tvb, offset,
@@ -3058,6 +3058,17 @@ decode_mcast_vpn_nlri(proto_tree *tree, tvbuff_t *tvb, gint offset, guint16 afi)
             ret = decode_mcast_vpn_nlri_addresses(nlri_tree, tvb, offset);
             if (ret < 0)
                 return -1;
+
+            offset = ret;
+
+            if (afi == AFNUM_INET)
+                proto_tree_add_item(nlri_tree,
+                                           hf_bgp_mcast_vpn_nlri_origin_router_ipv4,
+                                           tvb, offset, ip_length, ENC_BIG_ENDIAN);
+            else
+                proto_tree_add_item(nlri_tree,
+                                           hf_bgp_mcast_vpn_nlri_origin_router_ipv6,
+                                           tvb, offset, ip_length, ENC_NA);
             break;
 
         case MCAST_VPN_RTYPE_LEAF_AD:
@@ -7603,7 +7614,7 @@ dissect_bgp_path_attr(proto_tree *subtree, tvbuff_t *tvb, guint16 path_attr_len,
                             break;
                     default:
                         proto_tree_add_expert_format(subtree2, pinfo, &ei_bgp_prefix_sid_type_err, tvb, o + i + aoff, alen,
-                            "Unknwon BGP Prefix-SID TLV type: %u", prefix_sid_subtype);
+                            "Unknown BGP Prefix-SID TLV type: %u", prefix_sid_subtype);
                         q += 3 + prefix_sid_sublen;
                         break;
                     }

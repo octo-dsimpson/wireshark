@@ -488,7 +488,9 @@ void MainWindow::layoutToolbars()
 
     main_ui_->mainToolBar->setVisible(recent.main_toolbar_show);
     main_ui_->displayFilterToolBar->setVisible(recent.filter_toolbar_show);
+#if defined(HAVE_LIBNL) && defined(HAVE_NL80211)
     main_ui_->wirelessToolBar->setVisible(recent.wireless_toolbar_show);
+#endif
     main_ui_->statusBar->setVisible(recent.statusbar_show);
 
     foreach (QAction *action, main_ui_->menuInterfaceToolbars->actions()) {
@@ -2393,9 +2395,11 @@ void MainWindow::showHideMainWidgets(QAction *action)
     } else if (widget == main_ui_->displayFilterToolBar) {
         recent.filter_toolbar_show = show;
         main_ui_->actionViewFilterToolbar->setChecked(show);
+#if defined(HAVE_LIBNL) && defined(HAVE_NL80211)
      } else if (widget == main_ui_->wirelessToolBar) {
         recent.wireless_toolbar_show = show;
         main_ui_->actionViewWirelessToolbar->setChecked(show);
+#endif
     } else if (widget == main_ui_->statusBar) {
         recent.statusbar_show = show;
         main_ui_->actionViewStatusBar->setChecked(show);
@@ -4140,23 +4144,18 @@ void MainWindow::filterToolbarEditFilter()
 
 void MainWindow::filterDropped(QString description, QString filter)
 {
-    gchar* err = NULL;
     if ( filter.length() == 0 )
         return;
 
     filter_expression_new(qUtf8Printable(description),
             qUtf8Printable(filter), qUtf8Printable(description), TRUE);
 
-    uat_save(uat_get_table_by_name("Display expressions"), &err);
-    g_free(err);
-
+    save_migrated_uat("Display expressions", &prefs.filter_expressions_old);
     filterExpressionsChanged();
 }
 
 void MainWindow::filterToolbarDisableFilter()
 {
-    gchar* err = NULL;
-
     QString label = ((QAction *)sender())->property(dfe_property_label_).toString();
     QString expr = ((QAction *)sender())->property(dfe_property_expression_).toString();
 
@@ -4167,15 +4166,13 @@ void MainWindow::filterToolbarDisableFilter()
     if ( rowIndex.isValid() ) {
         uatModel->setData(rowIndex, QVariant::fromValue(false));
 
-        uat_save(uat_get_table_by_name("Display expressions"), &err);
-        g_free(err);
+        save_migrated_uat("Display expressions", &prefs.filter_expressions_old);
         filterExpressionsChanged();
     }
 }
 
 void MainWindow::filterToolbarRemoveFilter()
 {
-    gchar* err = NULL;
     UatModel * uatModel = new UatModel(this, "Display expressions");
 
     QString label = ((QAction *)sender())->property(dfe_property_label_).toString();
@@ -4187,8 +4184,7 @@ void MainWindow::filterToolbarRemoveFilter()
     if ( rowIndex.isValid() ) {
         uatModel->removeRow(rowIndex.row());
 
-        uat_save(uat_get_table_by_name("Display expressions"), &err);
-        g_free(err);
+        save_migrated_uat("Display expressions", &prefs.filter_expressions_old);
         filterExpressionsChanged();
     }
 }

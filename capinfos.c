@@ -1359,7 +1359,7 @@ print_usage(FILE *output)
   fprintf(output, "  -A generate all infos (default)\n");
   fprintf(output, "  -K disable displaying the capture comment\n");
   fprintf(output, "\n");
-  fprintf(output, "Options are processed from left to right order with later options superceding\n");
+  fprintf(output, "Options are processed from left to right order with later options superseding\n");
   fprintf(output, "or adding to earlier options.\n");
   fprintf(output, "\n");
   fprintf(output, "If no options are given the default is to display all infos in long report\n");
@@ -1397,8 +1397,8 @@ hash_to_str(const unsigned char *hash, size_t length, char *str) {
   }
 }
 
-int
-main(int argc, char *argv[])
+static int
+real_main(int argc, char *argv[])
 {
   GString *comp_info_str;
   GString *runtime_info_str;
@@ -1445,7 +1445,6 @@ main(int argc, char *argv[])
   g_string_free(runtime_info_str, TRUE);
 
 #ifdef _WIN32
-  arg_list_utf_16to8(argc, argv);
   create_app_running_mutex();
 #endif /* _WIN32 */
 
@@ -1458,7 +1457,7 @@ main(int argc, char *argv[])
    * Attempt to get the pathname of the directory containing the
    * executable file.
    */
-  init_progfile_dir_error = init_progfile_dir(argv[0], main);
+  init_progfile_dir_error = init_progfile_dir(argv[0], NULL);
   if (init_progfile_dir_error != NULL) {
     fprintf(stderr,
             "capinfos: Can't get pathname of directory containing the capinfos program: %s.\n",
@@ -1724,6 +1723,23 @@ exit:
   free_progdirs();
   return overall_error_status;
 }
+
+#ifdef _WIN32
+int
+wmain(int argc, wchar_t *wc_argv[])
+{
+  char **argv;
+
+  argv = arg_list_utf_16to8(argc, wc_argv);
+  return real_main(argc, argv);
+}
+#else
+int
+main(int argc, char *argv[])
+{
+  return real_main(argc, argv);
+}
+#endif
 
 /*
  * Editor modelines  -  http://www.wireshark.org/tools/modelines.html

@@ -804,8 +804,12 @@ print_usage(FILE *output)
     fprintf(output, "  -i <seconds per file>  split the packet output to different files based on\n");
     fprintf(output, "                         uniform time intervals with a maximum of\n");
     fprintf(output, "                         <seconds per file> each.\n");
-    fprintf(output, "  -F <capture type>      set the output file type; default is pcapng. An empty\n");
-    fprintf(output, "                         \"-F\" option will list the file types.\n");
+#ifdef PCAP_NG_DEFAULT
+    fprintf(output, "  -F <capture type>      set the output file type; default is pcapng.\n");
+#else
+    fprintf(output, "  -F <capture type>      set the output file type; default is pcap.\n");
+#endif
+    fprintf(output, "                         An empty \"-F\" option will list the file types.\n");
     fprintf(output, "  -T <encap type>        set the output file encapsulation type; default is the\n");
     fprintf(output, "                         same as the input file. An empty \"-T\" option will\n");
     fprintf(output, "                         list the encapsulation types.\n");
@@ -940,8 +944,8 @@ editcap_dump_open(const char *filename, guint32 snaplen,
   return pdh;
 }
 
-int
-main(int argc, char *argv[])
+static int
+real_main(int argc, char *argv[])
 {
     GString      *comp_info_str;
     GString      *runtime_info_str;
@@ -992,7 +996,6 @@ main(int argc, char *argv[])
     cmdarg_err_init(failure_warning_message, failure_message_cont);
 
 #ifdef _WIN32
-    arg_list_utf_16to8(argc, argv);
     create_app_running_mutex();
 #endif /* _WIN32 */
 
@@ -1021,7 +1024,7 @@ main(int argc, char *argv[])
      * Attempt to get the pathname of the directory containing the
      * executable file.
      */
-    init_progfile_dir_error = init_progfile_dir(argv[0], main);
+    init_progfile_dir_error = init_progfile_dir(argv[0], NULL);
     if (init_progfile_dir_error != NULL) {
         fprintf(stderr,
                 "editcap: Can't get pathname of directory containing the editcap program: %s.\n",
@@ -1883,6 +1886,23 @@ clean_exit:
     free_progdirs();
     return ret;
 }
+
+#ifdef _WIN32
+int
+wmain(int argc, wchar_t *wc_argv[])
+{
+    char **argv;
+
+    argv = arg_list_utf_16to8(argc, wc_argv);
+    return real_main(argc, argv);
+}
+#else
+int
+main(int argc, char *argv[])
+{
+    return real_main(argc, argv);
+}
+#endif
 
 /* Skip meta-information read from file to return offset of real
  * protocol data */

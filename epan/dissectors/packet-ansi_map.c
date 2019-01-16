@@ -9851,7 +9851,7 @@ dissect_ansi_map_QualificationRequest(gboolean implicit_tag _U_, tvbuff_t *tvb _
 
 static const ber_sequence_t QualificationRequestRes_U_set[] = {
   { &hf_ansi_map_systemMyTypeCode, BER_CLASS_CON, 22, BER_FLAGS_IMPLTAG, dissect_ansi_map_SystemMyTypeCode },
-  { &hf_ansi_map_analogRedirectRecord, BER_CLASS_CON, 225, BER_FLAGS_IMPLTAG, dissect_ansi_map_AnalogRedirectRecord },
+  { &hf_ansi_map_analogRedirectRecord, BER_CLASS_CON, 225, BER_FLAGS_OPTIONAL|BER_FLAGS_IMPLTAG, dissect_ansi_map_AnalogRedirectRecord },
   { &hf_ansi_map_authorizationDenied, BER_CLASS_CON, 13, BER_FLAGS_OPTIONAL|BER_FLAGS_IMPLTAG, dissect_ansi_map_AuthorizationDenied },
   { &hf_ansi_map_authorizationPeriod, BER_CLASS_CON, 14, BER_FLAGS_OPTIONAL|BER_FLAGS_IMPLTAG, dissect_ansi_map_AuthorizationPeriod },
   { &hf_ansi_map_cdmaRedirectRecord, BER_CLASS_CON, 229, BER_FLAGS_OPTIONAL|BER_FLAGS_IMPLTAG, dissect_ansi_map_CDMARedirectRecord },
@@ -10267,7 +10267,7 @@ static const ber_sequence_t RegistrationNotification_U_set[] = {
   { &hf_ansi_map_qualificationInformationCode, BER_CLASS_CON, 17, BER_FLAGS_IMPLTAG, dissect_ansi_map_QualificationInformationCode },
   { &hf_ansi_map_systemMyTypeCode, BER_CLASS_CON, 22, BER_FLAGS_IMPLTAG, dissect_ansi_map_SystemMyTypeCode },
   { &hf_ansi_map_availabilityType, BER_CLASS_CON, 90, BER_FLAGS_OPTIONAL|BER_FLAGS_IMPLTAG, dissect_ansi_map_AvailabilityType },
-  { &hf_ansi_map_borderCellAccess, BER_CLASS_CON, 50, BER_FLAGS_OPTIONAL|BER_FLAGS_IMPLTAG, dissect_ansi_map_BorderCellAccess },
+  { &hf_ansi_map_borderCellAccess, BER_CLASS_CON, 58, BER_FLAGS_OPTIONAL|BER_FLAGS_IMPLTAG, dissect_ansi_map_BorderCellAccess },
   { &hf_ansi_map_cdmaNetworkIdentification, BER_CLASS_CON, 232, BER_FLAGS_OPTIONAL|BER_FLAGS_IMPLTAG, dissect_ansi_map_CDMANetworkIdentification },
   { &hf_ansi_map_controlChannelData, BER_CLASS_CON, 55, BER_FLAGS_OPTIONAL|BER_FLAGS_IMPLTAG, dissect_ansi_map_ControlChannelData },
   { &hf_ansi_map_controlChannelMode, BER_CLASS_CON, 199, BER_FLAGS_OPTIONAL|BER_FLAGS_IMPLTAG, dissect_ansi_map_ControlChannelMode },

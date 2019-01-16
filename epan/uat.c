@@ -643,7 +643,41 @@ gboolean uat_fld_chk_num_dec(void* u1 _U_, const char* strptr, guint len, const 
 }
 
 gboolean uat_fld_chk_num_hex(void* u1 _U_, const char* strptr, guint len, const void* u2 _U_, const void* u3 _U_, char** err) {
-    return uat_fld_chk_num(16, strptr, len, err);
+    if (len > 0) {
+        char* str = g_strndup(strptr, len);
+        const char* strn;
+        gboolean result;
+        guint32 value;
+
+        result = ws_hexstrtou32(str, &strn, &value);
+        if (result && ((*strn != '\0') && (*strn != ' '))) {
+            /* string valid, but followed by something other than a space */
+            result = FALSE;
+            errno = EINVAL;
+        }
+        if (!result) {
+            switch (errno) {
+
+            case EINVAL:
+                *err = g_strdup("Invalid value");
+                break;
+
+            case ERANGE:
+                *err = g_strdup("Value too large");
+                break;
+
+            default:
+                *err = g_strdup(g_strerror(errno));
+                break;
+            }
+        }
+        g_free(str);
+
+        return result;
+    }
+
+    *err = NULL;
+    return TRUE;
 }
 
 gboolean uat_fld_chk_bool(void* u1 _U_, const char* strptr, guint len, const void* u2 _U_, const void* u3 _U_, char** err)

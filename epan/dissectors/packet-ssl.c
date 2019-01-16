@@ -543,7 +543,7 @@ static gint dissect_ssl3_record(tvbuff_t *tvb, packet_info *pinfo,
 /* alert message dissector */
 static void dissect_ssl3_alert(tvbuff_t *tvb, packet_info *pinfo,
                                proto_tree *tree, guint32 offset,
-                               const SslSession *session);
+                               guint32 record_length, const SslSession *session);
 
 /* handshake protocol dissector */
 static void dissect_ssl3_handshake(tvbuff_t *tvb, packet_info *pinfo,
@@ -1157,6 +1157,22 @@ process_ssl_payload(tvbuff_t *tvb, int offset, packet_info *pinfo,
                     proto_tree *tree, SslSession *session,
                     dissector_handle_t app_handle_port);
 
+static guint32
+tls_msp_fragment_id(struct tcp_multisegment_pdu *msp)
+{
+    /*
+     * If a frame contains multiple appdata PDUs, then "first_frame" is not
+     * sufficient to uniquely identify groups of fragments. Therefore include
+     * seq (the position of the initial fragment in the TLS stream) in the ID.
+     * As a frame most likely does not have multiple PDUs (except maybe for
+     * HTTP2), just let 'seq' contibute only a few bits.
+     */
+    guint32 id = msp->first_frame;
+    id ^= (msp->seq & 0xff) << 24;
+    id ^= (msp->seq & 0xff00) << 16;
+    return id;
+}
+
 static void
 desegment_ssl(tvbuff_t *tvb, packet_info *pinfo, int offset,
               guint32 seq, guint32 nxtseq,
@@ -1243,7 +1259,7 @@ again:
         }
 
         ipfd_head = fragment_add(&ssl_reassembly_table, tvb, offset,
-                                 pinfo, msp->first_frame, NULL,
+                                 pinfo, tls_msp_fragment_id(msp), NULL,
                                  seq - msp->seq,
                                  len, (LT_SEQ (nxtseq,msp->nxtpdu)));
 
@@ -1369,7 +1385,7 @@ again:
                  * needs desegmentation).
                  */
                 fragment_set_partial_reassembly(&ssl_reassembly_table,
-                                                pinfo, msp->first_frame, NULL);
+                                                pinfo, tls_msp_fragment_id(msp), NULL);
                 /* Update msp->nxtpdu to point to the new next
                  * pdu boundary.
                  */
@@ -1515,7 +1531,7 @@ again:
 
             /* add this segment as the first one for this new pdu */
             fragment_add(&ssl_reassembly_table, tvb, deseg_offset,
-                         pinfo, msp->first_frame, NULL,
+                         pinfo, tls_msp_fragment_id(msp), NULL,
                          0, nxtseq - deseg_seq,
                          LT_SEQ(nxtseq, msp->nxtpdu));
         }
@@ -1956,9 +1972,9 @@ dissect_ssl3_record(tvbuff_t *tvb, packet_info *pinfo,
         break;
     case SSL_ID_ALERT:
         if (decrypted) {
-            dissect_ssl3_alert(decrypted, pinfo, ssl_record_tree, 0, session);
+            dissect_ssl3_alert(decrypted, pinfo, ssl_record_tree, 0, 2, session);
         } else {
-            dissect_ssl3_alert(tvb, pinfo, ssl_record_tree, offset, session);
+            dissect_ssl3_alert(tvb, pinfo, ssl_record_tree, offset, record_length, session);
         }
         break;
     case SSL_ID_HANDSHAKE:
@@ -2044,7 +2060,7 @@ dissect_ssl3_record(tvbuff_t *tvb, packet_info *pinfo,
 /* dissects the alert message, filling in the tree */
 static void
 dissect_ssl3_alert(tvbuff_t *tvb, packet_info *pinfo,
-                   proto_tree *tree, guint32 offset,
+                   proto_tree *tree, guint32 offset, guint32 record_length,
                    const SslSession *session)
 {
     /*     struct {
@@ -2062,7 +2078,7 @@ dissect_ssl3_alert(tvbuff_t *tvb, packet_info *pinfo,
     if (tree)
     {
         ti = proto_tree_add_item(tree, hf_ssl_alert_message, tvb,
-                                 offset, 2, ENC_NA);
+                                 offset, record_length, ENC_NA);
         ssl_alert_tree = proto_item_add_subtree(ti, ett_ssl_alert);
     }
 

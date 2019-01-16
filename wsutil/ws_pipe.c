@@ -330,6 +330,17 @@ GPid ws_pipe_spawn_async(ws_pipe_t *ws_pipe, GPtrArray *args)
     return pid;
 }
 
+void ws_pipe_close(ws_pipe_t * ws_pipe)
+{
+    if (ws_pipe->pid != WS_INVALID_PID) {
+#ifdef _WIN32
+        TerminateProcess(ws_pipe->pid, 0);
+#endif
+        g_spawn_close_pid(ws_pipe->pid);
+        ws_pipe->pid = WS_INVALID_PID;
+    }
+}
+
 #ifdef _WIN32
 
 typedef struct
@@ -576,8 +587,15 @@ ws_read_string_from_pipe(ws_pipe_handle read_pipe, gchar *buffer,
             return FALSE;
         }
 #else
+        /*
+         * Check if data is available before doing a blocking I/O read.
+         */
+        if (!ws_pipe_data_available(read_pipe)) {
+            break;
+        }
+
         bytes_to_read = buffer_bytes_remaining;
-        bytes_read = read(read_pipe, buffer, bytes_to_read);
+        bytes_read = read(read_pipe, &buffer[total_bytes_read], bytes_to_read);
         if (bytes_read == -1)
         {
             /* XXX - provide an error string */

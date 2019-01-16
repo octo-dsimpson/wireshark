@@ -7,7 +7,7 @@
 #
 m4_define([version_major], [2])
 m4_define([version_minor], [6])
-m4_define([version_micro], [3])
+m4_define([version_micro], [6])
 dnl Updated by make-version.pl
 m4_define([version_extra], [])
 m4_define([version_micro_extra], m4_join([], version_micro, version_extra))
@@ -467,7 +467,7 @@ AM_CONDITIONAL(BUILD_USER_GUIDE, [test "x$have_wsug" = xyes -a "x$want_wsug" != 
 AC_CHECK_PROGS(RPMBUILD, [rpmbuild], [rpmbuild])
 
 # Shellcheck
-AC_CHECK_PROG(SHELLCHECK, shellcheck)
+AC_PATH_PROG(SHELLCHECK, shellcheck)
 
 #
 # Check compiler vendor. For GCC this will be 'gnu' and for Clang 'clang'.
@@ -1469,42 +1469,11 @@ elif test "$have_gtk" = "no" -a "$have_qt" = "no" ; then
 	wireshark_SUBDIRS=""
 fi
 
-#
-# If we have <dlfcn.h>, check whether we have dladdr.
-#
-if test "$ac_cv_header_dlfcn_h" = "yes"
-then
-	#
-	# Use GLib compiler flags and linker flags; GLib's gmodule
-	# stuff uses the dl APIs if available, so it might know
-	# what flags are needed.
-	#
-	ac_save_CFLAGS="$CFLAGS"
-	ac_save_LIBS="$LIBS"
-	CFLAGS="$WS_CFLAGS $GLIB_CFLAGS $CFLAGS"
-	LIBS="$LIBS $GLIB_LIBS"
-	AC_CHECK_FUNCS(dladdr)
-	if test x$ac_cv_func_dladdr = xno
-	then
-		#
-		# OK, try it with -ldl, in case you need that to get
-		# dladdr().  For some reason, on Linux, that's not
-		# part of the GLib flags; perhaps GLib itself is
-		# linked with libdl, so that you can link with
-		# Glib and it'll pull libdl in itself.
-		#
-		LIBS="$LIBS -ldl"
-		AC_CHECK_FUNCS(dladdr)
-	fi
-	CFLAGS="$ac_save_CFLAGS"
-	LIBS="$ac_save_LIBS"
-fi
-
 AC_SUBST(wireshark_bin)
 AC_SUBST(wireshark_man)
 AC_SUBST(wireshark_SUBDIRS)
 AM_CONDITIONAL(HAVE_Qt, test "$have_qt" = "yes")
-AM_CONDITIONAL(HAVE_QT_VERSION_4, [test $qt_version -eq 4])
+AM_CONDITIONAL(HAVE_QT_VERSION_4, [test "$qt_version" -eq 4])
 AM_CONDITIONAL(HAVE_GTK, test "$have_gtk" = "yes")
 
 # Enable/disable tshark

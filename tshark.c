@@ -370,7 +370,7 @@ print_usage(FILE *output)
   fprintf(output, "  -Y <display filter>      packet displaY filter in Wireshark display filter\n");
   fprintf(output, "                           syntax\n");
   fprintf(output, "  -n                       disable all name resolutions (def: all enabled)\n");
-  fprintf(output, "  -N <name resolve flags>  enable specific name resolution(s): \"mnNtCd\"\n");
+  fprintf(output, "  -N <name resolve flags>  enable specific name resolution(s): \"mnNtdv\"\n");
   fprintf(output, "  -d %s ...\n", DECODE_AS_ARG_TEMPLATE);
   fprintf(output, "                           \"Decode As\", see the man page for details\n");
   fprintf(output, "                           Example: tcp.port==8888,http\n");
@@ -387,10 +387,18 @@ print_usage(FILE *output)
 
   /*fprintf(output, "\n");*/
   fprintf(output, "Output:\n");
+#ifdef PCAP_NG_DEFAULT
+  fprintf(output, "  -w <outfile|->           write packets to a pcapng-format file named \"outfile\"\n");
+#else
   fprintf(output, "  -w <outfile|->           write packets to a pcap-format file named \"outfile\"\n");
+#endif
   fprintf(output, "                           (or to the standard output for \"-\")\n");
   fprintf(output, "  -C <config profile>      start with specified configuration profile\n");
+#ifdef PCAP_NG_DEFAULT
   fprintf(output, "  -F <output file type>    set the output file type, default is pcapng\n");
+#else
+  fprintf(output, "  -F <output file type>    set the output file type, default is pcap\n");
+#endif
   fprintf(output, "                           an empty \"-F\" option will list the file types\n");
   fprintf(output, "  -V                       add output of packet tree        (Packet Details)\n");
   fprintf(output, "  -O <protocols>           Only show packet details of these protocols, comma\n");
@@ -438,7 +446,7 @@ print_usage(FILE *output)
   fprintf(output, "                           (Note that attributes are nonstandard)\n");
   fprintf(output, "  --no-duplicate-keys      If -T json is specified, merge duplicate keys in an object\n");
   fprintf(output, "                           into a single key with as value a json array containing all\n");
-  fprintf(output, "                           values");
+  fprintf(output, "                           values\n");
 
   fprintf(output, "\n");
   fprintf(output, "Miscellaneous:\n");
@@ -660,8 +668,8 @@ must_do_dissection(dfilter_t *rfcode, dfilter_t *dfcode,
       tap_listeners_require_dissection() || dissect_color;
 }
 
-int
-main(int argc, char *argv[])
+static int
+real_main(int argc, char *argv[])
 {
   GString             *comp_info_str;
   GString             *runtime_info_str;
@@ -751,7 +759,6 @@ main(int argc, char *argv[])
   cmdarg_err_init(failure_warning_message, failure_message_cont);
 
 #ifdef _WIN32
-  arg_list_utf_16to8(argc, argv);
   create_app_running_mutex();
 #if !GLIB_CHECK_VERSION(2,31,0)
   g_thread_init(NULL);
@@ -771,7 +778,7 @@ main(int argc, char *argv[])
    * Attempt to get the pathname of the directory containing the
    * executable file.
    */
-  init_progfile_dir_error = init_progfile_dir(argv[0], main);
+  init_progfile_dir_error = init_progfile_dir(argv[0], NULL);
   if (init_progfile_dir_error != NULL) {
     fprintf(stderr,
             "tshark: Can't get pathname of directory containing the tshark program: %s.\n"
@@ -1992,10 +1999,10 @@ main(int argc, char *argv[])
       /* Activate the export PDU tap */
       comment = g_strdup_printf("Dump of PDUs from %s", cf_name);
       err = exp_pdu_open(&exp_pdu_tap_data, exp_fd, comment);
+      g_free(comment);
       if (err != 0) {
           cfile_dump_open_failure_message("TShark", exp_pdu_filename, err,
                                           WTAP_FILE_TYPE_SUBTYPE_PCAPNG);
-          g_free(comment);
           exit_status = INVALID_EXPORT;
           goto clean_exit;
       }
@@ -2233,6 +2240,23 @@ clean_exit:
   cf_close(&cfile);
   return exit_status;
 }
+
+#ifdef _WIN32
+int
+wmain(int argc, wchar_t *wc_argv[])
+{
+  char **argv;
+
+  argv = arg_list_utf_16to8(argc, wc_argv);
+  return real_main(argc, argv);
+}
+#else
+int
+main(int argc, char *argv[])
+{
+  return real_main(argc, argv);
+}
+#endif
 
 /*#define USE_BROKEN_G_MAIN_LOOP*/
 

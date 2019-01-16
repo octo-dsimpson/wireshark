@@ -464,8 +464,8 @@ static const struct {
 	/*
 	 * To repeat:
 	 *
-	 * If you need a new encapsulation type for libpcap files, do
-	 * *N*O*T* use *ANY* of the values listed here!  I.e., do *NOT*
+	 * If you need a new encapsulation type for pcap and pcapng files,
+	 * do *N*O*T* use *ANY* of the values listed here!  I.e., do *NOT*
 	 * add a new encapsulation type by changing an existing entry;
 	 * leave the existing entries alone.
 	 *
@@ -489,10 +489,10 @@ static const struct {
 	 */
 
 	/*
-	 * 11 is DLT_ATM_RFC1483 on most platforms; the only libpcaps I've
-	 * seen that define anything other than DLT_ATM_RFC1483 as 11 are
-	 * the BSD/OS one, which defines DLT_FR as 11.  We handle it as
-	 * Frame Relay on BSD/OS and LLC-encapsulated ATM on all other
+	 * 11 is DLT_ATM_RFC1483 on most platforms; the only version of
+	 * libpcap I've seen that define anything other than DLT_ATM_RFC1483
+	 * as 11 is the BSD/OS one, which defines DLT_FR as 11.  We handle
+	 * it as Frame Relay on BSD/OS and LLC-encapsulated ATM on all other
 	 * platforms.
 	 */
 #if defined(__bsdi__) /* BSD/OS */
@@ -620,24 +620,25 @@ static const struct {
 	 * 18 is DLT_CIP in SuSE 6.3 libpcap; if it's the same as the
 	 * DLT_CIP of 16 that the Alexey Kuznetzov patches for
 	 * libpcap/tcpdump define, it's WTAP_ENCAP_LINUX_ATM_CLIP.
-	 * I've not found any libpcap that uses it for any other purpose -
-	 * hopefully nobody will do so in the future.
+	 * I've not found any version of libpcap that uses it for any
+	 * other purpose - hopefully nobody will do so in the future.
 	 */
 	{ 18,		WTAP_ENCAP_LINUX_ATM_CLIP },
 
 	/*
 	 * 19 is DLT_ATM_CLIP in the libpcap/tcpdump patches in the
 	 * recent versions I've seen of the Linux ATM distribution;
-	 * I've not yet found any libpcap that uses it for any other
-	 * purpose - hopefully nobody will do so in the future.
+	 * I've not yet found any version of libpcap file that uses it
+	 * for any other purpose - hopefully nobody will do so in
+	 * the future.
 	 */
 	{ 19,		WTAP_ENCAP_LINUX_ATM_CLIP },
 
 	/*
 	 * To repeat:
 	 *
-	 * If you need a new encapsulation type for libpcap files, do
-	 * *N*O*T* use *ANY* of the values listed here!  I.e., do *NOT*
+	 * If you need a new encapsulation type for pcap and pcapng files,
+	 * do *N*O*T* use *ANY* of the values listed here!  I.e., do *NOT*
 	 * add a new encapsulation type by changing an existing entry;
 	 * leave the existing entries alone.
 	 *
@@ -737,28 +738,6 @@ wtap_max_snaplen_for_encap(int wtap_encap)
 	else
 		return WTAP_MAX_PACKET_SIZE_STANDARD;
 }
-
-gboolean
-wtap_encap_requires_phdr(int wtap_encap)
-{
-	switch (wtap_encap) {
-
-	case WTAP_ENCAP_ATM_PDUS:
-	case WTAP_ENCAP_IRDA:
-	case WTAP_ENCAP_MTP2_WITH_PHDR:
-	case WTAP_ENCAP_LINUX_LAPD:
-	case WTAP_ENCAP_SITA:
-	case WTAP_ENCAP_BLUETOOTH_H4_WITH_PHDR:
-	case WTAP_ENCAP_BLUETOOTH_LINUX_MONITOR:
-	case WTAP_ENCAP_NFC_LLCP:
-	case WTAP_ENCAP_PPP_WITH_PHDR:
-	case WTAP_ENCAP_ERF:
-	case WTAP_ENCAP_I2C:
-		return TRUE;
-	}
-	return FALSE;
-}
-
 
 /*
  * Various pseudo-headers that appear at the beginning of packet data.
@@ -1004,7 +983,7 @@ pcap_read_irda_pseudoheader(FILE_T fh, union wtap_pseudo_header *pseudo_header,
 	if (pntoh16(&irda_phdr[IRDA_SLL_PROTOCOL_OFFSET]) != 0x0017) {
 		*err = WTAP_ERR_BAD_FILE;
 		if (err_info != NULL)
-			*err_info = g_strdup("libpcap: IrDA capture has a packet with an invalid sll_protocol field");
+			*err_info = g_strdup("pcap/pcapng: IrDA capture has a packet with an invalid sll_protocol field");
 		return FALSE;
 	}
 
@@ -1040,7 +1019,7 @@ pcap_read_lapd_pseudoheader(FILE_T fh, union wtap_pseudo_header *pseudo_header,
 	if (pntoh16(&lapd_phdr[LAPD_SLL_PROTOCOL_OFFSET]) != ETH_P_LAPD) {
 		*err = WTAP_ERR_BAD_FILE;
 		if (err_info != NULL)
-			*err_info = g_strdup("libpcap: LAPD capture has a packet with an invalid sll_protocol field");
+			*err_info = g_strdup("pcap/pcapng: LAPD capture has a packet with an invalid sll_protocol field");
 		return FALSE;
 	}
 
@@ -1439,7 +1418,7 @@ pcap_byteswap_nflog_pseudoheader(wtap_rec *rec, guint8 *pd)
  * Pseudo-header at the beginning of DLT_BLUETOOTH_HCI_H4_WITH_PHDR frames.
  * Values in network byte order.
  */
-struct libpcap_bt_phdr {
+struct pcap_bt_phdr {
 	guint32 direction;     /* Bit 0 hold the frame direction. */
 };
 
@@ -1450,9 +1429,9 @@ static gboolean
 pcap_read_bt_pseudoheader(FILE_T fh,
     union wtap_pseudo_header *pseudo_header, int *err, gchar **err_info)
 {
-	struct libpcap_bt_phdr phdr;
+	struct pcap_bt_phdr phdr;
 
-	if (!wtap_read_bytes(fh, &phdr, sizeof (struct libpcap_bt_phdr),
+	if (!wtap_read_bytes(fh, &phdr, sizeof (struct pcap_bt_phdr),
 	    err, err_info))
 		return FALSE;
 	pseudo_header->p2p.sent = ((g_ntohl(phdr.direction) & LIBPCAP_BT_PHDR_RECV) == 0)? TRUE: FALSE;
@@ -1463,7 +1442,7 @@ pcap_read_bt_pseudoheader(FILE_T fh,
  * Pseudo-header at the beginning of DLT_BLUETOOTH_LINUX_MONITOR frames.
  * Values in network byte order.
  */
-struct libpcap_bt_monitor_phdr {
+struct pcap_bt_monitor_phdr {
 	guint16 adapter_id;
 	guint16 opcode;
 };
@@ -1472,9 +1451,9 @@ static gboolean
 pcap_read_bt_monitor_pseudoheader(FILE_T fh,
     union wtap_pseudo_header *pseudo_header, int *err, gchar **err_info)
 {
-	struct libpcap_bt_monitor_phdr phdr;
+	struct pcap_bt_monitor_phdr phdr;
 
-	if (!wtap_read_bytes(fh, &phdr, sizeof (struct libpcap_bt_monitor_phdr),
+	if (!wtap_read_bytes(fh, &phdr, sizeof (struct pcap_bt_monitor_phdr),
 	    err, err_info))
 		return FALSE;
 
@@ -1499,7 +1478,7 @@ pcap_read_llcp_pseudoheader(FILE_T fh,
 /*
  * Pseudo-header at the beginning of DLT_PPP_WITH_DIR frames.
  */
-struct libpcap_ppp_phdr {
+struct pcap_ppp_phdr {
 	guint8 direction;
 };
 
@@ -1510,9 +1489,9 @@ static gboolean
 pcap_read_ppp_pseudoheader(FILE_T fh,
     union wtap_pseudo_header *pseudo_header, int *err, gchar **err_info)
 {
-	struct libpcap_ppp_phdr phdr;
+	struct pcap_ppp_phdr phdr;
 
-	if (!wtap_read_bytes(fh, &phdr, sizeof (struct libpcap_ppp_phdr),
+	if (!wtap_read_bytes(fh, &phdr, sizeof (struct pcap_ppp_phdr),
 	    err, err_info))
 		return FALSE;
 	pseudo_header->p2p.sent = (phdr.direction == LIBPCAP_PPP_PHDR_SENT) ? TRUE: FALSE;
@@ -1645,8 +1624,7 @@ pcap_read_i2c_pseudoheader(FILE_T fh, union wtap_pseudo_header *pseudo_header, i
 
 int
 pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
-    guint packet_size, gboolean check_packet_size,
-    wtap_rec *rec, int *err, gchar **err_info)
+    guint packet_size, wtap_rec *rec, int *err, gchar **err_info)
 {
 	int phdr_len = 0;
 	guint size;
@@ -1658,13 +1636,13 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 			/*
 			 * Nokia IPSO ATM.
 			 */
-			if (check_packet_size && packet_size < NOKIAATM_LEN) {
+			if (packet_size < NOKIAATM_LEN) {
 				/*
 				 * Uh-oh, the packet isn't big enough to even
 				 * have a pseudo-header.
 				 */
 				*err = WTAP_ERR_BAD_FILE;
-				*err_info = g_strdup_printf("pcap: Nokia IPSO ATM file has a %u-byte packet, too small to have even an ATM pseudo-header",
+				*err_info = g_strdup_printf("pcap/pcapng: Nokia IPSO ATM file has a %u-byte packet, too small to have even an ATM pseudo-header",
 				    packet_size);
 				return -1;
 			}
@@ -1677,13 +1655,13 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 			/*
 			 * SunATM.
 			 */
-			if (check_packet_size && packet_size < SUNATM_LEN) {
+			if (packet_size < SUNATM_LEN) {
 				/*
 				 * Uh-oh, the packet isn't big enough to even
 				 * have a pseudo-header.
 				 */
 				*err = WTAP_ERR_BAD_FILE;
-				*err_info = g_strdup_printf("pcap: SunATM file has a %u-byte packet, too small to have even an ATM pseudo-header",
+				*err_info = g_strdup_printf("pcap/pcapng: SunATM file has a %u-byte packet, too small to have even an ATM pseudo-header",
 				    packet_size);
 				return -1;
 			}
@@ -1698,7 +1676,7 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 	case WTAP_ENCAP_ETHERNET:
 		if (file_type == WTAP_FILE_TYPE_SUBTYPE_PCAP_NOKIA) {
 			/*
-			 * Nokia IPSO.  Psuedo header has already been read, but it's not considered
+			 * Nokia IPSO.  Pseudo header has already been read, but it's not considered
 			 * part of the packet size, so reread it to store the data for later (when saving)
 			 */
 			if (!pcap_read_nokia_pseudoheader(fh, &rec->rec_header.packet_header.pseudo_header, err, err_info))
@@ -1730,13 +1708,13 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 		break;
 
 	case WTAP_ENCAP_IRDA:
-		if (check_packet_size && packet_size < IRDA_SLL_LEN) {
+		if (packet_size < IRDA_SLL_LEN) {
 			/*
 			 * Uh-oh, the packet isn't big enough to even
 			 * have a pseudo-header.
 			 */
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup_printf("pcap: IrDA file has a %u-byte packet, too small to have even an IrDA pseudo-header",
+			*err_info = g_strdup_printf("pcap/pcapng: IrDA file has a %u-byte packet, too small to have even an IrDA pseudo-header",
 			    packet_size);
 			return -1;
 		}
@@ -1748,13 +1726,13 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 		break;
 
 	case WTAP_ENCAP_MTP2_WITH_PHDR:
-		if (check_packet_size && packet_size < MTP2_HDR_LEN) {
+		if (packet_size < MTP2_HDR_LEN) {
 			/*
 			 * Uh-oh, the packet isn't big enough to even
 			 * have a pseudo-header.
 			 */
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup_printf("pcap: MTP2 file has a %u-byte packet, too small to have even an MTP2 pseudo-header",
+			*err_info = g_strdup_printf("pcap/pcapng: MTP2 file has a %u-byte packet, too small to have even an MTP2 pseudo-header",
 			    packet_size);
 			return -1;
 		}
@@ -1766,13 +1744,13 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 		break;
 
 	case WTAP_ENCAP_LINUX_LAPD:
-		if (check_packet_size && packet_size < LAPD_SLL_LEN) {
+		if (packet_size < LAPD_SLL_LEN) {
 			/*
 			 * Uh-oh, the packet isn't big enough to even
 			 * have a pseudo-header.
 			 */
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup_printf("pcap: LAPD file has a %u-byte packet, too small to have even a LAPD pseudo-header",
+			*err_info = g_strdup_printf("pcap/pcapng: LAPD file has a %u-byte packet, too small to have even a LAPD pseudo-header",
 			    packet_size);
 			return -1;
 		}
@@ -1784,13 +1762,13 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 		break;
 
 	case WTAP_ENCAP_SITA:
-		if (check_packet_size && packet_size < SITA_HDR_LEN) {
+		if (packet_size < SITA_HDR_LEN) {
 			/*
 			 * Uh-oh, the packet isn't big enough to even
 			 * have a pseudo-header.
 			 */
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup_printf("pcap: SITA file has a %u-byte packet, too small to have even a SITA pseudo-header",
+			*err_info = g_strdup_printf("pcap/pcapng: SITA file has a %u-byte packet, too small to have even a SITA pseudo-header",
 			    packet_size);
 			return -1;
 		}
@@ -1807,14 +1785,13 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 		break;
 
 	case WTAP_ENCAP_BLUETOOTH_H4_WITH_PHDR:
-		if (check_packet_size &&
-		    packet_size < sizeof (struct libpcap_bt_phdr)) {
+		if (packet_size < sizeof (struct pcap_bt_phdr)) {
 			/*
 			 * Uh-oh, the packet isn't big enough to even
 			 * have a pseudo-header.
 			 */
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup_printf("pcap: libpcap bluetooth file has a %u-byte packet, too small to have even a pseudo-header",
+			*err_info = g_strdup_printf("pcap/pcapng: Bluetooth file has a %u-byte packet, too small to have even a pseudo-header",
 			    packet_size);
 			return -1;
 		}
@@ -1822,18 +1799,17 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 		    &rec->rec_header.packet_header.pseudo_header, err, err_info))
 			return -1;	/* Read error */
 
-		phdr_len = (int)sizeof (struct libpcap_bt_phdr);
+		phdr_len = (int)sizeof (struct pcap_bt_phdr);
 		break;
 
 	case WTAP_ENCAP_BLUETOOTH_LINUX_MONITOR:
-		if (check_packet_size &&
-		    packet_size < sizeof (struct libpcap_bt_monitor_phdr)) {
+		if (packet_size < sizeof (struct pcap_bt_monitor_phdr)) {
 			/*
 			 * Uh-oh, the packet isn't big enough to even
 			 * have a pseudo-header.
 			 */
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup_printf("pcap: libpcap bluetooth monitor file has a %u-byte packet, too small to have even a pseudo-header",
+			*err_info = g_strdup_printf("pcap/pcapng: Bluetooth monitor file has a %u-byte packet, too small to have even a pseudo-header",
 			    packet_size);
 			return -1;
 		}
@@ -1841,13 +1817,14 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 		    &rec->rec_header.packet_header.pseudo_header, err, err_info))
 			return -1;	/* Read error */
 
-		phdr_len = (int)sizeof (struct libpcap_bt_monitor_phdr);
+		phdr_len = (int)sizeof (struct pcap_bt_monitor_phdr);
 		break;
 
 	case WTAP_ENCAP_NFC_LLCP:
-		if (check_packet_size && packet_size < LLCP_HEADER_LEN) {
+		if (packet_size < LLCP_HEADER_LEN) {
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup("pcap: libpcap llcp file too short");
+			*err_info = g_strdup_printf("pcap/pcapng: NFC LLCP file has a %u-byte packet, too small to have even a pseudo-header",
+			    packet_size);
 			return -1;
 		}
 		if (!pcap_read_llcp_pseudoheader(fh, &rec->rec_header.packet_header.pseudo_header, err, err_info))
@@ -1856,14 +1833,13 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 		break;
 
 	case WTAP_ENCAP_PPP_WITH_PHDR:
-		if (check_packet_size &&
-		    packet_size < sizeof (struct libpcap_ppp_phdr)) {
+		if (packet_size < sizeof (struct pcap_ppp_phdr)) {
 			/*
 			 * Uh-oh, the packet isn't big enough to even
 			 * have a pseudo-header.
 			 */
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup_printf("pcap: libpcap ppp file has a %u-byte packet, too small to have even a pseudo-header",
+			*err_info = g_strdup_printf("pcap/pcapng: PPP file has a %u-byte packet, too small to have even a pseudo-header",
 			    packet_size);
 			return -1;
 		}
@@ -1871,18 +1847,17 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 		    &rec->rec_header.packet_header.pseudo_header, err, err_info))
 			return -1;	/* Read error */
 
-		phdr_len = (int)sizeof (struct libpcap_ppp_phdr);
+		phdr_len = (int)sizeof (struct pcap_ppp_phdr);
 		break;
 
 	case WTAP_ENCAP_ERF:
-		if (check_packet_size &&
-		    packet_size < sizeof(struct erf_phdr) ) {
+		if (packet_size < sizeof(struct erf_phdr) ) {
 			/*
 			 * Uh-oh, the packet isn't big enough to even
 			 * have a pseudo-header.
 			 */
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup_printf("pcap: ERF file has a %u-byte packet, too small to have even an ERF pseudo-header",
+			*err_info = g_strdup_printf("pcap/pcapng: ERF file has a %u-byte packet, too small to have even an ERF pseudo-header",
 			    packet_size);
 			return -1;
 		}
@@ -1907,28 +1882,26 @@ pcap_process_pseudo_header(FILE_T fh, int file_type, int wtap_encap,
 
 		phdr_len += size;
 
-		if (check_packet_size &&
-		    packet_size < (guint)phdr_len) {
+		if (packet_size < (guint)phdr_len) {
 			/*
 			 * Uh-oh, the packet isn't big enough for the pseudo-
 			 * header.
 			 */
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup_printf("pcap: ERF file has a %u-byte packet, too small for a pseudo-header with ex- and sub-headers (%d)",
+			*err_info = g_strdup_printf("pcap/pcapng: ERF file has a %u-byte packet, too small for a pseudo-header with ex- and sub-headers (%d)",
 			    packet_size, phdr_len);
 			return -1;
 		}
 		break;
 
 	case WTAP_ENCAP_I2C:
-		if (check_packet_size &&
-		    packet_size < sizeof (struct i2c_file_hdr)) {
+		if (packet_size < sizeof (struct i2c_file_hdr)) {
 			/*
 			 * Uh-oh, the packet isn't big enough to even
 			 * have a pseudo-header.
 			 */
 			*err = WTAP_ERR_BAD_FILE;
-			*err_info = g_strdup_printf("pcap: I2C file has a %u-byte packet, too small to have even a I2C pseudo-header",
+			*err_info = g_strdup_printf("pcap/pcapng: I2C file has a %u-byte packet, too small to have even a I2C pseudo-header",
 			    packet_size);
 			return -1;
 		}
@@ -2022,6 +1995,27 @@ pcap_read_post_process(int file_type, int wtap_encap,
 	}
 }
 
+gboolean
+wtap_encap_requires_phdr(int wtap_encap)
+{
+	switch (wtap_encap) {
+
+	case WTAP_ENCAP_ATM_PDUS:
+	case WTAP_ENCAP_IRDA:
+	case WTAP_ENCAP_MTP2_WITH_PHDR:
+	case WTAP_ENCAP_LINUX_LAPD:
+	case WTAP_ENCAP_SITA:
+	case WTAP_ENCAP_BLUETOOTH_H4_WITH_PHDR:
+	case WTAP_ENCAP_BLUETOOTH_LINUX_MONITOR:
+	case WTAP_ENCAP_NFC_LLCP:
+	case WTAP_ENCAP_PPP_WITH_PHDR:
+	case WTAP_ENCAP_ERF:
+	case WTAP_ENCAP_I2C:
+		return TRUE;
+	}
+	return FALSE;
+}
+
 int
 pcap_get_phdr_size(int encap, const union wtap_pseudo_header *pseudo_header)
 {
@@ -2047,6 +2041,22 @@ pcap_get_phdr_size(int encap, const union wtap_pseudo_header *pseudo_header)
 
 	case WTAP_ENCAP_SITA:
 		hdrsize = SITA_HDR_LEN;
+		break;
+
+	case WTAP_ENCAP_BLUETOOTH_H4_WITH_PHDR:
+		hdrsize = (int)sizeof (struct pcap_bt_phdr);
+		break;
+
+	case WTAP_ENCAP_BLUETOOTH_LINUX_MONITOR:
+		hdrsize = (int)sizeof (struct pcap_bt_monitor_phdr);
+		break;
+
+	case WTAP_ENCAP_NFC_LLCP:
+		hdrsize = LLCP_HEADER_LEN;
+		break;
+
+	case WTAP_ENCAP_PPP_WITH_PHDR:
+		hdrsize = (int)sizeof (struct pcap_ppp_phdr);
 		break;
 
 	case WTAP_ENCAP_ERF:
@@ -2098,18 +2108,6 @@ pcap_get_phdr_size(int encap, const union wtap_pseudo_header *pseudo_header)
 		hdrsize = (int)sizeof (struct i2c_file_hdr);
 		break;
 
-	case WTAP_ENCAP_BLUETOOTH_H4_WITH_PHDR:
-		hdrsize = (int)sizeof (struct libpcap_bt_phdr);
-		break;
-
-	case WTAP_ENCAP_PPP_WITH_PHDR:
-		hdrsize = (int)sizeof (struct libpcap_ppp_phdr);
-		break;
-
-	case WTAP_ENCAP_BLUETOOTH_LINUX_MONITOR:
-		hdrsize = (int)sizeof (struct libpcap_bt_monitor_phdr);
-		break;
-
 	default:
 		hdrsize = 0;
 		break;
@@ -2130,9 +2128,10 @@ pcap_write_phdr(wtap_dumper *wdh, int encap, const union wtap_pseudo_header *pse
 	guint8 erf_hdr[ sizeof(struct erf_mc_phdr)];
 	guint8 erf_subhdr[sizeof(union erf_subhdr)];
 	struct i2c_file_hdr i2c_hdr;
-	struct libpcap_bt_phdr bt_hdr;
-	struct libpcap_bt_monitor_phdr bt_monitor_hdr;
-	struct libpcap_ppp_phdr ppp_hdr;
+	struct pcap_bt_phdr bt_hdr;
+	struct pcap_bt_monitor_phdr bt_monitor_hdr;
+	struct pcap_ppp_phdr ppp_hdr;
+	guint8 llcp_phdr[LLCP_HEADER_LEN];
 	size_t size;
 	size_t subhdr_size = 0;
 
@@ -2345,6 +2344,14 @@ pcap_write_phdr(wtap_dumper *wdh, int encap, const union wtap_pseudo_header *pse
 		if (!wtap_dump_file_write(wdh, &bt_monitor_hdr, sizeof bt_monitor_hdr, err))
 			return FALSE;
 		wdh->bytes_dumped += sizeof bt_monitor_hdr;
+		break;
+
+	case WTAP_ENCAP_NFC_LLCP:
+		llcp_phdr[LLCP_ADAPTER_OFFSET] = pseudo_header->llcp.adapter;
+		llcp_phdr[LLCP_FLAGS_OFFSET] = pseudo_header->llcp.flags;
+		if (!wtap_dump_file_write(wdh, &llcp_phdr, sizeof llcp_phdr, err))
+			return FALSE;
+		wdh->bytes_dumped += sizeof llcp_phdr;
 		break;
 
 	case WTAP_ENCAP_PPP_WITH_PHDR:

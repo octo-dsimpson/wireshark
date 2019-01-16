@@ -13,39 +13,47 @@ used for troubleshooting, analysis, development and education.
 
 == What’s New
 
+* The Windows installers now ship with Qt 5.9.7. Previously they shipped with Qt 5.9.5.
+
 === Bug Fixes
 
 The following vulnerabilities have been fixed:
 
-* wssalink:2018-44[]
-+
-Bluetooth AVDTP dissector crash.
-wsbuglink:14884[].
-cveidlink:2018-16058[].
-// Fixed in master: c48d6a6d60
-// Fixed in master-2.6: 24200230a4
-// Fixed in master-2.4: 590b9d95fc
-// Fixed in master-2.2: c88cc3da31
+* wssalink:2019-01[]
+The 6LoWPAN dissector could crash.
+// * Buildbot crash output: randpkt-2018-10-18-13414.pcap.
+wsbuglink:15217[].
+cveidlink:2019-5716[].
+// Fixed in master: 62e81562e4
+// Fixed in master-2.6: 2b2eea1793
+// Fixed in master-2.4: n/a
 
-* wssalink:2018-45[]
-+
-Bluetooth Attribute Protocol dissector crash.
-wsbuglink:14994[].
-cveidlink:2018-16056[].
-// Fixed in master: f98fbce64c
-// Fixed in master-2.6: 10db757c35
-// Fixed in master-2.4: 4be24806b2
-// Fixed in master-2.2: e5f6e70687
+* wssalink:2019-02[]
+The P_MUL dissector could crash.
+// * Buildbot crash output: fuzz-2018-12-05-10088.pcap.
+wsbuglink:15337[].
+cveidlink:2019-5717[].
+// Fixed in master: 3cccd4ec5b
+// Fixed in master-2.6: 3caa4cde0d
+// Fixed in master-2.4: bf9272a92f
 
-* wssalink:2018-46[]
-+
-Radiotap dissector crash.
-wsbuglink:15022[].
-cveidlink:2018-16057[].
-// Fixed in master: 739eebd3d2
-// Fixed in master-2.6: 1576ae10e7
-// Fixed in master-2.4: bbf46eb46a
-// Fixed in master-2.2: af9fc0e15e
+* wssalink:2019-03[]
+The RTSE dissector and other dissectors could crash.
+// * Wireshark heap out-of-bounds read in get_t61_string.
+wsbuglink:15373[].
+cveidlink:2019-5718[].
+// Fixed in master: 3aad1ef236
+// Fixed in master-2.6: 9b4a937c88
+// Fixed in master-2.4: cd09cb5cfb
+
+* wssalink:2019-04[]
+The ISAKMP dissector could crash.
+// * Wireshark NULL pointer dereference in dissect_transform.
+wsbuglink:15374[].
+cveidlink:2019-5719[].
+// Fixed in master: c9cfae7fec
+// Fixed in master-2.6: cd4b3f5d69
+// Fixed in master-2.4: b5b02f2a9b
 
 
 The following bugs have been fixed:
@@ -54,31 +62,33 @@ The following bugs have been fixed:
 //* wsbuglink:6000[Wireshark bug]
 //* cveidlink:2014-2486[]
 //* Wireshark convinced you to switch seats on the plane while neglecting to tell you that its seat was noticeably moist.
-// cp /dev/null /tmp/buglist.txt ; for bugnumber in `git log --stat v2.6.4rc0..| grep ' Bug:' | awk '{print $2}' | sort -n -u ` ; do ./tools/gen-bugnote $bugnumber; pbpaste >> /tmp/buglist.txt; done
+// cp /dev/null /tmp/buglist.txt ; for bugnumber in `git log --stat v2.6.7rc0..| grep ' Bug:' | awk '{print $2}' | sort -n -u ` ; do ./tools/gen-bugnote $bugnumber; pbpaste >> /tmp/buglist.txt; done
 
-* Wireshark Hangs on startup initializing external capture plugins. wsbuglink:14657[].
+* console.lua not found in a folder with non-ASCII characters in its name. wsbuglink:15118[].
 
-* Qt: SCTP Analyse Association Dialog: Segmentation fault when clicking twice the Filter Association button. wsbuglink:14970[].
+* Disabling 'Update list of packets in real time.' will generally trigger crash after three start capture, stop capture cycles. wsbuglink:15263[].
 
-* Incorrect presentation of dissected data item (NETMASK) in ISAKMP dissector. wsbuglink:14987[].
+* UDP Multicast Stream double counts. wsbuglink:15271[].
 
-* Decode NFAPI: CONFIG.request  Error. wsbuglink:14988[].
+* text2pcap et al. set snaplength to 64kiB-1, while processing frames of 256kiB. wsbuglink:15292[].
 
-* udpdump frame too long error. wsbuglink:14989[].
+* Builds without libpcap fail if the libpcap headers aren't installed. wsbuglink:15317[].
 
-* ISDN - LAPD dissector broken since version 2.5.0. wsbuglink:15018[].
+* TCAP AnalogRedirectRecord parameter incorrectly coded as mandatory in QualReq_rr message. wsbuglink:15350[].
 
-* ASTERIX Category 062 / 135 Altitude has wrong value. wsbuglink:15030[].
+* macOS DMG appears to have duplicate files. wsbuglink:15361[].
 
-* Wireshark cannot decrypt SSL/TLS session if it was proxied over HTTP tunnel. wsbuglink:15042[].
+* Wireshark jumps behind other windows when opening UAT dialogs. wsbuglink:15366[].
 
-* TLS records in a HTTP tunnel are displayed as "Encrypted Handshake Message". wsbuglink:15043[].
+* Pathnames containing non-ASCII characters are mangled in error dialogs on Windows. wsbuglink:15367[].
 
-* BTATT Dissector: Temperature Measurement: Celsius and Fahrenheit swapped. wsbuglink:15058[].
+* Executing `-z http,stat -r file.pcapng` throws a segmentation fault. wsbuglink:15369[].
 
-* Diameter AVP User Location Info, Mobile Network Code decoded not correctly. wsbuglink:15068[].
+* IS-41 TCAP RegistrationNotification Invoke has borderCellAccess parameter coded as tag 50 (as denyAccess) but should be 58. wsbuglink:15372[].
 
-* Heartbeat message "Info" displayed without comma separator. wsbuglink:15079[].
+* In DNS statistics, response times > 1 sec not included. wsbuglink:15382[].
+
+* GTPv2 APN dissect problem. wsbuglink:15383[].
 
 === New and Updated Features
 
@@ -97,48 +107,43 @@ There are no new protocols in this release.
 // Add one protocol per line between the -- delimiters.
 [commaize]
 --
-ASTERIX
-Bluetooth
-Bluetooth AVDTP
-Bluetooth ATT
-E.212
-DHCP
-DTLS
-FP
-GSM A RR
-HTTP
-HTTP2
-IEEE 802.11
+6LoWPAN
+ANSI MAP
+DNP3
+DNS
+GSM A
+GTP
+GTPv2
+IMF
 ISAKMP
-ISDN
-K12
-NFAPI
-Nordic BLE
-PFCP
-Radiotap
-SSL
-Steam IHS Discovery
-TLS 1.3
+ISObus VT
+Kerberos
+P_MUL
+RTSE
+S7COMM
+TCAP
 --
 
 === New and Updated Capture File Support
 
-//There is no new or updated capture file support in this release.
+There is no new or updated capture file support in this release.
 // Add one file type per line between the -- delimiters.
-[commaize]
---
-pcapng
---
+// [commaize]
+// --
+// --
 
 === New and Updated Capture Interfaces support
 
-//There is no new or updated capture file support in this release.
-[commaize]
---
-ciscodump, udpdump
---
+There is no new or updated capture file support in this release.
+// [commaize]
+// --
+// --
 
-//=== Major API Changes
+=== Major API Changes
+
+* Lua: on Windows, file-related functions such as dofile now assume UTF-8 paths
+  instead of the local code page. This is consistent with Linux and macOS and
+  improves compatibility on non-English systems. (wsbuglink:15118[])
 
 == Getting Wireshark
 

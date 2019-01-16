@@ -2378,7 +2378,8 @@ console_log_level_set_cb(pref_t* pref, const gchar* value, unsigned int* changed
 {
     guint    uval;
 
-    uval = (guint)strtoul(value, NULL, 10);
+    if (!ws_strtou32(value, NULL, &uval))
+        return PREFS_SET_SYNTAX_ERR;        /* number was bad */
 
     if (*pref->varp.uint != uval) {
         *changed_flags = prefs_get_effect_flags(pref);
@@ -3391,12 +3392,10 @@ prefs_register_modules(void)
                                    "Show all interfaces, including interfaces marked as hidden",
                                    &prefs.gui_interfaces_show_hidden);
 
-#ifdef HAVE_PCAP_REMOTE
     prefs_register_bool_preference(gui_module, "interfaces_remote_display",
                                    "Show Remote interfaces",
                                    "Show remote interfaces in the interface selection",
                                    &prefs.gui_interfaces_remote_display);
-#endif
 
     register_string_like_preference(gui_module, "interfaces_hidden_types", "Hide interface types in list",
         "Hide the given interface types in the startup list",
@@ -3465,11 +3464,9 @@ prefs_register_modules(void)
         "By default, capture in monitor mode on interface? (Ex: eth0,eth3,...)",
         &prefs.capture_devices_monitor_mode, PREF_STRING, NULL, FALSE);
 
-#ifdef CAN_SET_CAPTURE_BUFFER_SIZE
     register_string_like_preference(capture_module, "devices_buffersize", "Interface buffer size",
         "Interface buffer size (Ex: en0(1),en1(143),...)",
         &prefs.capture_devices_buffersize, PREF_STRING, NULL, FALSE);
-#endif
 
     register_string_like_preference(capture_module, "devices_snaplen", "Interface snap length",
         "Interface snap length (Ex: en0(65535),en1(1430),...)",
@@ -4122,10 +4119,7 @@ pre_init_prefs(void)
     g_free (prefs.gui_interfaces_hide_types);
     prefs.gui_interfaces_hide_types = g_strdup("");
     prefs.gui_interfaces_show_hidden = FALSE;
-#ifdef HAVE_PCAP_REMOTE
     prefs.gui_interfaces_remote_display = TRUE;
-#endif
-
     prefs.gui_qt_packet_list_separator = FALSE;
     prefs.gui_qt_show_selected_packet = FALSE;
     prefs.gui_qt_show_file_load_time = FALSE;
@@ -4856,8 +4850,8 @@ prefs_is_column_visible(const gchar *cols_hidden, fmt_data *cfmt)
             }
             if (cfmt->fmt == COL_CUSTOM) {
                 /*
-                 * A custom column has to have the
-                 * same custom field and occurrence.
+                 * A custom column has to have the same custom field,
+                 * occurrence and resolved settings.
                  */
                 if (cfmt_hidden.custom_fields && cfmt->custom_fields) {
                     if (strcmp(cfmt->custom_fields,
@@ -4867,8 +4861,9 @@ prefs_is_column_visible(const gchar *cols_hidden, fmt_data *cfmt)
                         cfmt_hidden.custom_fields = NULL;
                         continue;
                     }
-                    if (cfmt->custom_occurrence != cfmt_hidden.custom_occurrence) {
-                        /* Different occurrences. */
+                    if ((cfmt->custom_occurrence != cfmt_hidden.custom_occurrence) ||
+                        (cfmt->resolved != cfmt_hidden.resolved)) {
+                        /* Different occurrences or resolved settings. */
                         g_free(cfmt_hidden.custom_fields);
                         cfmt_hidden.custom_fields = NULL;
                         continue;
@@ -4975,10 +4970,6 @@ string_to_name_resolve(const char *string, e_addr_resolve *name_resolve)
             break;
         case 't':
             name_resolve->transport_name = TRUE;
-            break;
-        case 'C':
-            /* DEPRECATED */
-            /* name_resolve->concurrent_dns */
             break;
         case 'd':
             name_resolve->dns_pkt_addr_resolution = TRUE;
@@ -5257,7 +5248,6 @@ deprecated_port_pref(gchar *pref_name, const gchar *value)
     };
 
     unsigned int i;
-    char     *p;
     guint    uval;
     dissector_table_t sub_dissectors;
     dissector_handle_t handle, tpkt_handle;
@@ -5268,9 +5258,7 @@ deprecated_port_pref(gchar *pref_name, const gchar *value)
     {
         if (strcmp(pref_name, port_prefs[i].pref_name) == 0)
         {
-            /* XXX - give an error if it doesn't fit in a guint? */
-            uval = (guint)strtoul(value, &p, port_prefs[i].base);
-            if (p == value || *p != '\0')
+            if (!ws_basestrtou32(value, NULL, &uval, port_prefs[i].base))
                 return FALSE;        /* number was bad */
 
             module = prefs_find_module(port_prefs[i].module_name);
@@ -5359,8 +5347,7 @@ deprecated_port_pref(gchar *pref_name, const gchar *value)
         if (strcmp(pref_name, tpkt_subdissector_port_prefs[i].pref_name) == 0)
         {
             /* XXX - give an error if it doesn't fit in a guint? */
-            uval = (guint)strtoul(value, &p, tpkt_subdissector_port_prefs[i].base);
-            if (p == value || *p != '\0')
+            if (!ws_basestrtou32(value, NULL, &uval, tpkt_subdissector_port_prefs[i].base))
                 return FALSE;        /* number was bad */
 
             /* If the value is 0 or 102 (default TPKT port), don't add to the Decode As tables */
@@ -5391,11 +5378,10 @@ static prefs_set_pref_e
 set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
          gboolean return_range_errors)
 {
-    unsigned long int cval;
+    guint    cval;
     guint    uval;
     gboolean bval;
     gint     enum_val;
-    char     *p;
     gchar    *dotp, *last_dotp;
     static gchar *filter_label = NULL;
     static gboolean filter_enabled = FALSE;
@@ -5418,6 +5404,8 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
         filter_expression_new(filter_label, value, "", filter_enabled);
         g_free(filter_label);
         filter_label = NULL;
+        /* Remember to save the new UAT to file. */
+        prefs.filter_expressions_old = TRUE;
     } else if (strcmp(pref_name, "gui.version_in_start_page") == 0) {
         /* Convert deprecated value to closest current equivalent */
         if (g_ascii_strcasecmp(value, "true") == 0) {
@@ -5823,9 +5811,7 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
         switch (type) {
 
         case PREF_UINT:
-            /* XXX - give an error if it doesn't fit in a guint? */
-            uval = (guint)strtoul(value, &p, pref->info.base);
-            if (p == value || *p != '\0')
+            if (!ws_basestrtou32(value, NULL, &uval, pref->info.base))
                 return PREFS_SET_SYNTAX_ERR;        /* number was bad */
             if (*pref->varp.uint != uval) {
                 containing_module->prefs_changed_flags |= prefs_get_effect_flags(pref);
@@ -5841,9 +5827,7 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
             dissector_table_t sub_dissectors;
             dissector_handle_t handle;
 
-            /* XXX - give an error if it doesn't fit in a guint? */
-            uval = (guint)strtoul(value, &p, pref->info.base);
-            if (p == value || *p != '\0')
+            if (!ws_basestrtou32(value, NULL, &uval, pref->info.base))
                 return PREFS_SET_SYNTAX_ERR;        /* number was bad */
 
             if (*pref->varp.uint != uval) {
@@ -5963,7 +5947,8 @@ set_pref(gchar *pref_name, const gchar *value, void *private_data _U_,
 
         case PREF_COLOR:
         {
-            cval = strtoul(value, NULL, 16);
+            if (!ws_hexstrtou32(value, NULL, &cval))
+                return PREFS_SET_SYNTAX_ERR;        /* number was bad */
             if ((pref->varp.colorp->red != RED_COMPONENT(cval)) ||
                 (pref->varp.colorp->green != GREEN_COMPONENT(cval)) ||
                 (pref->varp.colorp->blue != BLUE_COMPONENT(cval))) {
@@ -6616,6 +6601,21 @@ write_prefs(char **pf_path_return)
         g_free(pf_path);
     } else {
         pf = stdout;
+    }
+
+    /*
+     * If the preferences file is being written, be sure to write UAT files
+     * first that were migrated from the preferences file.
+     */
+    if (pf_path_return != NULL) {
+        if (prefs.filter_expressions_old) {
+            char *err = NULL;
+            prefs.filter_expressions_old = FALSE;
+            if (!uat_save(uat_get_table_by_name("Display expressions"), &err)) {
+                ws_g_warning("Unable to save Display expressions: %s", err);
+                g_free(err);
+            }
+        }
     }
 
     fputs("# Configuration file for Wireshark " VERSION ".\n"

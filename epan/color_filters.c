@@ -414,12 +414,12 @@ color_filter_validate_cb(gpointer filter_arg, gpointer err)
     if (colorf->disabled) return;
 
     if (!dfilter_compile(colorf->filter_text, &colorf->c_colorfilter, &local_err_msg)) {
-        *err_msg = g_strdup_printf("Removing color filter name: \"%s\" text: \"%s\".\n%s",
+        *err_msg = g_strdup_printf("Disabling color filter name: \"%s\" filter: \"%s\".\n%s",
                       colorf->filter_name, colorf->filter_text, local_err_msg);
         g_free(local_err_msg);
-        /* Delete the color filter from the list of color filters. */
-        color_filter_valid_list = g_slist_remove(color_filter_valid_list, colorf);
-        color_filter_delete(colorf);
+
+        /* Disable the color filter in the list of color filters. */
+        colorf->disabled = TRUE;
     }
 }
 
@@ -537,6 +537,8 @@ read_filters_file(const gchar *path, FILE *f, gpointer user_data, color_filter_a
 
     name = (gchar *)g_malloc(name_len + 1);
     filter_exp = (gchar *)g_malloc(filter_exp_len + 1);
+
+    prefs.unknown_colorfilters = FALSE;
 
     while (1) {
 

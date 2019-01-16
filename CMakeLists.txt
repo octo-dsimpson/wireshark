@@ -13,7 +13,7 @@ project(Wireshark C CXX)
 set(GIT_REVISION 0)
 set(PROJECT_MAJOR_VERSION 2)
 set(PROJECT_MINOR_VERSION 6)
-set(PROJECT_PATCH_VERSION 3)
+set(PROJECT_PATCH_VERSION 6)
 set(PROJECT_BUILD_VERSION ${GIT_REVISION})
 set(PROJECT_VERSION_EXTENSION "")
 set(PROJECT_RELEASE_VERSION "${PROJECT_MAJOR_VERSION}.${PROJECT_MINOR_VERSION}")
@@ -106,23 +106,12 @@ if(WIN32)
 	# Download third-party libraries
 	file (TO_NATIVE_PATH ${CMAKE_SOURCE_DIR}/tools/win-setup.ps1 _win_setup)
 	file (TO_NATIVE_PATH ${_PROJECT_LIB_DIR} _ws_lib_dir)
-	if(MSVC14)
-		set(_vsversion_args "14")
-	elseif(MSVC12)
-		set(_vsversion_args "12")
-	elseif(MSVC11)
-		set(_vsversion_args "11")
-	elseif(MSVC10)
-		set(_vsversion_args "10")
-	else()
-		message(FATAL_ERROR "Unsupported compiler ${CMAKE_C_COMPILER}")
-	endif()
 
 	# Is it possible to have a one-time, non-cached option in CMake? If
 	# so, we could add a "-DFORCE_WIN_SETUP" which passes -Force to
 	# win-setup.ps1.
 	execute_process(
-		COMMAND ${POWERSHELL_COMMAND} "\"${_win_setup}\"" -Destination "${_ws_lib_dir}" -Platform ${WIRESHARK_TARGET_PLATFORM} -VSVersion ${_vsversion_args}
+		COMMAND ${POWERSHELL_COMMAND} "\"${_win_setup}\"" -Destination "${_ws_lib_dir}" -Platform ${WIRESHARK_TARGET_PLATFORM}
 		RESULT_VARIABLE _win_setup_failed
 	)
 	if (${_win_setup_failed})
@@ -182,6 +171,13 @@ if(NOT CMAKE_INSTALL_RPATH AND NOT (WIN32 OR APPLE))
 		SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 	endif("${IS_SYSTEM_DIR}" STREQUAL "-1")
 endif()
+
+
+if(WIN32)
+    # Linking with wsetargv.obj enables "wildcard expansion" of
+    # command-line arguments.
+    set(WILDCARD_OBJ wsetargv.obj)
+endif(WIN32)
 
 # Banner shown at top right of Qt welcome screen.
 if(DEFINED ENV{WIRESHARK_VERSION_FLAVOR})
@@ -279,6 +275,13 @@ endif()
 # This option only has an effect on CMake >= 2.8.9
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Path to our generated executables (or wrapper scripts)
+if(WIN32)
+	set(WS_PROGRAM_PATH ./run/$<CONFIG>)
+else()
+	set(WS_PROGRAM_PATH ./run)
+endif()
+
 if( CMAKE_C_COMPILER_ID MATCHES "MSVC")
 	if ((MSVC_VERSION LESS "1900") OR (MSVC_VERSION GREATER_EQUAL "2000"))
 		message(FATAL_ERROR "You are using an unsupported version of MSVC")
@@ -317,26 +320,19 @@ if( CMAKE_C_COMPILER_ID MATCHES "MSVC")
 
 	set(WS_LINK_FLAGS "/LARGEADDRESSAWARE /MANIFEST:NO /INCREMENTAL:NO /RELEASE")
 
-	if(MSVC12)
-		# /Zo                               Enhanced debugging of optimised code for VS2013 Update 3 and beyond,
-		#                                   Assume all VS2013 builds are at least Update 3.
-		#                                   See http://msdn.microsoft.com/en-us/library/dn785163.aspx
-		list(APPEND LOCAL_CFLAGS /Zo)
-	elseif(MSVC14)
-		# /Zo                               Enhanced debugging of optimised code
-		# /utf-8                            Set Source and Executable character sets to UTF-8
-		#                                   VS2015(MSVC14): On by default when /Zi or /Z7 used.
-		# /guard:cf                         Control Flow Guard (compile and link).
-		#                                   See https://msdn.microsoft.com/en-us/library/windows/desktop/mt637065.aspx
-		#                                   Note: This requires CMake 3.9.0 or newer.
-		#                                   https://gitlab.kitware.com/cmake/cmake/commit/f973d49ab9d4c59b93f6dac812a94bb130200836
-		# /Qspectre                         Speculative execution attack mitigation
-		#                                   See https://blogs.msdn.microsoft.com/vcblog/2018/01/15/spectre-mitigations-in-msvc/
-		list(APPEND LOCAL_CFLAGS /Zo /utf-8 /guard:cf)
-		set(WS_LINK_FLAGS "${WS_LINK_FLAGS} /guard:cf")
-		# /Qspectre is not available for VS2015 or older VS2017. Test for its availability.
-		set(WIRESHARK_COMMON_FLAGS /Qspectre)
-	endif()
+	# /Zo                               Enhanced debugging of optimised code
+	# /utf-8                            Set Source and Executable character sets to UTF-8
+	#                                   VS2015(MSVC14): On by default when /Zi or /Z7 used.
+	# /guard:cf                         Control Flow Guard (compile and link).
+	#                                   See https://msdn.microsoft.com/en-us/library/windows/desktop/mt637065.aspx
+	#                                   Note: This requires CMake 3.9.0 or newer.
+	#                                   https://gitlab.kitware.com/cmake/cmake/commit/f973d49ab9d4c59b93f6dac812a94bb130200836
+	# /Qspectre                         Speculative execution attack mitigation
+	#                                   See https://blogs.msdn.microsoft.com/vcblog/2018/01/15/spectre-mitigations-in-msvc/
+	list(APPEND LOCAL_CFLAGS /Zo /utf-8 /guard:cf)
+	set(WS_LINK_FLAGS "${WS_LINK_FLAGS} /guard:cf")
+	# /Qspectre is not available for VS2015 or older VS2017. Test for its availability.
+	set(WIRESHARK_COMMON_FLAGS /Qspectre)
 
 	if(ENABLE_CODE_ANALYSIS)
 		list(APPEND LOCAL_CFLAGS /analyze:WX-)
@@ -997,7 +993,7 @@ endif()
 if(ENABLE_ZLIB)
 	if (WIN32)
 		# On Windows we build our own version of zlib, so add the paths
-		set(ZLIB_SRC_DIR "${_PROJECT_LIB_DIR}/zlib-1.2.11-ws")
+		set(ZLIB_SRC_DIR "${_PROJECT_LIB_DIR}/zlib-1.2.11-2-ws")
 		set(SKIP_INSTALL_ALL True) # We copy the DLL ourselves.
 		add_subdirectory("${ZLIB_SRC_DIR}" "${CMAKE_BINARY_DIR}/zlib")
 		unset(SKIP_INSTALL_ALL)
@@ -2175,6 +2171,9 @@ if(ENABLE_APPLICATION_BUNDLE)
 	"-Wl,-headerpad_max_install_names -Wl,-search_paths_first ${CMAKE_EXE_LINKER_FLAGS}"
 	)
 
+	# Create our Frameworks directory
+	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/run/${CMAKE_CFG_INTDIR}/Wireshark.app/Contents/Frameworks")
+
 	# Add files to the app bundle
 	# Wireshark.app/Contents
 	file(WRITE ${CMAKE_BINARY_DIR}/packaging/macosx/PkgInfo "APPLWshk\n")
@@ -2327,7 +2326,7 @@ endif()
 # Common properties for CLI executables
 macro(set_extra_executable_properties _executable _folder)
 	set_target_properties(${_executable} PROPERTIES
-		LINK_FLAGS "${WS_LINK_FLAGS}"
+		LINK_FLAGS "${WILDCARD_OBJ} ${WS_LINK_FLAGS}"
 		FOLDER ${_folder}
 	)
 
@@ -2869,7 +2868,6 @@ if(BUILD_androiddump)
 	)
 
 	add_executable(androiddump WIN32 ${androiddump_FILES})
-	# XXX Shouldn't we add wsutil to androiddump_LIBS instead?
 	set_extcap_executable_properties(androiddump)
 	target_link_libraries(androiddump ${androiddump_LIBS})
 	install(TARGETS androiddump RUNTIME DESTINATION ${EXTCAP_DIR})
@@ -2957,7 +2955,6 @@ if(BUILD_randpktdump)
 	)
 
 	add_executable(randpktdump WIN32 ${randpktdump_FILES})
-	# XXX Shouldn't we add wsutil to randpktdump_LIBS instead?
 	set_extcap_executable_properties(randpktdump)
 	target_link_libraries(randpktdump ${randpktdump_LIBS})
 	install(TARGETS randpktdump RUNTIME DESTINATION ${EXTCAP_DIR})
@@ -3001,9 +2998,6 @@ if(ENABLE_APPLICATION_BUNDLE)
 					${CMAKE_SOURCE_DIR}/packaging/macosx/ChmodBPF
 					${CMAKE_BINARY_DIR}/run/ChmodBPF
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
-					${CMAKE_SOURCE_DIR}/packaging/macosx/Resources
-					${CMAKE_BINARY_DIR}/run/Resources
-		COMMAND ${CMAKE_COMMAND} -E copy_directory
 					${CMAKE_SOURCE_DIR}/packaging/macosx/Scripts
 					${CMAKE_BINARY_DIR}/run/Scripts
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -3037,8 +3031,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	find_program(GIT_EXECUTABLE git)
 endif()
 
-# This will fail if we're not building from a git checkout.
-if(RPMBUILD_EXECUTABLE AND GIT_EXECUTABLE)
+# RPM target must be built from a git checkout. We simply test for .git for now.
+if(RPMBUILD_EXECUTABLE AND GIT_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
 	foreach(_rpm_dir BUILD RPMS SOURCES SPECS SRPMS)
 		file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/packaging/rpm/${_rpm_dir}")
 	endforeach()
@@ -3057,22 +3051,22 @@ if(RPMBUILD_EXECUTABLE AND GIT_EXECUTABLE)
 		list(APPEND _rpmbuild_with_args --with lua)
 	endif()
 	if (LZ4_FOUND AND SNAPPY_FOUND)
-		list(APPEND _rpmbuild_with_args --define "with_lz4_and_snappy 1")
+		list(APPEND _rpmbuild_with_args --with lz4_and_snappy)
 	endif()
 	if (CARES_FOUND)
-		list(APPEND _rpmbuild_with_args --define "with_c_ares 1")
+		list(APPEND _rpmbuild_with_args --with c_ares)
 	endif()
 	if (SPANDSP_FOUND)
-		list(APPEND _rpmbuild_with_args --define "with_spandsp 1")
+		list(APPEND _rpmbuild_with_args --with spandsp)
 	endif()
 	if (BCG729_FOUND)
-		list(APPEND _rpmbuild_with_args --define "with_bcg729 1")
+		list(APPEND _rpmbuild_with_args --with bcg729)
 	endif()
 	if (LIBXML2_FOUND)
-		list(APPEND _rpmbuild_with_args --define "with_libxml2 1")
+		list(APPEND _rpmbuild_with_args --with libxml2)
 	endif()
 	if (NGHTTP2_FOUND)
-		list(APPEND _rpmbuild_with_args --define "with_nghttp2 1")
+		list(APPEND _rpmbuild_with_args --with nghttp2)
 	endif()
 
 	execute_process(

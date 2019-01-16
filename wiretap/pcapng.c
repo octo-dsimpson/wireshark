@@ -50,18 +50,6 @@ pcapng_close(wtap *wth);
 #define MIN_BLOCK_SIZE  ((guint32)(sizeof(pcapng_block_header_t) + sizeof(guint32)))
 
 /*
- * In order to keep from trying to allocate large chunks of memory,
- * which could either fail or, even if it succeeds, chew up so much
- * address space or memory+backing store as not to leave room for
- * anything else, we impose an upper limit on the size of blocks
- * we're willing to handle.
- *
- * For now, we pick an arbitrary limit of 16MB (OK, fine, 16MiB, but
- * don't try saying that on Wikipedia :-) :-) :-)).
- */
-#define MAX_BLOCK_SIZE  (16*1024*1024)
-
-/*
  * Minimum SHB size = minimum block size + size of fixed length portion of SHB.
  */
 #define MIN_SHB_SIZE    ((guint32)(MIN_BLOCK_SIZE + sizeof(pcapng_section_header_block_t)))
@@ -161,6 +149,21 @@ struct option {
 
 /* MSBit of option code means "local type" */
 #define OPT_LOCAL_FLAG       0x8000
+
+/*
+ * In order to keep from trying to allocate large chunks of memory,
+ * which could either fail or, even if it succeeds, chew up so much
+ * address space or memory+backing store as not to leave room for
+ * anything else, we impose upper limits on the size of blocks we're
+ * willing to handle.
+ *
+ * We pick a limit of an EPB with a maximum-sized D-Bus packet and 128 KiB
+ * worth of options; we use the maximum D-Bus packet size as that's larger
+ * than the maximum packet size for other link-layer types, and the maximum
+ * packet size for other link-layer types is currently small enough that
+ * the resulting block size would be less than the previous 16 MiB limit.
+ */
+#define MAX_BLOCK_SIZE (MIN_EPB_SIZE + WTAP_MAX_PACKET_SIZE_DBUS + 131072)
 
 /* Note: many of the defined structures for block data are defined in wtap.h */
 
@@ -779,6 +782,7 @@ pcapng_read_if_descr_block(wtap *wth, FILE_T fh, pcapng_block_header_t *bh,
         bytes_read = pcapng_read_option(fh, pn, &oh, option_content, opt_cont_buf_len, to_read, err, err_info, "if_descr");
         if (bytes_read <= 0) {
             pcapng_debug("pcapng_read_if_descr_block: failed to read option");
+            g_free(option_content);
             return FALSE;
         }
         to_read -= bytes_read;
@@ -1219,7 +1223,6 @@ pcapng_read_packet_block(FILE_T fh, pcapng_block_header_t *bh, pcapng_t *pn, wta
                                                    WTAP_FILE_TYPE_SUBTYPE_PCAPNG,
                                                    iface_info.wtap_encap,
                                                    packet.cap_len,
-                                                   TRUE,
                                                    wblock->rec,
                                                    err,
                                                    err_info);
@@ -1507,7 +1510,6 @@ pcapng_read_simple_packet_block(FILE_T fh, pcapng_block_header_t *bh, pcapng_t *
                                                    WTAP_FILE_TYPE_SUBTYPE_PCAPNG,
                                                    iface_info.wtap_encap,
                                                    simple_packet.cap_len,
-                                                   TRUE,
                                                    wblock->rec,
                                                    err,
                                                    err_info);
@@ -1957,6 +1959,7 @@ pcapng_read_interface_statistics_block(FILE_T fh, pcapng_block_header_t *bh, pca
         bytes_read = pcapng_read_option(fh, pn, &oh, option_content, opt_cont_buf_len, to_read, err, err_info, "interface_statistics");
         if (bytes_read <= 0) {
             pcapng_debug("pcapng_read_interface_statistics_block: failed to read option");
+            g_free(option_content);
             return FALSE;
         }
         to_read -= bytes_read;

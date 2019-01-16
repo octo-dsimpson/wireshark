@@ -118,7 +118,7 @@ bin directory, e.g. C:\Qt\Qt5.6.2\5.6\msvc2013
 
 === GTK+ / GLib / GDK / Pango / ATK / GNU gettext / GNU libiconv
 
-The Glib library is used as a basic platform abstraction library, it’s
+The GLib library is used as a basic platform abstraction library, it’s
 not related to graphical user interface (GUI) things. For a detailed
 description about GLib, see <<ChCodeGLib>>.
 
@@ -137,18 +137,16 @@ The 2.x versions require all mentioned libs.
 
 ==== Unix
 
-The GLib/GTK+ libraries are available for many unix-like platforms and
-Cygwin.
-
-If these libraries aren't already installed and also aren't available as a
-package for your platform, you can get them at
-http://www.gtk.org/download.html[].
+The GLib/GTK+ libraries are available for most Linux distributions and
+UNIX flavors. If these libraries aren't already installed and also
+aren't available as a package for your platform, you can get them at
+http://www.gtk.org[].
 
 [[ChLibsWin32GTK]]
 
 ==== Win32 MSVC
 
-You can get the latest version at http://www.gtk.org/download.html[].
+You can get the latest version at http://www.gtk.org[].
 
 [[ChLibsSMI]]
 

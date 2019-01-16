@@ -191,7 +191,7 @@ print_usage(FILE *output)
     fprintf(output, "  -m                       virtual memory limit, in bytes\n");
 #endif
     fprintf(output, "  -n                       disable all name resolution (def: all enabled)\n");
-    fprintf(output, "  -N <name resolve flags>  enable specific name resolution(s): \"mnNtd\"\n");
+    fprintf(output, "  -N <name resolve flags>  enable specific name resolution(s): \"mnNtdv\"\n");
     fprintf(output, "  -p                       use the system's packet header format\n");
     fprintf(output, "                           (which may have 64-bit timestamps)\n");
     fprintf(output, "  -R <read filter>         packet filter in Wireshark display filter syntax\n");
@@ -406,8 +406,8 @@ set_link_type(const char *lt_arg) {
     return FALSE;
 }
 
-int
-main(int argc, char *argv[])
+static int
+real_main(int argc, char *argv[])
 {
     GString             *comp_info_str;
     GString             *runtime_info_str;
@@ -460,7 +460,6 @@ main(int argc, char *argv[])
         get_ws_vcs_version_info(), comp_info_str->str, runtime_info_str->str);
 
 #ifdef _WIN32
-    arg_list_utf_16to8(argc, argv);
     create_app_running_mutex();
 #endif /* _WIN32 */
 
@@ -486,7 +485,7 @@ main(int argc, char *argv[])
      * Attempt to get the pathname of the directory containing the
      * executable file.
      */
-    init_progfile_dir_error = init_progfile_dir(argv[0], main);
+    init_progfile_dir_error = init_progfile_dir(argv[0], NULL);
     if (init_progfile_dir_error != NULL) {
         fprintf(stderr, "rawshark: Can't get pathname of rawshark program: %s.\n",
                 init_progfile_dir_error);
@@ -833,6 +832,23 @@ clean_exit:
     wtap_cleanup();
     return ret;
 }
+
+#ifdef _WIN32
+int
+wmain(int argc, wchar_t *wc_argv[])
+{
+    char **argv;
+
+    argv = arg_list_utf_16to8(argc, wc_argv);
+    return real_main(argc, argv);
+}
+#else
+int
+main(int argc, char *argv[])
+{
+    return real_main(argc, argv);
+}
+#endif
 
 /**
  * Read data from a raw pipe.  The "raw" data consists of a libpcap

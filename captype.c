@@ -81,8 +81,8 @@ failure_message_cont(const char *msg_format, va_list ap)
   fprintf(stderr, "\n");
 }
 
-int
-main(int argc, char *argv[])
+static int
+real_main(int argc, char *argv[])
 {
   GString *comp_info_str;
   GString *runtime_info_str;
@@ -121,7 +121,6 @@ main(int argc, char *argv[])
   g_string_free(runtime_info_str, TRUE);
 
 #ifdef _WIN32
-  arg_list_utf_16to8(argc, argv);
   create_app_running_mutex();
 #endif /* _WIN32 */
 
@@ -134,7 +133,7 @@ main(int argc, char *argv[])
    * Attempt to get the pathname of the directory containing the
    * executable file.
    */
-  init_progfile_dir_error = init_progfile_dir(argv[0], main);
+  init_progfile_dir_error = init_progfile_dir(argv[0], NULL);
   if (init_progfile_dir_error != NULL) {
     fprintf(stderr,
             "captype: Can't get pathname of directory containing the captype program: %s.\n",
@@ -205,6 +204,23 @@ main(int argc, char *argv[])
   free_progdirs();
   return overall_error_status;
 }
+
+#ifdef _WIN32
+int
+wmain(int argc, wchar_t *wc_argv[])
+{
+  char **argv;
+
+  argv = arg_list_utf_16to8(argc, wc_argv);
+  return real_main(argc, argv);
+}
+#else
+int
+main(int argc, char *argv[])
+{
+  return real_main(argc, argv);
+}
+#endif
 
 /*
  * Editor modelines  -  http://www.wireshark.org/tools/modelines.html

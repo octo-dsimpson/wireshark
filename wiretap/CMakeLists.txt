@@ -115,7 +115,7 @@ add_library(wiretap
 
 add_dependencies(wiretap version)
 
-set(FULL_SO_VERSION "8.0.3")
+set(FULL_SO_VERSION "8.0.6")
 
 set_target_properties(wiretap PROPERTIES
 	PREFIX "lib"
@@ -124,12 +124,6 @@ set_target_properties(wiretap PROPERTIES
 	VERSION ${FULL_SO_VERSION} SOVERSION 8
 	FOLDER "DLLs"
 )
-
-if(ENABLE_APPLICATION_BUNDLE)
-	set_target_properties(wiretap PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/run/Wireshark.app/Contents/Frameworks
-	)
-endif()
 
 ABICHECK(libwiretap)
 

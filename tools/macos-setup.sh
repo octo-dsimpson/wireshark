@@ -149,10 +149,7 @@ LIBXML2_VERSION=2.9.4
 LZ4_VERSION=1.7.5
 SBC_VERSION=1.3
 CARES_VERSION=1.12.0
-# Redmine used by libssh.org numbers the files available for download,
-# so using version only isn't enough
 LIBSSH_VERSION=0.7.4
-LIBSSH_FILENUM=210
 # mmdbresolve
 MAXMINDDB_VERSION=1.3.2
 
@@ -1174,7 +1171,7 @@ uninstall_libsmi() {
 install_libgpg_error() {
     if [ "$LIBGPG_ERROR_VERSION" -a ! -f libgpg-error-$LIBGPG_ERROR_VERSION-done ] ; then
         echo "Downloading, building, and installing libgpg-error:"
-        [ -f libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2 ] || curl -L -O ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2 || exit 1
+        [ -f libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2 ] || curl -L -O https://www.gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2 || exit 1
         $no_build && echo "Skipping installation" && return
         bzcat libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2 | tar xf - || exit 1
         cd libgpg-error-$LIBGPG_ERROR_VERSION
@@ -1224,7 +1221,7 @@ install_libgcrypt() {
         fi
 
         echo "Downloading, building, and installing libgcrypt:"
-        [ -f libgcrypt-$LIBGCRYPT_VERSION.tar.gz ] || curl -L -O ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-$LIBGCRYPT_VERSION.tar.gz || exit 1
+        [ -f libgcrypt-$LIBGCRYPT_VERSION.tar.gz ] || curl -L -O https://www.gnupg.org/ftp/gcrypt/libgcrypt/libgcrypt-$LIBGCRYPT_VERSION.tar.gz || exit 1
         $no_build && echo "Skipping installation" && return
         gzcat libgcrypt-$LIBGCRYPT_VERSION.tar.gz | tar xf - || exit 1
         cd libgcrypt-$LIBGCRYPT_VERSION
@@ -1759,7 +1756,11 @@ uninstall_c_ares() {
 install_libssh() {
     if [ "$LIBSSH_VERSION" -a ! -f libssh-$LIBSSH_VERSION-done ] ; then
         echo "Downloading, building, and installing libssh:"
-        [ -f libssh-$LIBSSH_VERSION.tar.xz ] || curl -L -O https://red.libssh.org/attachments/download/$LIBSSH_FILENUM/libssh-$LIBSSH_VERSION.tar.xz || exit 1
+        LIBSSH_MAJOR_VERSION="`expr $LIBSSH_VERSION : '\([0-9][0-9]*\).*'`"
+        LIBSSH_MINOR_VERSION="`expr $LIBSSH_VERSION : '[0-9][0-9]*\.\([0-9][0-9]*\).*'`"
+        LIBSSH_DOTDOT_VERSION="`expr $LIBSSH_VERSION : '[0-9][0-9]*\.[0-9][0-9]*\.\([0-9][0-9]*\).*'`"
+        LIBSSH_MAJOR_MINOR_VERSION=$LIBSSH_MAJOR_VERSION.$LIBSSH_MINOR_VERSION
+        [ -f libssh-$LIBSSH_VERSION.tar.xz ] || curl -L -O https://www.libssh.org/files/$LIBSSH_MAJOR_MINOR_VERSION/libssh-$LIBSSH_VERSION.tar.xz
         $no_build && echo "Skipping installation" && return
         xzcat libssh-$LIBSSH_VERSION.tar.xz | tar xf - || exit 1
         cd libssh-$LIBSSH_VERSION
@@ -2720,8 +2721,9 @@ then
     installed_cares_version=`ls c-ares-*-done 2>/dev/null | sed 's/c-ares-\(.*\)-done/\1/'`
     installed_libssh_version=`ls libssh-*-done 2>/dev/null | sed 's/libssh-\(.*\)-done/\1/'`
     installed_nghttp2_version=`ls nghttp2-*-done 2>/dev/null | sed 's/nghttp2-\(.*\)-done/\1/'`
-    installed_spandsp_version=`ls spandsp-*-done 2>/dev/null | sed 's/spandsp-\(.*\)-done/\1/'`
     installed_libtiff_version=`ls tiff-*-done 2>/dev/null | sed 's/tiff-\(.*\)-done/\1/'`
+    installed_spandsp_version=`ls spandsp-*-done 2>/dev/null | sed 's/spandsp-\(.*\)-done/\1/'`
+    installed_bcg729_version=`ls bcg729-*-done 2>/dev/null | sed 's/bcg729-\(.*\)-done/\1/'`
 
     #
     # If we don't have a versioned -done file for portaudio, but do have
